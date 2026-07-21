@@ -1,3 +1,5 @@
+import type { Route } from "next";
+
 /**
  * Rotas do app (front-end), centralizadas para evitar strings soltas espalhadas
  * pelos componentes. Não confundir com as rotas de API (essas vivem sob
@@ -14,17 +16,31 @@ export const ROUTES = {
   // Painel administrativo
   dashboard: "/dashboard",
   pedidos: "/pedidos",
-  pedidoDetalhe: (id: string) => `/pedidos/${id}`,
+
+  pedidoDetalhe: (id: string): Route =>
+    `/pedidos/${id}` as Route,
+
   cardapioCategorias: "/cardapio/categorias",
   cardapioProdutos: "/cardapio/produtos",
-  cardapioProdutoDetalhe: (id: string) => `/cardapio/produtos/${id}`,
+
+  cardapioProdutoDetalhe: (id: string): Route =>
+    `/cardapio/produtos/${id}` as Route,
+
   mesas: "/mesas",
   configuracoes: "/configuracoes",
 
   // Área do cliente (pública, sem login)
-  clienteMesa: (slug: string, token: string) => `/${slug}/mesa/${token}`,
-  clienteMenu: (slug: string) => `/${slug}/menu`,
-  clienteAcompanharPedido: (slug: string, orderId: string) => `/${slug}/orders/${orderId}`,
+  clienteMesa: (slug: string, token: string): Route =>
+    `/${slug}/mesa/${token}` as Route,
+
+  clienteMenu: (slug: string): Route =>
+    `/${slug}/menu` as Route,
+
+  clienteAcompanharPedido: (
+    slug: string,
+    orderId: string,
+  ): Route =>
+    `/${slug}/orders/${orderId}` as Route,
 } as const;
 
 /** Prefixo único de versão da API — qualquer chamada ao backend passa por aqui. */
