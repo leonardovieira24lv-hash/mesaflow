@@ -8,9 +8,9 @@ export const metadata = { title: "Bem-vindo" };
 export default async function ResolverMesaPage({
   params,
 }: {
-  params: Promise<{ slug: string; token: string }>;
+  params: { slug: string; token: string };
 }) {
-  const { slug, token } = await params;
+  const { slug, token } = params;
   return (
     <div className="flex flex-col gap-4 p-6">
       <h1 className="text-xl font-semibold">Bem-vindo</h1>

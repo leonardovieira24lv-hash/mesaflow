@@ -8,9 +8,9 @@ export const metadata = { title: "Acompanhar pedido" };
 export default async function AcompanharPedidoPage({
   params,
 }: {
-  params: Promise<{ slug: string; orderId: string }>;
+  params: { slug: string; orderId: string };
 }) {
-  const { slug, orderId } = await params;
+  const { slug, orderId } = params;
   return (
     <div className="flex flex-col gap-4 p-6">
       <h1 className="text-xl font-semibold">Seu pedido</h1>

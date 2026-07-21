@@ -6,7 +6,7 @@ import { parseOrThrow } from "@/lib/api/validation";
 import { updateMenuItemSchema } from "@/lib/validations/menu";
 
 interface RouteParams {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 function toItemDto(row: {
@@ -32,7 +32,7 @@ function toItemDto(row: {
 // GET /api/v1/menu/items/{id} — contrato seção 6.3
 export async function GET(_request: Request, { params }: RouteParams) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const { profile } = await requireSession();
 
     const supabase = await createClient();
@@ -60,7 +60,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 // PATCH /api/v1/menu/items/{id} — contrato seção 6.4 (edição completa e toggle de disponibilidade)
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const { profile } = await requireSession();
     const body = await request.json();
     const input = parseOrThrow(updateMenuItemSchema, body);
@@ -120,7 +120,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 // DELETE /api/v1/menu/items/{id} — contrato seção 6.5
 export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const { profile } = await requireSession();
 
     const supabase = await createClient();

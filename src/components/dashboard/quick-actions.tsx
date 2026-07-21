@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { Route } from "next";
 import { UtensilsCrossed, Package, LayoutGrid, QrCode } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
@@ -6,7 +7,12 @@ import { ROUTES } from "@/constants/routes";
 
 interface QuickAction {
   label: string;
-  href: string;
+  // `Route`, não `string`: com `typedRoutes` (next.config.mjs), `<Link href>`
+  // exige uma rota conhecida em tempo de compilação. Declarar este campo como
+  // `string` widening o literal de `ROUTES.*` (que é `as const`) de volta
+  // para `string` genérico, e o build falha em "Type 'string' is not
+  // assignable to type '...Route...'".
+  href: Route;
   icon: LucideIcon;
 }
 

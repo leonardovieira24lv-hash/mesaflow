@@ -5,8 +5,8 @@ export const metadata = { title: "Detalhes do Pedido" };
  * com inscrição no canal `orders:id=eq.{id}` para refletir mudanças de
  * outro atendente em tempo real.
  */
-export default async function PedidoDetalhePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function PedidoDetalhePage({ params }: { params: { id: string } }) {
+  const { id } = params;
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Pedido {id}</h1>

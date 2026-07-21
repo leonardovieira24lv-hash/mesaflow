@@ -1,4 +1,5 @@
 import { CheckCircle2, Circle } from "lucide-react";
+import type { Route } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getRestaurantOverview } from "@/lib/restaurant/get-restaurant-overview";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -11,7 +12,11 @@ interface ChecklistItem {
   key: string;
   label: string;
   done: boolean;
-  href: string;
+  // `Route`, não `string` — `ButtonLink` estende `LinkProps` do `next/link`,
+  // cujo `href` é validado por `typedRoutes` (next.config.mjs). Um campo
+  // `string` aqui faria o literal de `ROUTES.*` (`as const`) perder o tipo
+  // exato e quebrar o build ("Type 'string' is not assignable to '...Route...'").
+  href: Route;
   cta: string;
 }
 

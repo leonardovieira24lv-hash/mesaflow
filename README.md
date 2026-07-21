@@ -6,6 +6,55 @@ encaixar. O contrato de API oficial (front-end ↔ back-end) vive em
 `api-contracts-v1.md` e é a fonte da verdade para payloads, códigos de erro e
 comportamento dos endpoints — este README nunca deve contradizê-lo.
 
+## Correção de build para Next.js 14 / React 18 (pós-Sprint 7)
+
+Após o deploy inicial na Vercel, o build falhava na verificação de
+TypeScript. Causa raiz: parte do código (rotas dinâmicas e algumas páginas)
+usava o padrão de `params`/`cookies()` **assíncronos**, que só existe a
+partir do Next.js **15** — mas `package.json` fixa **Next 14.2.5 / React
+18.3.1** deliberadamente, e essa versão não deve mudar. Esta rodada revisou
+o projeto inteiro (`src/` completo, todas as rotas do App Router, hooks,
+utilitários e componentes compartilhados) e corrigiu tudo o que não era
+compatível com a versão realmente instalada — sem alterar nenhuma regra de
+negócio, visual ou arquitetura:
+
+- **`params`/`cookies()` revertidos para o padrão síncrono do Next 14** em:
+  `api/v1/tables/[id]`, `api/v1/menu/categories/[id]`,
+  `api/v1/menu/items/[id]`, `(admin)/cardapio/produtos/[id]`,
+  `(admin)/pedidos/[id]`, `(public)/[slug]/orders/[orderId]`,
+  `(public)/[slug]/menu`, `(public)/[slug]/mesa/[token]` e
+  `lib/supabase/server.ts` (`cookies()` agora chamado sem `await` — no Next
+  14 ele já é síncrono).
+- **Dois erros reais de `typedRoutes`** (`next.config.mjs`): em
+  `components/dashboard/quick-actions.tsx` e
+  `components/dashboard/onboarding-checklist.tsx`, os itens de navegação
+  tinham `href: string` numa interface local — isso "alarga" o tipo literal
+  de `ROUTES.*` (que é `as const`) de volta para `string` genérico antes de
+  chegar em `<Link>`/`<ButtonLink>`, e `typedRoutes` exige uma rota literal
+  conhecida em tempo de compilação. Corrigido tipando `href: Route`
+  (importado de `"next"`) nos dois lugares.
+- **`login-form.tsx`** (correção já aplicada antes desta rodada, mantida):
+  `redirect_to` (vindo de `useSearchParams()`) é validado como caminho
+  interno antes do cast para `Route`, evitando tanto o erro de tipo quanto
+  um open redirect.
+- Confirmado, com revisão completa de todo o `src/`: nenhum import quebrado,
+  nenhuma entidade JSX não escapada, nenhuma lista sem `key`, nenhum
+  componente com hook sem `"use client"`, e nenhuma API exclusiva de
+  React 19/Next 15+ (`useActionState`, `use()`, `unstable_after`, etc.) — o
+  projeto já era compatível com React 18 em todo o resto.
+
+**Limitação do ambiente onde esta correção foi feita:** sem acesso de rede
+para `npm install`, não foi possível rodar `next build`/`tsc --noEmit`/
+`next lint` de fato contra as dependências reais do projeto. A verificação
+foi feita revisando manualmente arquivo por arquivo, mais uma checagem
+sintática com o compilador TypeScript local (sem os tipos reais de React/
+Next/Supabase instalados, o que gera muito ruído de "módulo não encontrado"
+irrelevante, filtrado manualmente). **Antes do próximo deploy, vale rodar
+`npm install && npx tsc --noEmit && npm run lint && npm run build`
+localmente ou confiar no próprio build da Vercel** — que agora deve ter
+apenas os dois pontos acima (já corrigidos) como possíveis causas de falha
+de tipo.
+
 ## Auditoria de fundação (pós-Sprint 6, antes da Sprint 7)
 
 Antes de iniciar qualquer módulo novo, esta rodada de auditoria validou o

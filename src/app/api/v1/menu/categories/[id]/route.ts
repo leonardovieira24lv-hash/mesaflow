@@ -6,13 +6,13 @@ import { parseOrThrow } from "@/lib/api/validation";
 import { updateCategorySchema } from "@/lib/validations/menu";
 
 interface RouteParams {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 // PATCH /api/v1/menu/categories/{id} — contrato seção 5.3
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const { profile } = await requireSession();
     const body = await request.json();
     const { name } = parseOrThrow(updateCategorySchema, body);
@@ -51,7 +51,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 // DELETE /api/v1/menu/categories/{id} — contrato seção 5.4
 export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const { profile } = await requireSession();
 
     const supabase = await createClient();

@@ -11,7 +11,12 @@ import type { Database } from "@/types/database.types";
  * mesmo de tocar no banco, permitindo devolver 401/403 cedo.
  */
 export async function createClient() {
-  const cookieStore = await cookies();
+  // Next.js 14: `cookies()` é síncrono (só passou a retornar uma Promise a
+  // partir da API de requisição assíncrona do Next.js 15). A função
+  // continua `async` porque todo o projeto já chama `await createClient()`
+  // — isso segue funcionando normalmente, só não há mais nada para aguardar
+  // aqui dentro.
+  const cookieStore = cookies();
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
