@@ -7,8 +7,8 @@ import type { MenuCategory, MenuItem } from "@/types/domain";
 export const metadata = { title: "Detalhes do Produto" };
 
 /** Edição de Produto (GET/PATCH/DELETE /api/v1/menu/items/{id} — contrato seção 6.3–6.5). */
-export default async function ProdutoDetalhePage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default async function ProdutoDetalhePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { profile } = await requirePageSession();
   const supabase = await createClient();
 

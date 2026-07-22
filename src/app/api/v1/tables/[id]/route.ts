@@ -6,13 +6,13 @@ import { parseOrThrow } from "@/lib/api/validation";
 import { updateTableSchema } from "@/lib/validations/tables";
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // PATCH /api/v1/tables/{id} — contrato seção 7.3
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { profile } = await requireSession();
     const body = await request.json();
     const { name, status } = parseOrThrow(updateTableSchema, body);
@@ -61,7 +61,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 // DELETE /api/v1/tables/{id} — contrato seção 7.4
 export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { profile } = await requireSession();
 
     const supabase = await createClient();
