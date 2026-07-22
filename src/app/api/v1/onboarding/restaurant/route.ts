@@ -31,26 +31,16 @@ export async function POST(request: Request) {
       email_confirm: true, // sem etapa de confirmação de e-mail nesta v1
       user_metadata: { owner_name: input.owner_name },
     });
-if (createUserError) {
-  const message = createUserError.message.toLowerCase();
-
-  if (message.includes("already been registered") || message.includes("already exists")) {
-    throw new AppError("CONFLICT", "Este e-mail já está cadastrado.");
-  }
-
-  console.error("SUPABASE AUTH ERROR:", createUserError);
-
-  throw new AppError(
-    "VALIDATION_ERROR",
-    createUserError.message
-  );
-}
     if (createUserError) {
       const message = createUserError.message.toLowerCase();
+
+      console.error("SUPABASE AUTH ERROR:", createUserError);
+
       if (message.includes("already been registered") || message.includes("already exists")) {
         throw new AppError("CONFLICT", "Este e-mail já está cadastrado.");
       }
-      throw new AppError("VALIDATION_ERROR", "Não foi possível criar a conta com os dados informados.");
+
+      throw new AppError("VALIDATION_ERROR", createUserError.message);
     }
 
     createdUserId = userData.user.id;
