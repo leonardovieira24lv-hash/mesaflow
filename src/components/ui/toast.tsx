@@ -35,6 +35,12 @@ function getSnapshot() {
   return toasts;
 }
 
+const EMPTY_TOASTS: ToastItem[] = [];
+
+function getServerSnapshot() {
+  return EMPTY_TOASTS;
+}
+
 function push(variant: ToastVariant, title: string, description?: string) {
   const id = crypto.randomUUID();
   toasts = [...toasts, { id, title, description, variant }];
@@ -65,7 +71,11 @@ const VARIANT_CONFIG: Record<ToastVariant, { icon: typeof Info; className: strin
 
 /** Monta o container global de toasts. Incluir uma única vez, no root layout. */
 export function Toaster() {
-  const items = useSyncExternalStore(subscribe, getSnapshot, () => []);
+  const items = useSyncExternalStore(
+  subscribe,
+  getSnapshot,
+  getServerSnapshot
+);
 
   return (
     <div
