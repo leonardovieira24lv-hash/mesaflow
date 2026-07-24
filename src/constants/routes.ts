@@ -36,6 +36,12 @@ export const ROUTES = {
   clienteMenu: (slug: string): Route =>
     `/${slug}/menu` as Route,
 
+  clienteCarrinho: (slug: string): Route =>
+    `/${slug}/carrinho` as Route,
+
+  clienteCheckout: (slug: string): Route =>
+    `/${slug}/checkout` as Route,
+
   clienteAcompanharPedido: (
     slug: string,
     orderId: string,

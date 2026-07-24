@@ -48,11 +48,18 @@ export function Modal({ open, onClose, title, description, children, footer, hid
         // Fecha ao clicar no backdrop (fora do <div> de conteúdo).
         if (e.target === ref.current) onClose();
       }}
-      aria-labelledby="modal-title"
+      // `hideHeader` omite o `<h2 id="modal-title">` — sem isso,
+      // `aria-labelledby="modal-title"` fixo apontaria para um id
+      // inexistente e o diálogo ficaria sem nome acessível para leitores de
+      // tela. Sprint 10 (auditoria): nenhum consumidor usa `hideHeader` hoje,
+      // mas corrigido aqui porque é o tipo de bug que só aparece quando
+      // alguém finalmente usar a opção — melhor não deixar a armadilha.
+      aria-labelledby={hideHeader ? undefined : "modal-title"}
+      aria-label={hideHeader ? title : undefined}
       className={cn(
         "m-auto w-full max-w-md rounded-lg border border-border bg-surface p-0 text-surface-foreground shadow-lg",
         "backdrop:bg-foreground/40 backdrop:backdrop-blur-[2px]",
-        "open:animate-fade-in",
+        "open:animate-scale-in",
         className,
       )}
     >

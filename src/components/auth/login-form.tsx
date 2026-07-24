@@ -12,6 +12,7 @@ import { ROUTES } from "@/constants/routes";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 
 type FieldErrors = Partial<Record<"email" | "password", string>>;
 
@@ -83,12 +84,7 @@ export function LoginForm() {
       </div>
 
       {formError && (
-        <div
-          role="alert"
-          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {formError}
-        </div>
+        <Alert variant="destructive">{formError}</Alert>
       )}
 
       <FormField label="E-mail" error={errors.email}>

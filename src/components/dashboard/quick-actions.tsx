@@ -34,9 +34,9 @@ export function QuickActions() {
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {ACTIONS.map(({ label, href, icon: Icon }) => (
-        <Link key={label} href={href}>
-          <Card className="flex flex-col items-center gap-2 p-5 text-center transition-colors hover:bg-muted/50">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+        <Link key={label} href={href} className="group">
+          <Card interactive className="flex flex-col items-center gap-2 p-5 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 transition-transform group-hover:scale-110">
               <Icon className="h-5 w-5 text-primary" aria-hidden />
             </div>
             <span className="text-sm font-medium">{label}</span>

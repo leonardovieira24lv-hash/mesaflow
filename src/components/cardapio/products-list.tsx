@@ -8,6 +8,7 @@ import { ButtonLink } from "@/components/ui/button-link";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/select";
+import { formatCurrency } from "@/lib/format";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Pagination } from "@/components/ui/pagination";
@@ -35,7 +36,6 @@ interface ProductsListProps {
   initialMeta: ApiPaginationMeta;
 }
 
-const currencyFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const ALL_CATEGORIES = "all";
 
 /**
@@ -223,7 +223,7 @@ export function ProductsList({ categories, initialItems, initialMeta }: Products
                       <TableCell className="text-muted-foreground">
                         {categoryNameById.get(item.categoryId) ?? "—"}
                       </TableCell>
-                      <TableCell className="font-mono">{currencyFormatter.format(item.price)}</TableCell>
+                      <TableCell className="font-mono">{formatCurrency(item.price)}</TableCell>
                       <TableCell>
                         <Switch
                           checked={item.isAvailable}

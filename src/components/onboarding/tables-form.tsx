@@ -7,6 +7,7 @@ import { ROUTES } from "@/constants/routes";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 import { toast } from "@/components/ui/toast";
 import { OnboardingProgress } from "@/components/onboarding/onboarding-progress";
 import { TableQrCode } from "@/components/onboarding/table-qr-code";
@@ -133,12 +134,7 @@ export function TablesForm() {
         </div>
 
         {error && (
-          <div
-            role="alert"
-            className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-          >
-            {error}
-          </div>
+          <Alert variant="destructive">{error}</Alert>
         )}
 
         <FormField label="Número de mesas">

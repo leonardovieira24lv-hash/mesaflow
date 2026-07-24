@@ -5,6 +5,7 @@ import { AppError, handleRouteError } from "@/lib/api/errors";
 import { parseOrThrow } from "@/lib/api/validation";
 import { createRestaurantSchema } from "@/lib/validations/onboarding";
 import { slugify, nextSlugCandidate } from "@/lib/slug";
+import { assertWithinRateLimit } from "@/lib/api/rate-limit";
 
 // POST /api/v1/onboarding/restaurant — contrato seção 2.1
 //
@@ -16,22 +17,27 @@ import { slugify, nextSlugCandidate } from "@/lib/slug";
 // conta "órfã" sem restaurante.
 const MAX_SLUG_ATTEMPTS = 5;
 
+// Sprint 13 (Fase 2): este endpoint chama `admin.auth.admin.createUser`
+// (service role) diretamente — ao contrário do login, que usa o SDK público
+// do Supabase e por isso já herda o rate limiting nativo do GoTrue, aqui não
+// havia nenhum limite. Sem isso, o endpoint permitia criação ilimitada de
+// contas e funcionava como oráculo de enumeração de e-mail (a mensagem
+// "já cadastrado" confirma existência de conta). Limite generoso o bastante
+// para um cadastro legítimo nunca esbarrar nele.
+const SIGNUP_RATE_LIMIT = { limit: 5, windowMs: 60 * 60_000 };
+
+function resolveClientIp(request: Request): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  return forwardedFor?.split(",")[0]?.trim() || "unknown";
+}
+
 export async function POST(request: Request) {
   const admin = createAdminClient();
-  console.log("===== DEBUG SUPABASE =====");
-console.log("URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
-console.log(
-  "ANON KEY:",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "OK" : "UNDEFINED"
-);
-console.log(
-  "SERVICE ROLE:",
-  process.env.SUPABASE_SERVICE_ROLE_KEY ? "OK" : "UNDEFINED"
-);
-console.log("==========================");
   let createdUserId: string | null = null;
 
   try {
+    assertWithinRateLimit(`onboarding-signup:${resolveClientIp(request)}`, SIGNUP_RATE_LIMIT);
+
     const body = await request.json();
     const input = parseOrThrow(createRestaurantSchema, body);
 

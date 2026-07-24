@@ -1,10 +1,19 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  /** Ativa hover com leve elevação/realce de borda — usar em cards que são também um link/botão (ex.: atalhos, itens clicáveis). Não afeta cards estáticos. */
+  interactive?: boolean;
+}
+
+export function Card({ className, interactive, ...props }: CardProps) {
   return (
     <div
-      className={cn("rounded-lg border border-border bg-surface text-surface-foreground shadow-sm", className)}
+      className={cn(
+        "rounded-lg border border-border bg-surface text-surface-foreground shadow-card transition-shadow",
+        interactive && "hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-card-hover transition-transform",
+        className,
+      )}
       {...props}
     />
   );

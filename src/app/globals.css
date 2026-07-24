@@ -122,4 +122,20 @@
   .ticket-edge::after {
     right: -7px;
   }
+
+  /*
+   * Shimmer de skeleton — substitui o pulso de opacidade plano por uma
+   * varredura de brilho sutil (mesma técnica usada por Linear/Vercel).
+   * Mantido em `@layer components` para poder ser combinado livremente
+   * via `cn()` com `bg-muted` já aplicado pelo componente base.
+   */
+  .skeleton-shimmer {
+    background-image: linear-gradient(
+      100deg,
+      transparent 20%,
+      hsl(var(--surface) / 0.7) 50%,
+      transparent 80%
+    );
+    background-size: 200% 100%;
+  }
 }

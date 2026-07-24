@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 import { createMenuItemSchema, updateMenuItemSchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
 import type { ApiError } from "@/types/api";
@@ -118,12 +119,7 @@ export function ProductForm({ categories, item, onSaved, onCancel }: ProductForm
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
       {formError && (
-        <div
-          role="alert"
-          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {formError}
-        </div>
+        <Alert variant="destructive">{formError}</Alert>
       )}
 
       <FormField label="Categoria" error={errors.category_id} required>

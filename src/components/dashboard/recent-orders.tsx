@@ -6,15 +6,20 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { OrderStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionError } from "@/components/dashboard/section-error";
+import { formatCurrency } from "@/lib/format";
 
-const currencyFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const timeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
 /**
  * Últimos pedidos — sob demanda (sem Realtime; ver `lib/dashboard/queries.ts`).
- * Hoje sempre mostra o estado vazio, porque a Área do Cliente (que cria
- * pedidos, contrato seção 3.3) ainda não existe — é o estado real e
- * esperado desta sprint, não um bug.
+ *
+ * Nota (Sprint 10, auditoria de qualidade): o comentário original desta
+ * função dizia que a lista "sempre mostra o estado vazio, porque a Área do
+ * Cliente ainda não existe" — isso descrevia o estado da Sprint 5 e ficou
+ * desatualizado assim que a Sprint 8 implementou a criação de pedidos
+ * (contrato 3.3). `getRecentOrders` já consulta a tabela `orders` de verdade
+ * e não precisou de nenhuma mudança para isso — só a documentação estava
+ * errada, corrigida aqui.
  */
 export async function RecentOrders({ restaurantId }: { restaurantId: string }) {
   try {
@@ -51,7 +56,7 @@ export async function RecentOrders({ restaurantId }: { restaurantId: string }) {
                     <TableCell>
                       <OrderStatusBadge status={order.status} />
                     </TableCell>
-                    <TableCell className="font-mono">{currencyFormatter.format(order.totalAmount)}</TableCell>
+                    <TableCell className="font-mono">{formatCurrency(order.totalAmount)}</TableCell>
                     <TableCell className="font-mono text-muted-foreground">
                       {timeFormatter.format(new Date(order.createdAt))}
                     </TableCell>

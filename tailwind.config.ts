@@ -59,6 +59,10 @@ const config: Config = {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
         },
+        shimmer: {
+          from: { backgroundPosition: "150% 0" },
+          to: { backgroundPosition: "-50% 0" },
+        },
         "toast-in": {
           from: { transform: "translateY(0.5rem)", opacity: "0" },
           to: { transform: "translateY(0)", opacity: "1" },
@@ -67,11 +71,22 @@ const config: Config = {
           from: { opacity: "0" },
           to: { opacity: "1" },
         },
+        "scale-in": {
+          from: { transform: "scale(0.97)", opacity: "0" },
+          to: { transform: "scale(1)", opacity: "1" },
+        },
       },
       animation: {
         "skeleton-pulse": "skeleton-pulse 1.6s ease-in-out infinite",
+        shimmer: "shimmer 1.8s ease-in-out infinite",
         "toast-in": "toast-in 0.2s ease-out",
         "fade-in": "fade-in 0.15s ease-out",
+        "scale-in": "scale-in 0.15s ease-out",
+      },
+      boxShadow: {
+        card: "0 1px 2px 0 rgb(30 20 12 / 0.04), 0 1px 3px 0 rgb(30 20 12 / 0.03)",
+        "card-hover": "0 4px 10px -2px rgb(30 20 12 / 0.08), 0 2px 6px -2px rgb(30 20 12 / 0.05)",
+        bar: "0 -4px 16px 0 rgb(30 20 12 / 0.08)",
       },
     },
   },

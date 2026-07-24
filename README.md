@@ -6,7 +6,230 @@ encaixar. O contrato de API oficial (front-end ↔ back-end) vive em
 `api-contracts-v1.md` e é a fonte da verdade para payloads, códigos de erro e
 comportamento dos endpoints — este README nunca deve contradizê-lo.
 
+## Estado atual do MVP (pós-Sprint 10)
+
+A v1 do contrato (`api-contracts-v1.md`, seções 2 a 8) está **completa e
+auditada**: todos os 26 endpoints da seção 9 (Visão Consolidada) estão
+implementados, e a Sprint 10 fechou a última lacuna de front-end que restava
+— o Painel de Pedidos administrativo (contrato 8.1/8.2), que tinha o backend
+pronto desde a Sprint 8 mas a tela ainda era um placeholder. Nenhum endpoint
+da v1 retorna mais `stubResponse(...)`, e não sobrou nenhuma tela do fluxo
+principal com "Módulo a implementar".
+
+Módulos concluídos: Autenticação (3), Onboarding (4), Dashboard (5), Cardápio
+(6), Mesas e QR Codes (7), Área do Cliente pública + Pedidos administrativos e
+Realtime (8), Configurações (9) — números entre parênteses referem-se à
+sprint em que o backend ficou pronto; ver "Auditoria de Qualidade (Sprint
+10)" para o que precisou de correção na camada de front-end.
+
+Fora do escopo da v1 (ver contrato, seção 10, e a seção de roadmap no fim
+deste documento): funcionários/convites, variações de produto, histórico de
+status, pagamentos, estoque, fidelidade e relatórios — todos ficam para v1.1
+em diante.
+
+## Auditoria de Qualidade (Sprint 10)
+
+Sprint sem novas funcionalidades — v1 e v1.1 continuam com o mesmo escopo já
+documentado. Objetivo único: revisar consistência visual, mobile/desktop,
+navegação, loading/vazio/erro, componentes duplicados, código morto,
+performance, memory leaks, re-renderizações, memoização, acessibilidade e o
+Design System, percorrendo a jornada completa (Login → Onboarding →
+Dashboard → Cardápio → QR Code → Cliente → Carrinho → Checkout → Pedido →
+Painel Administrativo → Finalização).
+
+### Bug crítico encontrado e corrigido: Painel de Pedidos era um placeholder
+
+`(admin)/pedidos/page.tsx` e `(admin)/pedidos/[id]/page.tsx` ainda exibiam
+"Módulo a implementar" — apesar do backend completo (contrato 8.1/8.2/8.3,
+Sprint 8) e do link "Pedidos" já existir na barra lateral
+(`admin-sidebar.tsx`) apontando para eles. Isso quebrava a etapa "Painel
+Administrativo" da jornada completa pedida nesta auditoria: um atendente
+literalmente não conseguia ver ou avançar o status de nenhum pedido pelo
+painel. Não é uma funcionalidade nova da v1.1 — é o fechamento de um módulo
+que já constava como "concluído" na documentação da Sprint 8/9, então tratado
+aqui como correção de bug, não como novo módulo.
+
+Construído com os mesmos padrões já estabelecidos (Server Component carrega
+a página inicial, Client Component cuida da interação — mesmo modelo de
+`(admin)/mesas`):
+
+- `components/pedidos/orders-list.tsx`: listagem com abas de filtro por
+  status, paginação (`<Pagination>`), skeleton de carregamento
+  (`<SkeletonTableRow>`), estado vazio (`<EmptyState>`) e clique na linha
+  (mouse + teclado) para abrir o detalhe.
+- `components/pedidos/order-detail.tsx`: itens, observações, total (usando
+  `<CardTicketDivider>` — ver achado de Design System abaixo) e botões de
+  transição de status, calculados dinamicamente a partir da máquina de
+  estados do contrato 8.3 (nunca uma lista de botões fixa que poderia
+  divergir do backend). Cancelar pede confirmação (`<ConfirmDialog>`); os
+  demais avanços aplicam direto, mesmo critério já usado no restante do
+  painel para ações destrutivas vs. não-destrutivas.
+- `lib/orders/order-status-transitions-map.ts` (novo): a máquina de estados
+  de `lib/orders/status-transitions.ts` não podia ser importada por um
+  Client Component (depende de `AppError`, que importa `next/server`) — a
+  tabela pura foi extraída para este novo arquivo, e `status-transitions.ts`
+  passou a importar dali em vez de manter sua própria cópia. Elimina a
+  duplicação que existiria se o Painel simplesmente reescrevesse a mesma
+  tabela à mão.
+- **Realtime de verdade** (não polling): `restaurant:{id}:orders` na lista,
+  `orders:id=eq.{id}` no detalhe — via `@supabase/ssr` no browser
+  (`lib/supabase/client.ts`) com `postgres_changes`. Diferente da Área do
+  Cliente pública (que usa polling por razão de segurança documentada em
+  `order-tracking-view.tsx`), aqui é seguro porque a tela só existe atrás de
+  `requireSession()` + RLS: o Realtime do Supabase respeita a mesma política
+  de RLS de leitura da tabela, então um usuário autenticado só recebe
+  eventos dos pedidos do próprio restaurante — exatamente o comportamento
+  que o comentário original de `api/v1/orders/route.ts` (Sprint 8) já
+  previa, mas nunca tinha sido implementado.
+
+### Outros bugs encontrados e corrigidos
+
+- **Comentário desatualizado em `components/dashboard/recent-orders.tsx`**:
+  dizia que a lista "sempre mostra o estado vazio" — verdade na Sprint 5,
+  falso desde que a Sprint 8 implementou a criação de pedidos.
+  `getRecentOrders` já consultava a tabela `orders` real e não precisou de
+  nenhuma mudança de comportamento, só a documentação estava errada.
+- **`console.log` de debug em produção**: `api/v1/onboarding/restaurant/route.ts`
+  imprimia se `NEXT_PUBLIC_SUPABASE_URL`/`ANON_KEY`/`SERVICE_ROLE_KEY`
+  estavam definidas a cada cadastro — pendência já registrada nas Sprints 9
+  e 10, removida agora que a sprint tem escopo de auditoria irrestrito.
+- **`next.config.mjs`**: `experimental.typedRoutes` renomeado para
+  `typedRoutes` (topo do objeto de config) — a chave antiga ainda
+  funcionava, mas emitia aviso a cada build nesta versão do Next.
+- **Memory leak — timer sem cleanup**: `CheckoutContent` (`checkout-view.tsx`)
+  chamava `setTimeout(...)` (1200ms) para limpar o carrinho e redirecionar
+  após um pedido, sem limpar esse timer se o componente desmontasse antes
+  disso (ex.: cliente fecha a aba logo após o pedido ser aceito). Corrigido
+  guardando o id do timer numa ref e limpando no unmount.
+- **Bug de acessibilidade latente em `components/ui/modal.tsx`**:
+  `aria-labelledby="modal-title"` era fixo, mas a opção `hideHeader` omite
+  o `<h2 id="modal-title">` — se algum consumidor futuro usasse
+  `hideHeader`, o diálogo ficaria sem nome acessível para leitores de tela.
+  Nenhum componente usa `hideHeader` hoje, mas corrigido porque é o tipo de
+  bug que só aparece quando alguém finalmente usar a opção.
+
+### Componentes duplicados
+
+Três instâncias idênticas de `new Intl.NumberFormat("pt-BR", { style:
+"currency", currency: "BRL" })` — em `lib/format.ts` (a canônica, criada na
+Sprint 8 "para a Área do Cliente não abrir uma terceira instância igual",
+mas os dois arquivos anteriores foram deliberadamente deixados como estavam
+naquele momento), `components/dashboard/recent-orders.tsx` e
+`components/cardapio/products-list.tsx`. Consolidado: os dois últimos agora
+importam `formatCurrency` de `lib/format.ts` — sem nenhuma mudança de
+comportamento, só uma instância a menos rodando em memória por render.
+
+### Performance / re-renderizações / memoização
+
+`components/cardapio-cliente/cart-context.tsx`: o objeto `value` do
+`<CartContext.Provider>` e as quatro funções do carrinho
+(`addItem`/`updateQuantity`/`removeItem`/`clear`) eram recriados a cada
+render do `<CartProvider>`, fazendo todo consumidor de `useCart()`
+re-renderizar mesmo quando nada relevante tinha mudado. Corrigido com
+`useCallback` nas funções e `useMemo` no objeto de valor — mesmo carrinho,
+menos trabalho de render em cascata pela árvore de componentes que o
+consome (modal de produto, resumo do carrinho, linha do carrinho, checkout).
+
+### Consistência do Design System
+
+`<CardTicketDivider>` — descrito no próprio código como "o elemento de
+assinatura do design system", pensado especificamente para separar itens do
+total num card de pedido/comanda — só era usado na página de showcase
+(`/design-system`), nunca em nenhuma tela real de pedido (`checkout-view.tsx`,
+`carrinho-view.tsx` ou o antigo placeholder de Pedidos). Usado agora em
+`<OrderDetail>` (novo). Não alterado em `checkout-view.tsx`/`carrinho-view.tsx`
+por serem telas já em produção desde a Fase 4 — fica registrado como melhoria
+sugerida abaixo, não como bug, para não alterar uma tela já funcionando fora
+do escopo desta auditoria.
+
+### Acessibilidade
+
+- Adicionado `aria-live="polite"` no indicador de quantidade do modal de
+  produto (`product-detail-modal.tsx`), para leitores de tela anunciarem a
+  mudança ao clicar em +/-.
+- Revisados todos os formulários do fluxo principal (login, onboarding,
+  cardápio, mesas, configurações, checkout): todos já usam `<FormField>`
+  (label associado via `htmlFor`/`id`), `aria-label` em botões só-ícone, e
+  `role="alert"` em mensagens de erro de formulário — nenhum problema novo
+  encontrado além do já corrigido em `modal.tsx`.
+
+### Navegação, loading, vazio e erro — revisados, sem bugs adicionais
+
+Todas as listagens do painel (Cardápio, Mesas, e agora Pedidos) usam os
+mesmos primitivos (`<EmptyState>`, `<Skeleton*>`, toasts de erro com opção
+de tentar novamente) — nenhuma tela do fluxo principal ficou sem um desses
+três estados. Navegação entre Dashboard → Cardápio/Mesas/Pedidos/Configurações
+(sidebar) e a jornada pública completa (menu → carrinho → checkout →
+acompanhamento) foram percorridas linha a linha; nenhum link quebrado ou
+rota órfã encontrada.
+
+### Melhorias sugeridas antes da publicação do MVP (não implementadas nesta sprint)
+
+Todas abaixo exigiriam tocar telas já em produção fora do escopo desta
+auditoria, ou são otimizações sem bug associado — documentadas, não
+corrigidas:
+
+1. **Usar `<CardTicketDivider>` em `checkout-view.tsx`/`carrinho-view.tsx`**
+   para consistência total do Design System nas outras duas telas que
+   também representam uma comanda.
+2. **Testes automatizados** (unitários e E2E da jornada completa) — nenhum
+   existe hoje; esta sprint validou manualmente + `tsc`/`lint`/`build`, o
+   que não substitui uma suíte de regressão de verdade.
+3. **`loading.tsx` por rota** nas páginas públicas (`(public)/[slug]/menu`,
+   `/checkout`) para um esqueleto de carregamento nativo do App Router
+   durante a navegação entre elas, em vez de depender só do Server
+   Component terminar de buscar os dados.
+4. **Revisar `hideHeader` em `<Modal>`**: hoje não é usado por nenhum
+   consumidor — decidir se vira uma opção realmente suportada (com um teste
+   de uso real) ou se é removida como código morto numa próxima sprint.
+5. **Rate limiting real** em `POST /api/v1/public/{slug}/orders` — o
+   contrato já prevê `429 RATE_LIMITED` e o front-end já trata essa
+   resposta (`checkout-view.tsx`), mas não foi auditado nesta sprint se o
+   backend de fato aplica um limite (fora do escopo de front-end desta
+   auditoria).
+
+
+
+Uma seção logo abaixo (**"Correção de build para Next.js 14 / React 18"**,
+escrita após a Sprint 7) registra uma correção que teria revertido o projeto
+para o padrão **síncrono** de `params`/`cookies()` do Next.js 14, e afirma que
+a versão 14.2.5 foi fixada "deliberadamente". Isso **nunca refletiu o estado
+real do código nem do `package.json`**, que sempre declarou
+`"next": "^15.5.21"` — uma contradição identificada na auditoria de fundação
+anterior a esta sprint.
+
+Nesta sprint, pela primeira vez, o ambiente teve acesso de rede real para
+`npm install`. Isso permitiu confirmar de forma definitiva (`npx tsc --noEmit`,
+`npx next lint`, `npx next build`, este último imprimindo
+`▲ Next.js 15.5.21` no cabeçalho do build):
+
+- **100% das rotas dinâmicas** (`api/v1/tables/[id]`, `api/v1/orders/[id]`,
+  `(admin)/pedidos/[id]`, `(public)/[slug]/menu`, etc. — 16 arquivos ao todo)
+  usam o padrão assíncrono `params: Promise<{...}>` com `await params`, que só
+  existe a partir do Next.js 15.
+- `lib/supabase/server.ts` chama `await cookies()` — também exclusivo do
+  Next.js 15 (`cookies()` síncrono não existe nessa API a partir dessa
+  versão).
+- Não sobrou nenhum resquício do padrão síncrono do Next 14 em lugar nenhum
+  do `src/`.
+
+**Conclusão:** a migração para Next.js 15 está de fato completa e é o estado
+real e correto do projeto — a seção "Correção de build para Next.js 14 /
+React 18" abaixo está **desatualizada/incorreta** e é mantida só como registro
+histórico de uma sprint passada; não representa mais a versão-alvo do
+projeto. `next.config.mjs` também emite um aviso (não um erro) de que
+`experimental.typedRoutes` foi renomeado para `typedRoutes` no topo do objeto
+de config nesta versão do Next — ajuste cosmético, não corrigido nesta sprint
+por ser fora do escopo de Configurações, registrado aqui para a próxima
+manutenção.
+
 ## Correção de build para Next.js 14 / React 18 (pós-Sprint 7)
+
+> **Nota (Sprint 9):** a premissa desta seção — de que o projeto foi revertido
+> para o padrão síncrono do Next 14 — está incorreta; ver "Versão do Next.js:
+> divergência resolvida" logo acima. Mantida abaixo apenas como registro
+> histórico do que foi de fato alterado naquela sprint (as correções de tipo
+> em si continuam válidas, só a conclusão sobre a versão-alvo não).
 
 Após o deploy inicial na Vercel, o build falhava na verificação de
 TypeScript. Causa raiz: parte do código (rotas dinâmicas e algumas páginas)
@@ -117,6 +340,157 @@ está com uma vulnerabilidade de segurança conhecida (aviso do próprio
 atrás do lançamento atual. Atualizar é uma mudança maior (breaking changes
 prováveis entre 14→16) que merece sua própria sprint de manutenção, com
 testes de regressão completos — não uma correção pontual de fundação.
+
+## Configurações do Restaurante (Sprint 9)
+
+Fecha o último endpoint pendente da v1 (contrato seção 4.2) e substitui o
+placeholder de `(admin)/configuracoes`.
+
+### Auditoria realizada antes desta sprint
+
+Repetiu-se o processo já estabelecido nas sprints anteriores — desta vez com
+acesso de rede real para `npm install` pela primeira vez, o que permitiu
+rodar `npx tsc --noEmit`, `npx next lint` e `npx next build` de verdade
+(não apenas revisão manual). Isso encontrou e corrigiu dois problemas reais
+de tipo deixados pela Sprint 8, sem alterar nenhum comportamento:
+
+- **`api/v1/orders/route.ts` e `api/v1/orders/[id]/route.ts` não compilavam.**
+  Mesma causa raiz já documentada em `lib/dashboard/queries.ts`
+  (`getRecentOrders`, Sprint 5/6): `orders.table_id` é *many-to-one*, mas o
+  parsing estrutural do `.select()` do postgrest-js infere a relação
+  embutida (`table:tables(id, name)`) como array por padrão — o compilador
+  via `row.table`/`order.table` como `{ id: any; name: any }[]`, sem
+  `.id`/`.name`. Corrigido com o mesmo cast explícito documentando a
+  cardinalidade real em tempo de execução.
+- **`components/cardapio-cliente/cart-context.tsx` não compilava.**
+  `addItem` fazia `next[existingIndex].quantity` depois de um `findIndex` —
+  sob `noUncheckedIndexedAccess` (tsconfig), o acesso por índice é tipado
+  como possivelmente `undefined` mesmo vindo de um índice já validado.
+  Corrigido com um guard explícito, mesmo padrão já usado em
+  `categories-manager.tsx` (Sprint 6) para o mesmo tipo de problema.
+
+Também resolvida a divergência de versão do Next.js (14 vs 15) identificada
+na análise anterior a esta sprint — ver "Versão do Next.js: divergência
+resolvida" no topo deste documento.
+
+Nenhuma outra inconsistência de rota, import ou contrato foi encontrada;
+`PATCH /api/v1/restaurant` era o único stub `501` restante da v1.
+
+### Endpoint (contrato seção 4.2)
+
+- `lib/validations/restaurant.ts`: `updateRestaurantSchema` — `name` e
+  `slug` opcionais (payload de PATCH parcial, conforme contrato), mas
+  quando `slug` é enviado, precisa respeitar o formato "somente letras
+  minúsculas, números e hífen" (mesma regra já usada implicitamente por
+  `lib/slug.ts` no onboarding).
+- `api/v1/restaurant/route.ts`: `PATCH` implementado por completo (stub
+  removido). Usa `requireOwner()` (não `requireSession()`) — o contrato
+  restringe este endpoint ao papel `owner`, ao contrário do Cardápio/Mesas.
+  Conflito de slug (`23505`) vira `409 CONFLICT`; resposta de sucesso segue
+  o mesmo formato de 4.1, sem o campo `checklist` (específico do Dashboard).
+
+### RLS desta sprint
+
+Nenhuma migration nova foi necessária. `supabase/migrations/0003_onboarding.sql`
+já criou `update_own_restaurant_as_owner` (política de `update` em
+`restaurants` restrita a `id in (... role = 'owner')`) — auditada e
+confirmada como correta e suficiente para este endpoint; alterá-la sem
+necessidade contrariaria a própria orientação desta sprint.
+
+### Interface Administrativa (`(admin)/configuracoes`)
+
+- `(admin)/configuracoes/page.tsx`: Server Component que carrega o
+  restaurante atual via `getRestaurantOverview` (mesma função já usada pelo
+  Dashboard e por `GET /api/v1/restaurant` — evita round-trip HTTP da
+  própria página para a própria API) e entrega para
+  `<RestaurantSettingsForm>`.
+- `components/configuracoes/restaurant-settings-form.tsx`: mostra os dados
+  atuais (nome, slug, status via novo `RestaurantStatusBadge`, e a URL
+  pública do cardápio montada no cliente a partir de `window.location.origin`
+  — mesmo padrão já usado para os QR Codes) e um formulário de edição.
+  Envia no PATCH só os campos que de fato mudaram (evita `409` por reenviar
+  o slug já salvo). Feedback via `toast`/`FormField`, mesmo padrão de
+  `CategoriesManager`.
+- **Impacto da mudança de slug:** o slug é usado tanto na URL pública do
+  cardápio (`/{slug}/menu`, `/{slug}/mesa/{token}`...) quanto codificado
+  dentro de cada QR Code já impresso (`components/mesas/table-qr-modal.tsx`).
+  Trocar o slug **invalida imediatamente** QR Codes já impressos e qualquer
+  link já compartilhado com o cliente final — não existe (nem esta sprint
+  implementa) nenhum mecanismo de redirecionamento do slug antigo para o
+  novo, porque isso exigiria mudar a resolução pública por slug (seção 3 do
+  contrato) para também aceitar slugs históricos, uma mudança de contrato e
+  de schema (precisaria de uma tabela de slugs antigos), não apenas de tela
+  — fora do escopo desta sprint. Por isso, a troca de slug exige confirmação
+  explícita do usuário (`<ConfirmDialog>`) explicando essa consequência antes
+  de a chamada à API ser feita; nenhuma mudança de arquitetura foi feita
+  para compensar o problema, só o aviso.
+- `components/ui/badge.tsx`: adicionado `RestaurantStatusBadge`, seguindo
+  exatamente o mesmo padrão já usado por `OrderStatusBadge`/`TableStatusBadge`
+  (aditivo — nenhum badge existente foi alterado).
+
+## Pedidos Administrativos, Área do Cliente e Realtime (Sprint 8)
+
+> **Nota de documentação (Sprint 9):** esta seção foi escrita retroativamente.
+> O código desta sprint (rotas, `lib/orders/*`,
+> `supabase/migrations/0007_orders_module.sql`) já existia completo no projeto
+> antes desta rodada, mas nunca havia sido documentado aqui — a seção "O que
+> fica fora do escopo desta fundação" (fim deste documento) ainda listava
+> "Área do Cliente pública" e "Pedidos administrativos" como itens futuros,
+> o que não refletia mais o estado real do código. Esta seção reconstrói o
+> racional a partir do que o código implementa, para reconciliar a
+> documentação com a realidade antes de iniciar a Sprint 9.
+
+### Área do Cliente pública (contrato seção 3)
+
+- `lib/orders/resolve-public-context.ts`: resolve `slug` → restaurante e
+  `token` → mesa, usados por todos os endpoints públicos abaixo. Como não há
+  sessão de usuário nesses endpoints, usam `createAdminClient()` (service
+  role, ignora RLS) — o próprio código, não o Postgres, garante o isolamento
+  por tenant, validando `slug`/`table_token` explicitamente antes de
+  qualquer leitura/escrita (mesmo raciocínio já usado no onboarding, seção
+  2.1).
+- `GET /api/v1/public/{slug}/tables/{token}` (3.1): retorna
+  restaurante + mesa + pedido ativo, se houver (`lib/orders/active-order.ts`).
+- `GET /api/v1/public/{slug}/menu` (3.2): `lib/orders/public-menu.ts`.
+- `POST /api/v1/public/{slug}/orders` (3.3): `lib/orders/create-order.ts` —
+  revalida preço/disponibilidade de cada item no servidor no momento do
+  envio (nunca confia no que o front-end carregou antes), conforme exigido
+  pelo contrato.
+- `GET /api/v1/public/{slug}/orders/{orderId}` (3.4):
+  `lib/orders/get-public-order-status.ts`.
+- Front-end: `(public)/[slug]/menu`, `/carrinho`, `/checkout`,
+  `/orders/[orderId]` — carrinho em `components/cardapio-cliente/cart-context.tsx`
+  (estado em `sessionStorage`, isolado por `slug` + `tableToken`).
+
+### Pedidos Administrativos (contrato seção 8)
+
+- `lib/orders/status-transitions.ts`: a máquina de estados
+  (`pending → preparing → ready → delivered`, com `cancelled` a partir de
+  qualquer estado não-terminal) vive aqui, não numa `check constraint` — a
+  mensagem `422 INVALID_STATUS_TRANSITION` precisa do `details` com estado
+  atual e solicitado (8.3), algo que uma constraint de banco não expressa
+  (mesmo raciocínio já registrado para outras regras de negócio no restante
+  deste documento).
+- `GET /api/v1/orders` (8.1), `GET /api/v1/orders/{id}` (8.2),
+  `PATCH /api/v1/orders/{id}/status` (8.3) implementados por completo.
+- `(admin)/pedidos` e `(admin)/pedidos/[id]`: tela de Pedidos em Tempo Real.
+
+### Realtime (contrato seção 1.10)
+
+- `lib/realtime/channels.ts`: helpers para os canais
+  `restaurant:{restaurant_id}:orders` (painel administrativo) e
+  `orders:id=eq.{id}` (acompanhamento de um pedido específico, usado tanto
+  no painel quanto na Área do Cliente) — inscrição feita direto no
+  componente client-side que precisa dela, sem endpoint REST próprio para
+  "assinar" um canal.
+
+### RLS desta sprint
+
+`supabase/migrations/0007_orders_module.sql`: `update` em `orders` (8.3),
+`select` em `order_items` (8.2) e `update` em `order_sessions` (encerrar a
+comanda ao chegar num status terminal). Nenhuma política de `insert` para a
+criação pública de pedidos (3.3) — o endpoint público usa service role,
+mesmo raciocínio do onboarding.
 
 ## Mesas e QR Codes (Sprint 7)
 
@@ -386,7 +760,9 @@ criar elementos de formulário ou feedback soltos.
 
 ## Stack
 
-- **Next.js 14** (App Router) + **React 18** + **TypeScript** (strict mode)
+- **Next.js 15** (App Router, `params`/`cookies()` assíncronos) + **React 18**
+  + **TypeScript** (strict mode) — versão confirmada na Sprint 9 (ver "Versão
+  do Next.js: divergência resolvida", no topo deste documento)
 - **Tailwind CSS** para estilo
 - **Supabase** (Postgres + Auth + Realtime + Storage)
 - **Zod** para validação de payloads no servidor
@@ -511,19 +887,48 @@ supabase db reset             # aplica supabase/migrations/*.sql
 npm run supabase:types
 ```
 
-## O que fica fora do escopo desta fundação
+## Roadmap — v1 concluída, o que vem depois (pós-Sprint 10)
 
-Nenhuma lógica de negócio foi implementada nesta etapa — apenas estrutura,
-configuração e stubs. Os próximos módulos (nesta ordem sugerida) são:
+> **Nota (Sprint 9):** esta seção documentava, na fundação inicial do
+> projeto (antes da Sprint 3), a ordem sugerida dos módulos ainda por
+> implementar. Todos os 7 itens abaixo já foram concluídos — a lista é
+> mantida só como registro histórico da ordem original planejada; ver
+> "Estado atual do MVP", no topo deste documento, para o estado real.
 
-1. Autenticação (login + `requireSession`/`requireOwner` reais)
-2. Onboarding (2.1, 2.2)
-3. Restaurante/Configurações (4.1, 4.2)
-4. Cardápio — Categorias e Produtos (5.x, 6.x)
-5. Mesas e QR Codes (7.x)
-6. Área do Cliente pública (3.x)
-7. Pedidos administrativos + Realtime (8.x)
+Módulos da v1, na ordem em que foram de fato implementados:
 
-Também fora do escopo da v1 (ver seção 10 do contrato): funcionários/convites,
-variações de produto, histórico de status, pagamentos, estoque, fidelidade e
-relatórios.
+1. ✅ Autenticação (Sprint 3)
+2. ✅ Onboarding (Sprint 4, seções 2.1/2.2)
+3. ✅ Dashboard (Sprint 5)
+4. ✅ Cardápio — Categorias e Produtos (Sprint 6, seções 5.x/6.x)
+5. ✅ Mesas e QR Codes (Sprint 7, seção 7.x)
+6. ✅ Área do Cliente pública + Pedidos administrativos + Realtime
+   (Sprint 8, seções 3.x/8.x)
+7. ✅ Restaurante/Configurações (Sprint 9, seção 4.2)
+8. ✅ Auditoria de Qualidade (Sprint 10) — sem novo escopo de contrato,
+   fechou o Painel de Pedidos administrativo (front-end que ainda faltava
+   do item 6) e revisou consistência, acessibilidade, performance e
+   memory leaks de toda a jornada.
+
+Com isso, **a v1 do contrato está implementada por completo** — nenhum
+endpoint da seção 9 (Visão Consolidada) retorna mais `stubResponse(...)`, e
+nenhuma tela do fluxo principal ficou com "Módulo a implementar".
+
+### Fora do escopo da v1 (ver contrato, seção 10)
+
+Ficam para v1.1 em diante, sem mudança de raciocínio em relação ao que o
+próprio contrato já definia:
+
+- Funcionários/convites (expande o modelo de permissões além de só `owner`).
+- Variações de produto (`menu_item_variations`) e histórico de status
+  (`order_status_history`).
+- Pagamentos (PIX), estoque, fidelidade e relatórios (v2.0+).
+
+### Pendências técnicas registradas na Sprint 9 (✅ resolvidas na Sprint 10)
+
+- ~~`console.log` de debug (incluindo verificação de variáveis de ambiente)
+  deixado em `api/v1/onboarding/restaurant/route.ts`~~ — removido na Sprint
+  10 (auditoria de qualidade tinha escopo irrestrito sobre o código
+  existente, ao contrário da Sprint 9, escopada a Configurações).
+- ~~`next.config.mjs`: `experimental.typedRoutes` deveria ser apenas
+  `typedRoutes`~~ — corrigido na Sprint 10.

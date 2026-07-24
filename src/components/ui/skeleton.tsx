@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("animate-skeleton-pulse rounded-md bg-muted", className)}
+      className={cn("skeleton-shimmer animate-shimmer overflow-hidden rounded-md bg-muted", className)}
       role="presentation"
       aria-hidden
       {...props}

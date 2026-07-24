@@ -13,11 +13,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/95",
+  primary: "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:shadow active:bg-primary/95",
   secondary: "bg-muted text-foreground hover:bg-muted/70",
-  outline: "border border-border bg-surface hover:bg-muted",
+  outline: "border border-border bg-surface hover:border-primary/30 hover:bg-muted",
   ghost: "bg-transparent hover:bg-muted",
-  destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+  destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 hover:shadow",
   link: "bg-transparent text-primary underline-offset-4 hover:underline",
 };
 
@@ -38,7 +38,8 @@ const sizeClasses: Record<ButtonSize, string> = {
 export function buttonVariants(variant: ButtonVariant = "primary", size: ButtonSize = "md") {
   return cn(
     "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium",
-    "transition-colors disabled:pointer-events-none disabled:opacity-50",
+    "transition-[background-color,box-shadow,border-color,transform] duration-150",
+    "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100",
     variantClasses[variant],
     sizeClasses[size],
   );

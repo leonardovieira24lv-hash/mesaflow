@@ -11,6 +11,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PageLoading } from "@/components/ui/spinner";
+import { Alert } from "@/components/ui/alert";
 import { toast } from "@/components/ui/toast";
 
 type FieldErrors = Partial<Record<"password" | "confirmPassword", string>>;
@@ -118,12 +119,7 @@ export function ResetPasswordForm() {
       </div>
 
       {formError && (
-        <div
-          role="alert"
-          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {formError}
-        </div>
+        <Alert variant="destructive">{formError}</Alert>
       )}
 
       <FormField label="Nova senha" error={errors.password}>

@@ -62,11 +62,11 @@ export const toast = {
   dismiss,
 };
 
-const VARIANT_CONFIG: Record<ToastVariant, { icon: typeof Info; className: string }> = {
-  success: { icon: CheckCircle2, className: "text-success" },
-  error: { icon: XCircle, className: "text-destructive" },
-  info: { icon: Info, className: "text-info" },
-  warning: { icon: AlertTriangle, className: "text-warning" },
+const VARIANT_CONFIG: Record<ToastVariant, { icon: typeof Info; className: string; accentClassName: string }> = {
+  success: { icon: CheckCircle2, className: "text-success", accentClassName: "before:bg-success" },
+  error: { icon: XCircle, className: "text-destructive", accentClassName: "before:bg-destructive" },
+  info: { icon: Info, className: "text-info", accentClassName: "before:bg-info" },
+  warning: { icon: AlertTriangle, className: "text-warning", accentClassName: "before:bg-warning" },
 };
 
 /** Monta o container global de toasts. Incluir uma única vez, no root layout. */
@@ -84,15 +84,17 @@ export function Toaster() {
       aria-label="Notificações"
     >
       {items.map((item) => {
-        const { icon: Icon, className } = VARIANT_CONFIG[item.variant];
+        const { icon: Icon, className, accentClassName } = VARIANT_CONFIG[item.variant];
         return (
           <div
             key={item.id}
             role="status"
             aria-live="polite"
             className={cn(
-              "pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-lg border border-border",
-              "bg-surface p-4 text-surface-foreground shadow-lg animate-toast-in",
+              "relative pointer-events-auto flex w-full max-w-sm items-start gap-3 overflow-hidden rounded-lg border border-border",
+              "before:absolute before:inset-y-0 before:left-0 before:w-1",
+              "bg-surface p-4 pl-5 text-surface-foreground shadow-lg animate-toast-in",
+              accentClassName,
             )}
           >
             <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", className)} aria-hidden />
