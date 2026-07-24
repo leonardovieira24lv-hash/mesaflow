@@ -39,12 +39,7 @@ export function CardFooter({ className, ...props }: HTMLAttributes<HTMLDivElemen
   return <div className={cn("flex items-center gap-3 p-6 pt-0", className)} {...props} />;
 }
 
-/**
- * Divisor de "borda rasgada de comanda" — o elemento de assinatura do
- * design system. Usar com moderação: só dentro de cards que representem de
- * fato um pedido/comanda (ex.: separar itens do total), nunca como divisor
- * genérico de seção.
- */
-export function CardTicketDivider({ className }: { className?: string }) {
-  return <div className={cn("ticket-edge mx-6", className)} role="separator" />;
+/** Divisor horizontal simples dentro de um card (ex.: separar itens do total). */
+export function CardDivider({ className }: { className?: string }) {
+  return <div className={cn("mx-6 border-t border-border", className)} role="separator" />;
 }

@@ -48,15 +48,19 @@ export async function SummaryCards({ restaurantId }: { restaurantId: string }) {
     return (
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {items.map(({ label, value, icon: Icon, accent }) => (
-          <Card key={label} interactive>
-            <CardContent className="flex items-start justify-between p-5">
-              <div className="flex flex-col gap-1">
-                <span className="text-sm text-muted-foreground">{label}</span>
-                <span className="font-mono text-2xl font-semibold tabular-nums">{value}</span>
+          <Card key={label} interactive className="relative overflow-hidden">
+            <span
+              aria-hidden
+              className={cn("absolute inset-x-0 top-0 h-1", ACCENT_CLASSES[accent].iconBg.replace("/10", ""))}
+            />
+            <CardContent className="flex flex-col gap-3 p-6">
+              <div className="flex items-center gap-2">
+                <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg", ACCENT_CLASSES[accent].iconBg)}>
+                  <Icon className={cn("h-4 w-4", ACCENT_CLASSES[accent].icon)} aria-hidden />
+                </div>
+                <span className="text-sm font-medium text-muted-foreground">{label}</span>
               </div>
-              <div className={cn("flex h-9 w-9 items-center justify-center rounded-full", ACCENT_CLASSES[accent].iconBg)}>
-                <Icon className={cn("h-4 w-4", ACCENT_CLASSES[accent].icon)} aria-hidden />
-              </div>
+              <span className="font-mono text-3xl font-bold tabular-nums tracking-tight">{value}</span>
             </CardContent>
           </Card>
         ))}

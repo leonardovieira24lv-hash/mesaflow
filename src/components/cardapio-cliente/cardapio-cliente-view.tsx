@@ -57,7 +57,9 @@ export function CardapioClienteView({
                 id={categorySectionId(category.id)}
                 className="flex scroll-mt-32 flex-col gap-3"
               >
-                <h2 className="font-display text-lg font-semibold text-foreground">{category.name}</h2>
+                <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+                  {category.name}
+                </h2>
 
                 {category.items.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhum produto nesta categoria ainda.</p>

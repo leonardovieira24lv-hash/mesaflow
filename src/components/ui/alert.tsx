@@ -15,7 +15,11 @@ const VARIANT_CONFIG: Record<AlertVariant, { icon: typeof Info; className: strin
   destructive: { icon: XCircle, className: "border-destructive/30 bg-destructive/5 text-destructive" },
   info: { icon: Info, className: "border-info/30 bg-info/5 text-info" },
 };
-
+/**
+ * Banner inline de aviso/erro reutilizável.
+ * Centraliza o estilo dos avisos para evitar repetição de classes
+ * entre Checkout, Timeline e Pedidos.
+ */
 export function Alert({ variant = "warning", hideIcon, className, children, ...props }: AlertProps) {
   const { icon: Icon, className: variantClassName } = VARIANT_CONFIG[variant];
 

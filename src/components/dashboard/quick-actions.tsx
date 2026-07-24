@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { Route } from "next";
-import { UtensilsCrossed, Package, LayoutGrid, QrCode } from "lucide-react";
+import { UtensilsCrossed, Package, LayoutGrid, QrCode, ArrowUpRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { ROUTES } from "@/constants/routes";
@@ -35,11 +35,15 @@ export function QuickActions() {
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {ACTIONS.map(({ label, href, icon: Icon }) => (
         <Link key={label} href={href} className="group">
-          <Card interactive className="flex flex-col items-center gap-2 p-5 text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 transition-transform group-hover:scale-110">
+          <Card interactive className="flex items-center gap-3 p-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-transform group-hover:scale-110">
               <Icon className="h-5 w-5 text-primary" aria-hidden />
             </div>
-            <span className="text-sm font-medium">{label}</span>
+            <span className="flex-1 text-sm font-medium">{label}</span>
+            <ArrowUpRight
+              className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+              aria-hidden
+            />
           </Card>
         </Link>
       ))}

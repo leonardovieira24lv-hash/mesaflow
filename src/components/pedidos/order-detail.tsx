@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter, CardTicketDivider } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter, CardDivider } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -170,7 +170,7 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
           )}
         </CardContent>
 
-        <CardTicketDivider />
+        <CardDivider />
 
         <CardFooter className="justify-between">
           <span className="font-medium text-foreground">Total</span>

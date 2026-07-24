@@ -17,14 +17,14 @@ const NAV_ITEMS = [
 
 function BrandMark() {
   return (
-    <Link href={ROUTES.dashboard} className="flex items-center gap-2 px-6 py-5">
+    <Link href={ROUTES.dashboard} className="flex items-center gap-2.5 px-6 py-6">
       <span
         aria-hidden
-        className="flex h-7 w-7 items-center justify-center rounded-md bg-primary font-display text-sm font-semibold text-primary-foreground"
+        className="btn-primary-surface flex h-8 w-8 items-center justify-center rounded-lg font-display text-sm font-bold text-primary-foreground shadow-glow"
       >
         M
       </span>
-      <span className="font-display text-lg font-semibold tracking-tight">MesaFlow</span>
+      <span className="font-display text-lg font-bold tracking-tight text-chrome-foreground">MesaFlow</span>
     </Link>
   );
 }
@@ -43,16 +43,16 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
               active
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                ? "bg-white/10 text-chrome-foreground"
+                : "text-chrome-muted-foreground hover:bg-white/5 hover:text-chrome-foreground",
             )}
           >
             {active && (
               <span
                 aria-hidden
-                className="absolute -left-3 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary"
+                className="absolute -left-3 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-chrome-active"
               />
             )}
             <Icon className="h-4 w-4 shrink-0" aria-hidden />
@@ -64,16 +64,19 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-/** Sidebar de navegação: fixa em telas médias+, drawer deslizante em mobile. */
+/** Sidebar de navegação: chrome escuro fixo em telas médias+, drawer deslizante em mobile. */
 export function AdminSidebar() {
   const { mobileNavOpen, setMobileNavOpen } = useAdminShell();
 
   return (
     <>
       {/* Desktop / tablet */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface md:flex">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-chrome-border bg-chrome md:flex">
         <BrandMark />
         <NavLinks />
+        <div className="border-t border-chrome-border px-6 py-4 text-xs text-chrome-muted-foreground">
+          MesaFlow © {new Date().getFullYear()}
+        </div>
       </aside>
 
       {/* Mobile drawer */}
@@ -84,13 +87,13 @@ export function AdminSidebar() {
             className="absolute inset-0 bg-foreground/40"
             onClick={() => setMobileNavOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0 flex w-72 flex-col bg-surface shadow-lg animate-fade-in">
+          <div className="absolute inset-y-0 left-0 flex w-72 flex-col bg-chrome shadow-lg animate-fade-in">
             <div className="flex items-center justify-between">
               <BrandMark />
               <button
                 aria-label="Fechar menu"
                 onClick={() => setMobileNavOpen(false)}
-                className="mr-4 text-muted-foreground hover:text-foreground"
+                className="mr-4 text-chrome-muted-foreground hover:text-chrome-foreground"
               >
                 <X className="h-5 w-5" />
               </button>

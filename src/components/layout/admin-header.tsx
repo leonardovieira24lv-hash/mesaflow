@@ -18,7 +18,7 @@ export function AdminHeader({ userEmail }: AdminHeaderProps) {
   const { setMobileNavOpen } = useAdminShell();
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-surface px-4 md:px-6">
+    <header className="flex h-16 items-center justify-between border-b border-border bg-surface/80 px-4 backdrop-blur-sm md:px-8">
       <button
         aria-label="Abrir menu"
         onClick={() => setMobileNavOpen(true)}
@@ -27,10 +27,14 @@ export function AdminHeader({ userEmail }: AdminHeaderProps) {
         <Menu className="h-5 w-5" />
       </button>
 
-      <div className="hidden text-sm text-muted-foreground md:block">Restaurante</div>
+      <div className="hidden text-sm font-medium text-muted-foreground md:block">Painel do restaurante</div>
 
       <div className="flex items-center gap-3">
-        {userEmail && <span className="hidden text-sm text-muted-foreground sm:inline">{userEmail}</span>}
+        {userEmail && (
+          <span className="hidden rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground sm:inline">
+            {userEmail}
+          </span>
+        )}
         <LogoutButton />
       </div>
     </header>

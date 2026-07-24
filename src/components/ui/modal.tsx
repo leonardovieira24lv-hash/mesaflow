@@ -57,16 +57,16 @@ export function Modal({ open, onClose, title, description, children, footer, hid
       aria-labelledby={hideHeader ? undefined : "modal-title"}
       aria-label={hideHeader ? title : undefined}
       className={cn(
-        "m-auto w-full max-w-md rounded-lg border border-border bg-surface p-0 text-surface-foreground shadow-lg",
+        "m-auto w-full max-w-md rounded-2xl border border-border bg-surface p-0 text-surface-foreground shadow-lg",
         "backdrop:bg-foreground/40 backdrop:backdrop-blur-[2px]",
         "open:animate-scale-in",
         className,
       )}
     >
       {!hideHeader && (
-        <div className="flex items-start justify-between gap-4 p-6 pb-3">
-          <div className="flex flex-col gap-1">
-            <h2 id="modal-title" className="font-display text-lg font-semibold">
+        <div className="flex items-start justify-between gap-4 p-7 pb-4">
+          <div className="flex flex-col gap-1.5">
+            <h2 id="modal-title" className="font-display text-xl font-semibold tracking-tight">
               {title}
             </h2>
             {description && <p className="text-sm text-muted-foreground">{description}</p>}
@@ -76,16 +76,16 @@ export function Modal({ open, onClose, title, description, children, footer, hid
             size="icon"
             onClick={onClose}
             aria-label="Fechar"
-            className="-mr-2 -mt-2 h-8 w-8"
+            className="-mr-2 -mt-2 h-8 w-8 shrink-0"
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
       )}
 
-      <div className="px-6">{children}</div>
+      <div className="px-7">{children}</div>
 
-      {footer && <div className="flex items-center justify-end gap-3 p-6 pt-4">{footer}</div>}
+      {footer && <div className="flex items-center justify-end gap-3 p-7 pt-5">{footer}</div>}
     </dialog>
   );
 }

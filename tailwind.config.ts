@@ -39,6 +39,13 @@ const config: Config = {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
         },
+        chrome: {
+          DEFAULT: "hsl(var(--chrome))",
+          foreground: "hsl(var(--chrome-foreground))",
+          "muted-foreground": "hsl(var(--chrome-muted-foreground))",
+          border: "hsl(var(--chrome-border))",
+          active: "hsl(var(--chrome-active))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -84,9 +91,10 @@ const config: Config = {
         "scale-in": "scale-in 0.15s ease-out",
       },
       boxShadow: {
-        card: "0 1px 2px 0 rgb(30 20 12 / 0.04), 0 1px 3px 0 rgb(30 20 12 / 0.03)",
-        "card-hover": "0 4px 10px -2px rgb(30 20 12 / 0.08), 0 2px 6px -2px rgb(30 20 12 / 0.05)",
-        bar: "0 -4px 16px 0 rgb(30 20 12 / 0.08)",
+        card: "0 1px 2px 0 rgb(15 15 25 / 0.04), 0 1px 3px 0 rgb(15 15 25 / 0.04)",
+        "card-hover": "0 8px 20px -4px rgb(15 15 25 / 0.10), 0 3px 8px -2px rgb(15 15 25 / 0.06)",
+        bar: "0 -4px 20px 0 rgb(15 15 25 / 0.08)",
+        glow: "0 0 0 1px hsl(var(--primary) / 0.15), 0 8px 24px -8px hsl(var(--primary) / 0.35)",
       },
     },
   },

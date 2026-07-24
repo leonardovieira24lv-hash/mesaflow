@@ -1,4 +1,4 @@
-# Design System do MesaFlow — conceito "Comanda"
+# Design System do MesaFlow — v2
 
 Este documento registra o racional por trás das decisões visuais, para que
 qualquer pessoa (ou IA) que trabalhe nas próximas telas entenda o porquê das
@@ -7,35 +7,27 @@ escolhas, não só o "o quê". A vitrine viva de todos os componentes fica em
 
 ## Conceito
 
-A identidade parte de um objeto que já existe em todo restaurante brasileiro:
-**a comanda de papel**. Fundo quente como papel, tinta escura para o texto,
-um carimbo âmbar-tijolo como cor de ação, e uma fonte monoespaçada reservada
-para dado — número de mesa, número de pedido, preço, horário — como no talão
-impresso. O painel administrativo é usado várias horas por dia por quem
-trabalha no salão; por isso a paleta é calma e de baixa fadiga, com cor
-salva para status e ação, não para decoração.
-
-Deliberadamente evitado: fundo creme + serifada de alto contraste + terracota
-(combinação que já ficou clichê em produtos gerados por IA), preto quase puro
-com acento neon, e layout estilo jornal com hairlines. O calor do "papel" é
-parecido ao primeiro clichê na superfície, mas a diferença está na aplicação:
-aqui a paleta nasce do objeto de domínio (a comanda), não de uma fórmula
-genérica — e o acento (Ember, um tijolo mais escuro e menos alaranjado que o
-terracota-padrão) nunca aparece como fundo de hero, só em ações e marca.
+Paleta neutra fria (grafite/branco), com um acento indigo-violeta como cor
+de marca e ação. A navegação estrutural do painel administrativo (sidebar)
+usa um "chrome" escuro dedicado — separado do conteúdo claro — para dar peso
+e assinatura visual sem escurecer telas de trabalho usadas por horas. Dado
+numérico (mesa, pedido, preço, horário) continua reservado a uma fonte
+monoespaçada em todo o produto, admin e Área do Cliente.
 
 ## Cores
 
-| Token (CSS var)          | Papel                          | Hex aprox. |
-|---------------------------|--------------------------------|------------|
-| `--background` (Paper)    | Fundo da aplicação              | `#FAF7F2`  |
-| `--foreground` (Ink)      | Texto principal                 | `#211D1A`  |
-| `--surface`                | Fundo de cards/inputs           | `#FFFFFF`  |
-| `--primary` (Ember)        | Marca, ações primárias          | `#C13E1F`  |
-| `--success` (Sage)         | Status "pronto"/disponível      | `#3F6B4A`  |
-| `--warning` (Amber)        | Status "preparando"/atenção     | `#8A6508`  |
-| `--destructive` (Rust)     | Exclusão, cancelamento          | `#7A2626`  |
-| `--info`                   | Informativo neutro (toasts)     | `#2B5A75`  |
-| `--muted` / `--border`     | Superfícies e linhas neutras     | tons de `#E7E1D7` |
+| Token (CSS var)          | Papel                          |
+|---------------------------|--------------------------------|
+| `--background`             | Fundo da aplicação (conteúdo)   |
+| `--foreground`             | Texto principal                 |
+| `--surface`                | Fundo de cards/inputs           |
+| `--primary` (Indigo)       | Marca, ações primárias          |
+| `--success`                | Status "pronto"/disponível      |
+| `--warning`                | Status "preparando"/atenção     |
+| `--destructive`            | Exclusão, cancelamento          |
+| `--info`                   | Informativo neutro (toasts)     |
+| `--muted` / `--border`     | Superfícies e linhas neutras     |
+| `--chrome*`                | Sidebar escura do admin (só navegação estrutural, nunca conteúdo) |
 
 Todas as cores vivem como CSS vars em `src/app/globals.css` e são expostas ao
 Tailwind via `tailwind.config.ts`. **Nunca** usar hex solto num componente —
@@ -45,31 +37,28 @@ sempre a classe utilitária (`bg-primary`, `text-destructive`, etc.).
 
 Três papéis, cada um com uma fonte:
 
-- **Display — Fraunces**: títulos (`font-display`). Serifada editorial com
-  personalidade, usada com moderação (H1/H2 e o logotipo), nunca em texto
-  corrido.
+- **Display — Manrope** (`font-display`): títulos e a marca. Geométrica, peso
+  firme, sem serifa — usada com moderação (H1/H2 e o logotipo), nunca em
+  texto corrido.
 - **Sans — Inter** (`font-sans`, padrão do `<body>`): toda a interface —
   labels, parágrafos, botões, navegação.
 - **Mono — IBM Plex Mono** (`font-mono`): reservada para **dado**, nunca
-  para prosa — número de mesa, número de pedido, preço, timestamp. Reforça a
-  metáfora do talão impresso e melhora o alinhamento de colunas numéricas em
-  tabelas.
+  para prosa — número de mesa, número de pedido, preço, timestamp. Melhora
+  o alinhamento de colunas numéricas em tabelas.
 
-## Espaçamento
+## Espaçamento e raio
 
-Escala padrão do Tailwind (base 4px), sem token custom além do necessário —
-consistência vem de usar sempre a escala, não de reinventá-la. Únicas
-extensões: `18` (4.5rem) e `22` (5.5rem), usadas em shells de layout
-(altura de header, etc.).
+Escala padrão do Tailwind (base 4px). Únicas extensões: `18` (4.5rem) e `22`
+(5.5rem), usadas em shells de layout (altura de header, etc.). Raio de borda
+(`--radius`) mais generoso que a v1 — cantos mais suaves em cards, botões e
+modais, consistente em toda a interface via `rounded-lg`/`md`/`sm`.
 
-## Elemento de assinatura: `ticket-edge`
+## Elevação
 
-A "borda rasgada de comanda" (classe utilitária `.ticket-edge`, componente
-`<CardTicketDivider />`) é o único elemento decorativo deliberadamente
-memorável do sistema. Uso **restrito** a divisores dentro de cards que
-representem de fato um pedido/comanda (ex.: separar itens do total no card
-de pedido). Nunca usar como divisor genérico de seção — perderia o
-significado e viraria só decoração.
+`shadow-card` / `shadow-card-hover` para elevação neutra de cards e
+`shadow-glow` (sombra tingida com `--primary`) reservada à ação primária
+(`Button variant="primary"`, marca na sidebar) — nunca usada em elementos
+neutros, para manter o efeito como assinatura de "ação principal".
 
 ## Acessibilidade — padrão em todo componente
 
@@ -95,7 +84,8 @@ significado e viraria só decoração.
 | Checkbox | `checkbox.tsx` |
 | Switch | `switch.tsx` |
 | Badge / OrderStatusBadge / TableStatusBadge | `badge.tsx` |
-| Card (+ CardTicketDivider) | `card.tsx` |
+| Card (+ CardDivider) | `card.tsx` |
+| Alert | `alert.tsx` |
 | Table (+ Head/Body/Row/Cell) | `table.tsx` |
 | Modal | `modal.tsx` |
 | ConfirmDialog | `confirm-dialog.tsx` |
@@ -106,8 +96,8 @@ significado e viraria só decoração.
 | Pagination | `pagination.tsx` |
 | Label + FormField | `label.tsx`, `form-field.tsx` |
 
-Layout: `AdminSidebar` e `AdminHeader` (`src/components/layout`), responsivos
-via `AdminShellProvider` (drawer mobile).
+Layout: `AdminSidebar` (chrome escuro) e `AdminHeader` (`src/components/layout`),
+responsivos via `AdminShellProvider` (drawer mobile).
 
 ## Regra para os próximos módulos
 

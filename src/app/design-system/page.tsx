@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Badge, OrderStatusBadge, TableStatusBadge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, CardTicketDivider } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, CardDivider } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -29,11 +29,11 @@ export default function DesignSystemPage() {
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-16 p-6 py-12 md:p-12">
       <header className="flex flex-col gap-2">
-        <p className="font-mono text-xs uppercase tracking-widest text-primary">Design System · v1</p>
-        <h1 className="font-display text-4xl font-semibold tracking-tight">MesaFlow</h1>
+        <p className="font-mono text-xs uppercase tracking-widest text-primary">Design System · v2</p>
+        <h1 className="font-display text-4xl font-bold tracking-tight">MesaFlow</h1>
         <p className="max-w-2xl text-muted-foreground">
-          Biblioteca de componentes oficial. Conceito &ldquo;Comanda&rdquo;: papel quente, tinta de
-          carimbo (Ember) como cor de ação, e monoespaçado para todo dado — mesa, pedido, preço.
+          Biblioteca de componentes oficial. Paleta neutra grafite/branco com indigo como cor de ação,
+          Manrope para títulos, Inter para interface e monoespaçado para todo dado — mesa, pedido, preço.
           Nenhuma regra de negócio vive aqui, só identidade visual e componentes reutilizáveis.
         </p>
       </header>
@@ -43,19 +43,19 @@ export default function DesignSystemPage() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
           <Swatch name="Background" className="bg-background border border-border" />
           <Swatch name="Surface" className="bg-surface border border-border" />
-          <Swatch name="Primary (Ember)" className="bg-primary text-primary-foreground" />
-          <Swatch name="Success (Sage)" className="bg-success text-success-foreground" />
-          <Swatch name="Warning (Amber)" className="bg-warning text-warning-foreground" />
-          <Swatch name="Destructive (Rust)" className="bg-destructive text-destructive-foreground" />
+          <Swatch name="Primary (Indigo)" className="bg-primary text-primary-foreground" />
+          <Swatch name="Success" className="bg-success text-success-foreground" />
+          <Swatch name="Warning" className="bg-warning text-warning-foreground" />
+          <Swatch name="Destructive" className="bg-destructive text-destructive-foreground" />
           <Swatch name="Info" className="bg-info text-info-foreground" />
           <Swatch name="Muted" className="bg-muted" />
         </div>
       </Section>
 
       {/* Tipografia */}
-      <Section title="Tipografia" description="Display (Fraunces) · Sans (Inter) · Mono (IBM Plex Mono).">
+      <Section title="Tipografia" description="Display (Manrope) · Sans (Inter) · Mono (IBM Plex Mono).">
         <div className="flex flex-col gap-4">
-          <p className="font-display text-3xl font-semibold">Cardápio do dia — Fraunces 700</p>
+          <p className="font-display text-3xl font-semibold">Cardápio do dia — Manrope 800</p>
           <p className="text-base text-foreground">
             Texto de interface e corpo em Inter. Usado em rótulos, parágrafos e a maior parte da UI.
           </p>
@@ -146,7 +146,7 @@ export default function DesignSystemPage() {
       </Section>
 
       {/* Cards */}
-      <Section title="Cards" description="Divisor 'ticket-edge' é o elemento de assinatura — usar só em cards de comanda.">
+      <Section title="Cards" description="CardDivider separa seções dentro de um mesmo card (ex.: itens do total).">
         <div className="grid gap-6 sm:grid-cols-2">
           <Card>
             <CardHeader>
@@ -180,7 +180,7 @@ export default function DesignSystemPage() {
                 <span className="font-mono">R$ 8,00</span>
               </div>
             </CardContent>
-            <CardTicketDivider />
+            <CardDivider />
             <CardFooter className="justify-between">
               <span className="font-medium">Total</span>
               <span className="font-mono font-semibold">R$ 57,80</span>

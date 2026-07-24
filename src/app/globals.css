@@ -3,72 +3,61 @@
 @tailwind utilities;
 
 /* ────────────────────────────────────────────────────────────────────────
-   MesaFlow Design System — conceito "Comanda"
-   A identidade visual parte do objeto físico que já existe em todo
-   restaurante brasileiro: a comanda de papel. Fundo quente (papel), tinta
-   escura para texto, um carimbo âmbar-tijolo ("ember") como cor de marca e
-   ação primária, e uma fonte monoespaçada para tudo que é dado — número de
-   mesa, número de pedido, preço — como no talão impresso.
-   Ver docs/design-system.md para o racional completo.
+   MesaFlow Design System v2
+   Paleta neutra fria (grafite/branco) com um acento indigo-violeta como
+   cor de ação e marca, tipografia geométrica para títulos, monoespaçada
+   reservada a dado numérico (mesa, pedido, preço, horário).
    ──────────────────────────────────────────────────────────────────────── */
 
 @layer base {
   :root {
-    /* Paper — fundo quente, não branco puro (~#FAF7F2) */
-    --background: 36 38% 97%;
-    /* Ink — texto principal, carvão quente, não preto puro (~#211D1A) */
-    --foreground: 30 12% 12%;
+    --background: 240 20% 98%;
+    --foreground: 240 15% 11%;
 
-    /* Surface — fundo de cards/inputs sobre o paper (~#FFFFFF) */
     --surface: 0 0% 100%;
-    --surface-foreground: 30 12% 12%;
+    --surface-foreground: 240 15% 11%;
 
-    /* Ember — cor de marca e ação primária, tinta de carimbo (~#C13E1F) */
-    --primary: 11 71% 44%;
-    --primary-foreground: 36 38% 97%;
+    --primary: 243 75% 59%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Line/Slate — bordas e texto secundário, neutros quentes */
-    --muted: 36 20% 93%;
-    --muted-foreground: 30 7% 38%;
-    --border: 38 24% 89%;
+    --muted: 240 16% 95%;
+    --muted-foreground: 240 8% 46%;
+    --border: 240 14% 90%;
 
-    /* Sage — sucesso / status "pronto" (~#3F6B4A) */
-    --success: 133 25% 33%;
+    --success: 152 55% 34%;
     --success-foreground: 0 0% 100%;
 
-    /* Amber — atenção / status "preparando" (~#B8860B) */
-    --warning: 43 83% 34%;
+    --warning: 38 92% 42%;
     --warning-foreground: 0 0% 100%;
 
-    /* Rust — destrutivo / status "cancelado" (~#8C2F2F) */
-    --destructive: 0 48% 36%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Info — neutro informativo, usado em toasts/badges informativos */
-    --info: 205 45% 34%;
+    --info: 217 80% 55%;
     --info-foreground: 0 0% 100%;
 
-    --ring: 11 71% 44%;
-    --radius: 0.5rem;
+    --ring: 243 75% 59%;
+    --radius: 0.75rem;
 
-    --font-display: "Fraunces", ui-serif, Georgia, serif;
+    --chrome: 240 24% 10%;
+    --chrome-foreground: 240 20% 92%;
+    --chrome-muted-foreground: 240 10% 62%;
+    --chrome-border: 240 20% 18%;
+    --chrome-active: 243 75% 59%;
+
+    --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
     --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
     --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
   }
 
-  /*
-   * Modo escuro reservado para telas operacionais de baixa luminosidade
-   * (ex.: KDS de cozinha, fora do escopo desta sprint). Mantido consistente
-   * com os mesmos papéis semânticos de token.
-   */
   .dark {
-    --background: 30 10% 9%;
-    --foreground: 36 30% 94%;
-    --surface: 30 9% 13%;
-    --surface-foreground: 36 30% 94%;
-    --muted: 30 8% 16%;
-    --muted-foreground: 36 10% 65%;
-    --border: 30 8% 22%;
+    --background: 240 20% 7%;
+    --foreground: 240 20% 94%;
+    --surface: 240 18% 10%;
+    --surface-foreground: 240 20% 94%;
+    --muted: 240 14% 14%;
+    --muted-foreground: 240 10% 65%;
+    --border: 240 14% 20%;
   }
 
   * {
@@ -79,7 +68,6 @@
     @apply bg-background font-sans text-foreground;
   }
 
-  /* Foco visível consistente em todo elemento interativo (acessibilidade). */
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
@@ -97,38 +85,6 @@
 }
 
 @layer components {
-  /*
-   * Elemento de assinatura do sistema: a "borda rasgada" de uma comanda.
-   * Uso deliberadamente restrito — só em divisores dentro de cards de
-   * pedido/comanda, nunca como decoração genérica de tela.
-   */
-  .ticket-edge {
-    position: relative;
-    border-top: 2px dashed hsl(var(--border));
-  }
-  .ticket-edge::before,
-  .ticket-edge::after {
-    content: "";
-    position: absolute;
-    top: -7px;
-    width: 14px;
-    height: 14px;
-    border-radius: 9999px;
-    background: hsl(var(--background));
-  }
-  .ticket-edge::before {
-    left: -7px;
-  }
-  .ticket-edge::after {
-    right: -7px;
-  }
-
-  /*
-   * Shimmer de skeleton — substitui o pulso de opacidade plano por uma
-   * varredura de brilho sutil (mesma técnica usada por Linear/Vercel).
-   * Mantido em `@layer components` para poder ser combinado livremente
-   * via `cn()` com `bg-muted` já aplicado pelo componente base.
-   */
   .skeleton-shimmer {
     background-image: linear-gradient(
       100deg,
@@ -137,5 +93,9 @@
       transparent 80%
     );
     background-size: 200% 100%;
+  }
+
+  .btn-primary-surface {
+    background-image: linear-gradient(180deg, hsl(var(--primary) / 1), hsl(var(--primary) / 0.92));
   }
 }
