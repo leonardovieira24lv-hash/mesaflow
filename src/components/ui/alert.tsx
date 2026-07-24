@@ -16,13 +16,6 @@ const VARIANT_CONFIG: Record<AlertVariant, { icon: typeof Info; className: strin
   info: { icon: Info, className: "border-info/30 bg-info/5 text-info" },
 };
 
-/**
- * Banner inline de aviso/erro — extraído na Sprint 12 a partir de 5
- * ocorrências quase idênticas espalhadas entre Checkout, Timeline de
- * pedido e listagem de Pedidos (cada uma com a mesma combinação
- * `rounded-lg border border-*/30 bg-*/5 p-4 text-sm text-*` digitada à
- * mão). Usar aqui em vez de remontar essas classes soltas.
- */
 export function Alert({ variant = "warning", hideIcon, className, children, ...props }: AlertProps) {
   const { icon: Icon, className: variantClassName } = VARIANT_CONFIG[variant];
 
