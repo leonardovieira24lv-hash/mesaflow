@@ -60,7 +60,7 @@ export async function SummaryCards({ restaurantId }: { restaurantId: string }) {
                 </div>
                 <span className="text-sm font-medium text-muted-foreground">{label}</span>
               </div>
-              <span className="font-mono text-3xl font-bold tabular-nums tracking-tight">{value}</span>
+              <span className="font-numeric text-3xl font-bold tabular-nums tracking-tight">{value}</span>
             </CardContent>
           </Card>
         ))}

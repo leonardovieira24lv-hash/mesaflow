@@ -235,7 +235,7 @@ export function OrdersList({ restaurantId, initialOrders, initialMeta }: OrdersL
                       <OrderStatusBadge status={order.status} />
                     </TableCell>
                     <TableCell>{order.item_count}</TableCell>
-                    <TableCell className="font-mono">{formatCurrency(order.total_amount)}</TableCell>
+                    <TableCell className="font-numeric">{formatCurrency(order.total_amount)}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {dateTimeFormatter.format(new Date(order.created_at))}
                     </TableCell>

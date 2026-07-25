@@ -23,7 +23,7 @@ export function OnboardingProgress({ current }: { current: 1 | 2 | 3 }) {
               <span
                 aria-current={state === "current" ? "step" : undefined}
                 className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-full font-mono text-xs font-semibold",
+                  "flex h-7 w-7 items-center justify-center rounded-full font-numeric text-xs font-semibold",
                   state === "done" && "bg-primary text-primary-foreground",
                   state === "current" && "bg-primary/10 text-primary ring-2 ring-primary",
                   state === "upcoming" && "bg-muted text-muted-foreground",

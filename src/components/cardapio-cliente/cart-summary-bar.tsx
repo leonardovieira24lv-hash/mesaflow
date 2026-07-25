@@ -35,7 +35,7 @@ export function CartSummaryBar({ slug }: CartSummaryBarProps) {
           <ShoppingBag className="h-4 w-4" aria-hidden />
           {itemCount} {itemCount === 1 ? "item" : "itens"}
         </span>
-        <span className="font-mono">{formatCurrency(subtotal)}</span>
+        <span className="font-numeric">{formatCurrency(subtotal)}</span>
       </Button>
     </div>
   );

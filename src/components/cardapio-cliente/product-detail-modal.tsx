@@ -134,7 +134,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
             <div className="flex flex-col gap-1.5">
               <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">{item.name}</h2>
               {item.description && <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>}
-              <p className="pt-1 font-mono text-lg font-bold tabular-nums text-primary">
+              <p className="pt-1 font-numeric text-lg font-bold tabular-nums text-primary">
                 {formatCurrency(item.price)}
               </p>
             </div>
@@ -153,7 +153,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
-                <span aria-live="polite" className="w-7 text-center font-mono text-base font-semibold">
+                <span aria-live="polite" className="w-7 text-center font-numeric text-base font-semibold">
                   {quantity}
                 </span>
                 <Button
@@ -180,7 +180,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
 
             <Button onClick={handleAdd} size="lg" className="w-full justify-between">
               <span>Adicionar ao carrinho</span>
-              <span className="font-mono">{formatCurrency(item.price * quantity)}</span>
+              <span className="font-numeric">{formatCurrency(item.price * quantity)}</span>
             </Button>
           </div>
         </div>

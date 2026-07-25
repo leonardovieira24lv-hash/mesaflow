@@ -37,7 +37,7 @@ export function RestaurantHeader({ restaurantName, tableName }: RestaurantHeader
             {restaurantName}
           </h1>
           {tableName && (
-            <span className="shrink-0 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 font-mono text-xs font-medium text-primary-foreground backdrop-blur-sm">
+            <span className="shrink-0 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 font-numeric text-xs font-medium text-primary-foreground backdrop-blur-sm">
               Mesa {tableName}
             </span>
           )}

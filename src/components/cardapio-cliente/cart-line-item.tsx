@@ -40,7 +40,7 @@ export function CartLineItem({ item, editable = false, onUpdateQuantity, onRemov
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="truncate font-medium text-foreground">{item.name}</p>
         {item.notes && <p className="truncate text-sm text-muted-foreground">Obs.: {item.notes}</p>}
-        <span className="font-mono text-sm font-semibold tabular-nums text-primary">
+        <span className="font-numeric text-sm font-semibold tabular-nums text-primary">
           {formatCurrency(lineTotal)}
         </span>
       </div>
@@ -57,7 +57,7 @@ export function CartLineItem({ item, editable = false, onUpdateQuantity, onRemov
           >
             <Minus className="h-3.5 w-3.5" />
           </Button>
-          <span className="w-5 text-center font-mono text-sm tabular-nums">{item.quantity}</span>
+          <span className="w-5 text-center font-numeric text-sm tabular-nums">{item.quantity}</span>
           <Button
             type="button"
             variant="ghost"
@@ -80,7 +80,7 @@ export function CartLineItem({ item, editable = false, onUpdateQuantity, onRemov
           </Button>
         </div>
       ) : (
-        <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 font-mono text-xs font-medium text-muted-foreground">
+        <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 font-numeric text-xs font-medium text-muted-foreground">
           Qtd. {item.quantity}
         </span>
       )}

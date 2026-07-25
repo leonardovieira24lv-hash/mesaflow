@@ -157,7 +157,7 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
                   </span>
                   {item.notes && <span className="text-xs text-muted-foreground">{item.notes}</span>}
                 </div>
-                <span className="font-mono text-muted-foreground">{formatCurrency(item.price * item.quantity)}</span>
+                <span className="font-numeric text-muted-foreground">{formatCurrency(item.price * item.quantity)}</span>
               </li>
             ))}
           </ul>
@@ -174,7 +174,7 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
 
         <CardFooter className="justify-between">
           <span className="font-medium text-foreground">Total</span>
-          <span className="font-mono text-lg font-semibold text-foreground">
+          <span className="font-numeric text-lg font-semibold text-foreground">
             {formatCurrency(order.total_amount)}
           </span>
         </CardFooter>

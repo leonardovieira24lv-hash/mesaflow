@@ -52,12 +52,12 @@ export async function RecentOrders({ restaurantId }: { restaurantId: string }) {
               <TableBody>
                 {orders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-mono">{order.tableName}</TableCell>
+                    <TableCell className="font-numeric">{order.tableName}</TableCell>
                     <TableCell>
                       <OrderStatusBadge status={order.status} />
                     </TableCell>
-                    <TableCell className="font-mono">{formatCurrency(order.totalAmount)}</TableCell>
-                    <TableCell className="font-mono text-muted-foreground">
+                    <TableCell className="font-numeric">{formatCurrency(order.totalAmount)}</TableCell>
+                    <TableCell className="font-numeric text-muted-foreground">
                       {timeFormatter.format(new Date(order.createdAt))}
                     </TableCell>
                   </TableRow>

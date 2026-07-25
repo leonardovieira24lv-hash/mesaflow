@@ -32,7 +32,7 @@ export async function RestaurantStatusHeader({ restaurantId }: { restaurantId: s
           href={`/${overview.slug}/menu`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex w-fit items-center gap-1.5 rounded-full bg-muted px-3 py-1 font-mono text-sm text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+          className="flex w-fit items-center gap-1.5 rounded-full bg-muted px-3 py-1 font-numeric text-sm text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
         >
           /{overview.slug}/menu
           <ExternalLink className="h-3.5 w-3.5" aria-hidden />

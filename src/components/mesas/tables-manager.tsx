@@ -1,7 +1,22 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { LayoutGrid, Pencil, Plus, QrCode, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Clock3,
+  LayoutGrid,
+  Pencil,
+  Plus,
+  QrCode,
+  Receipt,
+  Search,
+  TrendingUp,
+  Trash2,
+  UtensilsCrossed,
+  Armchair,
+  Wallet,
+  Wrench,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -9,18 +24,31 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TableStatusBadge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { formatCurrency, formatRelativeTimeShort } from "@/lib/format";
+import { createClient } from "@/lib/supabase/client";
+import { restaurantOrdersChannel } from "@/lib/realtime/channels";
 import { TableQrModal } from "@/components/mesas/table-qr-modal";
+import { TableDrawer } from "@/components/mesas/table-drawer";
+import {
+  deriveTableCardState,
+  TABLE_CARD_TONE_CLASSES,
+  TABLE_CARD_FILLED_TONES,
+  TABLE_CARD_TONE_DOT_CLASSES,
+} from "@/lib/mesas/derive-table-card-state";
 import { createTableSchema, updateTableSchema, TABLE_STATUS_VALUES } from "@/lib/validations/tables";
+import type { OrderListRow } from "@/components/pedidos/orders-list";
 import type { Table as TableEntity, TableStatus } from "@/types/domain";
-import type { ApiError } from "@/types/api";
+import type { ApiError, ApiSuccess } from "@/types/api";
 
 interface TablesManagerProps {
   initialTables: TableEntity[];
   /** Slug do restaurante, para montar a URL codificada no QR Code (`/{slug}/mesa/{qr_token}`). */
   restaurantSlug: string;
+  /** Para o canal Realtime de pedidos (`restaurant:{id}:orders`). */
+  restaurantId: string;
 }
 
 interface TableDto {
@@ -40,26 +68,58 @@ const STATUS_LABELS: Record<TableStatus, string> = {
   manutencao: "Manutenção",
 };
 
-// Identidade visual por status, para leitura à distância (a mesa é o
-// "coração operacional" do salão — o atendente precisa reconhecer o estado
-// sem ler texto). Só cobre os 3 status que existem hoje no contrato
-// (livre/ocupada/manutencao); "aguardando pedido/fechamento" e "chamando
-// garçom" não são estados reais do backend ainda, então não foram
-// inventados aqui.
-const TABLE_TILE_CLASSES: Record<TableStatus, string> = {
-  livre: "border-success/30 bg-success/5",
-  ocupada: "border-primary/30 bg-primary/5",
-  manutencao: "border-border bg-muted/60 opacity-75",
-};
+interface TableOperations {
+  totalAmount: number;
+  itemCount: number;
+  lastOrderAt: string | null;
+  hasPendingOrder: boolean;
+  orders: OrderListRow[];
+}
+
+function aggregateByTable(orders: OrderListRow[]): Record<string, TableOperations> {
+  const map: Record<string, TableOperations> = {};
+
+  for (const order of orders) {
+    const tableId = order.table.id;
+    if (!map[tableId]) {
+      map[tableId] = { totalAmount: 0, itemCount: 0, lastOrderAt: null, hasPendingOrder: false, orders: [] };
+    }
+    const entry = map[tableId];
+    entry.totalAmount += order.total_amount;
+    entry.itemCount += order.item_count;
+    entry.orders.push(order);
+    if (!entry.lastOrderAt || order.created_at > entry.lastOrderAt) entry.lastOrderAt = order.created_at;
+    if (order.status === "pending") entry.hasPendingOrder = true;
+  }
+
+  return map;
+}
 
 /**
- * Lista + CRUD de Mesas (contrato seção 7). Mesmo padrão de
- * `components/cardapio/categories-manager.tsx`: Server Component (página)
- * carrega a lista inicial, este componente cuida de toda a interação via
- * `/api/v1/tables`.
+ * Painel de Mesas (contrato seção 7) — Centro de Operações (pedido do
+ * dono, pós-feedback "não quero uma tabela comum"). CRUD de mesas continua
+ * aqui (mesmo padrão de sempre, via `/api/v1/tables`); o que mudou é que o
+ * tile de cada mesa agora também mostra dado real de operação (valor em
+ * aberto, itens, tempo desde o último pedido), agregado a partir de
+ * `GET /api/v1/orders` — mesmo endpoint que já alimenta a tela de Pedidos,
+ * sem endpoint novo.
+ *
+ * "Quantidade de pessoas" (pedido no prompt) não aparece em lugar nenhum:
+ * não existe esse campo em `Table` nem em `Order` — mostrar um número aqui
+ * seria inventado. Fica de fora até existir de verdade.
+ *
+ * Realtime: mesmo canal `restaurant:{id}:orders` que a tela de Pedidos já
+ * usa (`restaurantOrdersChannel`) — qualquer pedido criado/atualizado
+ * refaz a agregação. O pulso de "novo pedido" (tile amarelo) nasce direto
+ * de `hasPendingOrder`: enquanto existir um pedido `pending` na mesa, o
+ * tile pulsa; para de pulsar assim que alguém manda para a cozinha
+ * (`preparing`) — não é uma animação de "flash" cronometrada, é o próprio
+ * estado real durando enquanto for verdade.
  */
-export function TablesManager({ initialTables, restaurantSlug }: TablesManagerProps) {
+export function TablesManager({ initialTables, restaurantSlug, restaurantId }: TablesManagerProps) {
   const [tables, setTables] = useState<TableEntity[]>(initialTables);
+  const [operations, setOperations] = useState<Record<string, TableOperations>>({});
+  const [operationsError, setOperationsError] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<TableEntity | null>(null);
@@ -71,11 +131,62 @@ export function TablesManager({ initialTables, restaurantSlug }: TablesManagerPr
   const [deletingTable, setDeletingTable] = useState<TableEntity | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
-
   const [qrTable, setQrTable] = useState<TableEntity | null>(null);
+  const [drawerTable, setDrawerTable] = useState<TableEntity | null>(null);
+
+  // Estado puramente visual (busca + filtro de status na grade). Não é
+  // consumido por nenhuma API/hook — só decide o que é renderizado.
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"todas" | TableStatus>("todas");
+
+  // Tick só para forçar recálculo do "há X min" nos tiles a cada 30s —
+  // sem isso, o texto ficaria parado até o próximo evento Realtime.
+  const [, setClockTick] = useState(0);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+  const fetchOperations = useCallback(async () => {
+    try {
+      const response = await fetch("/api/v1/orders?status=pending,preparing,ready&per_page=100");
+      const body = await response.json();
+      if (!response.ok) {
+        setOperationsError(body?.error?.message ?? "Não foi possível carregar os pedidos em aberto.");
+        return;
+      }
+      const success = body as ApiSuccess<OrderListRow[]>;
+      setOperations(aggregateByTable(success.data));
+      setOperationsError(null);
+    } catch {
+      setOperationsError("Não foi possível conectar para carregar os pedidos em aberto.");
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchOperations();
+  }, [fetchOperations]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setClockTick((t) => t + 1), 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(restaurantOrdersChannel(restaurantId))
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` },
+        () => {
+          void fetchOperations();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [restaurantId, fetchOperations]);
 
   function tableUrl(table: TableEntity) {
     return `${origin}/${restaurantSlug}/mesa/${table.qrToken}`;
@@ -172,34 +283,6 @@ export function TablesManager({ initialTables, restaurantSlug }: TablesManagerPr
     }
   }
 
-  async function handleQuickStatusChange(table: TableEntity, nextStatus: TableStatus) {
-    if (nextStatus === table.status) return;
-    setStatusUpdatingId(table.id);
-
-    try {
-      const response = await fetch(`/api/v1/tables/${table.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      const body = await response.json();
-
-      if (!response.ok) {
-        const apiError = body as ApiError;
-        toast.error("Não foi possível atualizar o status", apiError.error?.message);
-        setStatusUpdatingId(null);
-        return;
-      }
-
-      const saved = fromDto(body.data as TableDto);
-      setTables((prev) => prev.map((t) => (t.id === saved.id ? saved : t)));
-      setStatusUpdatingId(null);
-    } catch {
-      toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
-      setStatusUpdatingId(null);
-    }
-  }
-
   async function handleDelete() {
     if (!deletingTable) return;
     setIsDeleting(true);
@@ -224,15 +307,137 @@ export function TablesManager({ initialTables, restaurantSlug }: TablesManagerPr
     }
   }
 
+  const drawerOperations = drawerTable ? operations[drawerTable.id] : undefined;
+
+  // Agregados derivados do que já está carregado (tables + operations) —
+  // nenhum dado novo, só leitura do que o componente já tem em mãos.
+  const totalTables = tables.length;
+  const freeCount = tables.filter((t) => t.status === "livre").length;
+  const occupiedCount = tables.filter((t) => t.status === "ocupada").length;
+  const maintenanceCount = tables.filter((t) => t.status === "manutencao").length;
+  const openOrdersList = Object.values(operations).flatMap((op) => op.orders);
+  const activeOrdersCount = openOrdersList.length;
+  const openAmount = Object.values(operations).reduce((sum, op) => sum + op.totalAmount, 0);
+  const averageTicket = activeOrdersCount > 0 ? openAmount / activeOrdersCount : null;
+
+  const indicators: Array<{
+    key: string;
+    label: string;
+    value: string;
+    icon: LucideIcon;
+    tone: "success" | "warning" | "muted" | "info" | "default";
+  }> = [
+    { key: "livres", label: "Mesas livres", value: String(freeCount), icon: Armchair, tone: "success" },
+    { key: "ocupadas", label: "Mesas ocupadas", value: String(occupiedCount), icon: UtensilsCrossed, tone: "warning" },
+    { key: "manutencao", label: "Em manutenção", value: String(maintenanceCount), icon: Wrench, tone: "muted" },
+    { key: "pedidos", label: "Pedidos em aberto", value: String(activeOrdersCount), icon: Receipt, tone: "info" },
+    { key: "valor", label: "Valor em aberto", value: formatCurrency(openAmount), icon: Wallet, tone: "default" },
+    {
+      key: "ticket",
+      label: "Ticket médio",
+      value: averageTicket !== null ? formatCurrency(averageTicket) : "—",
+      icon: TrendingUp,
+      tone: "default",
+    },
+  ];
+
+  const toneClasses: Record<(typeof indicators)[number]["tone"], string> = {
+    success: "bg-success/10 text-success ring-1 ring-inset ring-success/15",
+    warning: "bg-warning/10 text-warning ring-1 ring-inset ring-warning/15",
+    muted: "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
+    info: "bg-info/10 text-info ring-1 ring-inset ring-info/15",
+    default: "bg-primary/10 text-primary ring-1 ring-inset ring-primary/15",
+  };
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredTables = tables.filter((table) => {
+    const matchesStatus = statusFilter === "todas" || table.status === statusFilter;
+    const matchesQuery = normalizedQuery.length === 0 || table.name.toLowerCase().includes(normalizedQuery);
+    return matchesStatus && matchesQuery;
+  });
+
+  const STATUS_FILTER_OPTIONS: Array<{ value: "todas" | TableStatus; label: string }> = [
+    { value: "todas", label: "Todas" },
+    { value: "livre", label: "Livres" },
+    { value: "ocupada", label: "Ocupadas" },
+    { value: "manutencao", label: "Manutenção" },
+  ];
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
+    <div className="flex flex-col gap-5">
+      {operationsError && (
+        <Alert variant="warning">
+          {operationsError} — os tiles mostram só o status da mesa, sem dado de pedido em aberto.
+        </Alert>
+      )}
+
+      {/* Header Operacional */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5 shadow-card sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <LayoutGrid className="h-5 w-5" aria-hidden />
+          </span>
+          <div className="flex flex-col">
+            <h2 className="font-display text-xl font-semibold leading-tight">Centro de Operações</h2>
+            <p className="text-sm text-muted-foreground">
+              {totalTables === 0
+                ? "Nenhuma mesa cadastrada"
+                : `${totalTables} ${totalTables === 1 ? "mesa cadastrada" : "mesas cadastradas"}`}
+            </p>
+          </div>
+        </div>
         <Button onClick={openCreateModal}>
           <Plus className="h-4 w-4" />
           Nova mesa
         </Button>
       </div>
 
+      {/* Indicadores */}
+      {totalTables > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {indicators.map((indicator) => (
+            <div
+              key={indicator.key}
+              className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3.5 shadow-card"
+            >
+              <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", toneClasses[indicator.tone])}>
+                <indicator.icon className="h-4 w-4" aria-hidden />
+              </span>
+              <span className="font-numeric text-xl font-bold tabular-nums text-foreground">{indicator.value}</span>
+              <span className="text-xs text-muted-foreground">{indicator.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Barra de filtros */}
+      {totalTables > 0 && (
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3 sm:flex-row sm:items-center sm:justify-between">
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar mesa por nome..."
+            leadingIcon={<Search />}
+            className="sm:max-w-xs"
+            aria-label="Buscar mesa"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {STATUS_FILTER_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                size="sm"
+                variant={statusFilter === option.value ? "secondary" : "ghost"}
+                onClick={() => setStatusFilter(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Grade de Mesas */}
       {tables.length === 0 ? (
         <EmptyState
           icon={LayoutGrid}
@@ -245,64 +450,205 @@ export function TablesManager({ initialTables, restaurantSlug }: TablesManagerPr
             </Button>
           }
         />
+      ) : filteredTables.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title="Nenhuma mesa encontrada"
+          description="Ajuste a busca ou o filtro de status para ver outras mesas."
+          action={
+            <Button
+              onClick={() => {
+                setSearchQuery("");
+                setStatusFilter("todas");
+              }}
+              variant="outline"
+            >
+              Limpar filtros
+            </Button>
+          }
+        />
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {tables.map((table) => (
-            <div
-              key={table.id}
-              className={cn(
-                "group relative flex flex-col gap-3 overflow-hidden rounded-xl border p-4 shadow-card transition-shadow hover:shadow-card-hover",
-                TABLE_TILE_CLASSES[table.status],
-              )}
-            >
-              <div className="absolute right-2 top-2 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setQrTable(table)}
-                  aria-label={`Ver QR Code de ${table.name}`}
-                  className="h-7 w-7"
+          {filteredTables.map((table) => {
+            const data = operations[table.id] ?? null;
+            const state = deriveTableCardState(table.status, data, []);
+            const isFilled = TABLE_CARD_FILLED_TONES.includes(state.tone);
+            const pulseColorVar =
+              state.tone === "warning"
+                ? undefined
+                : ({ "--tw-ring-pulse-color": `hsl(var(--${state.tone}) / 0.35)` } as CSSProperties);
+
+            const dotClass = isFilled ? "bg-white/70" : TABLE_CARD_TONE_DOT_CLASSES[state.tone];
+            const ordersCount = data?.orders.length ?? 0;
+            const actionLabel = table.status === "livre" ? "Abrir mesa" : "Ver mesa";
+
+            return (
+              <div
+                key={table.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setDrawerTable(table)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") setDrawerTable(table);
+                }}
+                style={pulseColorVar}
+                className={cn(
+                  "group relative flex h-full cursor-pointer flex-col gap-3 overflow-hidden rounded-2xl border p-3.5 shadow-card transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover active:translate-y-0",
+                  TABLE_CARD_TONE_CLASSES[state.tone],
+                  state.pulse && "animate-ring-pulse",
+                )}
+              >
+                {/* Ícone decorativo — só personalidade visual, sem função. */}
+                <Armchair
+                  aria-hidden
+                  className={cn(
+                    "pointer-events-none absolute -bottom-3 -right-3 h-16 w-16",
+                    isFilled ? "text-white/15" : "text-muted-foreground/10",
+                  )}
+                />
+
+                <div className="absolute right-1.5 top-1.5 z-10 flex gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setQrTable(table);
+                    }}
+                    aria-label={`Ver QR Code de ${table.name}`}
+                    className={cn(
+                      "h-7 w-7 opacity-70 hover:opacity-100",
+                      isFilled ? "text-white hover:bg-white/15 hover:text-white" : "text-muted-foreground",
+                    )}
+                  >
+                    <QrCode className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditModal(table);
+                    }}
+                    aria-label={`Editar ${table.name}`}
+                    className={cn(
+                      "h-7 w-7 opacity-70 hover:opacity-100",
+                      isFilled ? "text-white hover:bg-white/15 hover:text-white" : "text-muted-foreground",
+                    )}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletingTable(table);
+                    }}
+                    aria-label={`Excluir ${table.name}`}
+                    className={cn(
+                      "h-7 w-7 opacity-70 hover:opacity-100",
+                      isFilled ? "text-white hover:bg-white/15 hover:text-white" : "text-destructive",
+                    )}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+
+                {/* 1. Número da mesa — maior elemento do card. */}
+                <span
+                  className={cn(
+                    "z-10 pr-14 font-numeric text-4xl font-bold leading-none tabular-nums",
+                    isFilled ? "text-white" : "text-foreground",
+                  )}
                 >
-                  <QrCode className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => openEditModal(table)}
-                  aria-label={`Editar ${table.name}`}
-                  className="h-7 w-7"
+                  {table.name}
+                </span>
+
+                {/* 2. Status — badge elegante com indicador de cor, nunca texto solto. */}
+                <span
+                  className={cn(
+                    "z-10 -mt-1 inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide",
+                    isFilled ? "bg-white/20 text-white" : "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
+                  )}
                 >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
+                  <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotClass)} aria-hidden />
+                  {state.label}
+                </span>
+
+                {/* 3 + 4. Valor em aberto (se existir) e tempo, discreto. */}
+                {data ? (
+                  <div className="z-10 flex flex-col gap-0.5">
+                    <span
+                      className={cn(
+                        "font-numeric text-2xl font-bold leading-tight tabular-nums",
+                        isFilled ? "text-white" : "text-foreground",
+                      )}
+                    >
+                      {formatCurrency(data.totalAmount)}
+                    </span>
+                    {data.lastOrderAt && (
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 text-[11px]",
+                          isFilled ? "text-white/70" : "text-muted-foreground",
+                        )}
+                      >
+                        <Clock3 className="h-3 w-3 shrink-0" aria-hidden />
+                        último pedido {formatRelativeTimeShort(data.lastOrderAt)}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className={cn("z-10 text-xs", isFilled ? "text-white/70" : "text-muted-foreground")}>
+                    Sem pedidos em aberto
+                  </span>
+                )}
+
+                {/* 5. Resumo operacional — só o que já existe (itens, pedidos). */}
+                {data && (data.itemCount > 0 || ordersCount > 0) && (
+                  <div
+                    className={cn(
+                      "z-10 flex items-center gap-3 text-[11px]",
+                      isFilled ? "text-white/80" : "text-muted-foreground",
+                    )}
+                  >
+                    {ordersCount > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <Receipt className="h-3 w-3 shrink-0" aria-hidden />
+                        {ordersCount} {ordersCount === 1 ? "pedido" : "pedidos"}
+                      </span>
+                    )}
+                    {data.itemCount > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <UtensilsCrossed className="h-3 w-3 shrink-0" aria-hidden />
+                        {data.itemCount} {data.itemCount === 1 ? "item" : "itens"}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Ação principal — sempre visível, alvo de toque grande, fixada no final do card. */}
                 <Button
+                  type="button"
                   variant="ghost"
-                  size="icon"
-                  onClick={() => setDeletingTable(table)}
-                  aria-label={`Excluir ${table.name}`}
-                  className="h-7 w-7"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDrawerTable(table);
+                  }}
+                  className={cn(
+                    "z-10 mt-auto w-full justify-center border font-semibold",
+                    isFilled
+                      ? "border-white/25 bg-white/10 text-white hover:bg-white/20"
+                      : "border-border bg-surface hover:bg-muted",
+                  )}
                 >
-                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  {actionLabel}
                 </Button>
               </div>
-
-              <span className="font-mono text-2xl font-bold tabular-nums">{table.name}</span>
-              <TableStatusBadge status={table.status} />
-
-              <Select
-                aria-label={`Alterar status de ${table.name}`}
-                value={table.status}
-                disabled={statusUpdatingId === table.id}
-                onChange={(e) => handleQuickStatusChange(table, e.target.value as TableStatus)}
-                className="mt-auto h-8 text-xs"
-              >
-                {TABLE_STATUS_VALUES.map((value) => (
-                  <option key={value} value={value}>
-                    {STATUS_LABELS[value]}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -366,6 +712,19 @@ export function TablesManager({ initialTables, restaurantSlug }: TablesManagerPr
           onClose={() => setQrTable(null)}
           tableName={qrTable.name}
           url={tableUrl(qrTable)}
+        />
+      )}
+
+      {drawerTable && (
+        <TableDrawer
+          table={drawerTable}
+          openOrders={drawerOperations?.orders ?? []}
+          onClose={() => setDrawerTable(null)}
+          onOrdersChanged={() => void fetchOperations()}
+          onTableUpdated={(updated) => {
+            setTables((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+            setDrawerTable(updated);
+          }}
         />
       )}
     </div>

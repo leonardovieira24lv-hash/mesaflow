@@ -48,7 +48,7 @@ export function OrderSummaryBar({
       <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4 shadow-bar">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-muted-foreground">Total</span>
-          <span className="font-mono text-lg font-bold tabular-nums text-foreground">{formatCurrency(total)}</span>
+          <span className="font-numeric text-lg font-bold tabular-nums text-foreground">{formatCurrency(total)}</span>
         </div>
 
         {actionSlot ?? (

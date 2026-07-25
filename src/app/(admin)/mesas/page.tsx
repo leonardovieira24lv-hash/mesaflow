@@ -23,7 +23,12 @@ export default async function MesasPage() {
   const supabase = await createClient();
 
   const [{ data: restaurant }, { data: tablesData }] = await Promise.all([
-    supabase.from("restaurants").select("slug").eq("id", profile.restaurantId).single(),
+    supabase
+      .from("restaurants")
+      .select("id, slug")
+      .eq("id", profile.restaurantId)
+      .single(),
+
     supabase
       .from("tables")
       .select("id, name, status, qr_token")
@@ -41,14 +46,20 @@ export default async function MesasPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="font-display text-2xl font-semibold">Mesas</h1>
+        <h1 className="font-display text-2xl font-semibold">
+          Mesas
+        </h1>
+
         <p className="text-sm text-muted-foreground">
-          Adicione, renomeie e gerencie o status das mesas do salão, e baixe o QR Code de acesso ao
-          cardápio de cada uma.
+          Adicione, renomeie e gerencie o status das mesas do salão, e baixe o QR Code de acesso ao cardápio de cada uma.
         </p>
       </div>
 
-      <TablesManager initialTables={tables} restaurantSlug={restaurant?.slug ?? ""} />
+      <TablesManager
+        initialTables={tables}
+        restaurantSlug={restaurant?.slug ?? ""}
+        restaurantId={restaurant?.id ?? ""}
+      />
     </div>
   );
 }

@@ -38,7 +38,7 @@ export function TableQrCode({ tableName, url }: TableQrCodeProps) {
       ) : (
         <Skeleton className="h-[120px] w-[120px]" />
       )}
-      <span className="font-mono text-sm font-medium">{tableName}</span>
+      <span className="font-numeric text-sm font-medium">{tableName}</span>
     </div>
   );
 }

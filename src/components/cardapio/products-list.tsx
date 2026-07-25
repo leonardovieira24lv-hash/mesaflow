@@ -223,7 +223,7 @@ export function ProductsList({ categories, initialItems, initialMeta }: Products
                       <TableCell className="text-muted-foreground">
                         {categoryNameById.get(item.categoryId) ?? "—"}
                       </TableCell>
-                      <TableCell className="font-mono">{formatCurrency(item.price)}</TableCell>
+                      <TableCell className="font-numeric">{formatCurrency(item.price)}</TableCell>
                       <TableCell>
                         <Switch
                           checked={item.isAvailable}

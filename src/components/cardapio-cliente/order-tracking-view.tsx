@@ -71,7 +71,7 @@ export function OrderTrackingView({ slug, orderId, restaurantName, initialOrder 
       <main className="flex flex-1 flex-col gap-6 px-4 py-6">
         <div className="flex flex-col gap-1">
           <h1 className="font-display text-xl font-semibold text-foreground">Seu pedido</h1>
-          <p className="font-mono text-xs text-muted-foreground">#{order.id.slice(0, 8)}</p>
+          <p className="font-numeric text-xs text-muted-foreground">#{order.id.slice(0, 8)}</p>
         </div>
 
         <div className="flex items-center justify-between rounded-lg border border-border bg-surface p-4">
@@ -90,7 +90,7 @@ export function OrderTrackingView({ slug, orderId, restaurantName, initialOrder 
                 className="flex items-center justify-between rounded-lg border border-border bg-surface p-3 text-sm"
               >
                 <span className="text-foreground">{item.name}</span>
-                <span className="font-mono text-muted-foreground">×{item.quantity}</span>
+                <span className="font-numeric text-muted-foreground">×{item.quantity}</span>
               </li>
             ))}
           </ul>
