@@ -64,7 +64,7 @@ export function CardapioClienteView({
                 {category.items.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhum produto nesta categoria ainda.</p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <div className="flex flex-col gap-2.5">
                     {category.items.map((item) => (
                       <MenuItemCard key={item.id} item={item} onSelect={setSelectedItem} />
                     ))}
