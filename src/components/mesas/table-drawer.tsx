@@ -15,6 +15,7 @@ import {
   deriveTableCardState,
   TABLE_CARD_FILLED_TONES,
   TABLE_CARD_TONE_DOT_CLASSES,
+  TABLE_CARD_TONE_CLASSES,
 } from "@/lib/mesas/derive-table-card-state";
 import type { OrderListRow } from "@/components/pedidos/orders-list";
 import type { Table as TableEntity } from "@/types/domain";
@@ -236,10 +237,7 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
         <div
           className={cn(
             "flex flex-col gap-3 border-b border-border px-5 py-4",
-            isFilled && cardState.tone === "success" && "bg-success text-success-foreground",
-            isFilled && cardState.tone === "warning" && "bg-warning text-warning-foreground",
-            isFilled && cardState.tone === "info" && "bg-info text-info-foreground",
-            isFilled && cardState.tone === "destructive" && "bg-destructive text-destructive-foreground",
+            isFilled && TABLE_CARD_TONE_CLASSES[cardState.tone],
           )}
         >
           <div className="flex items-start justify-between gap-2">

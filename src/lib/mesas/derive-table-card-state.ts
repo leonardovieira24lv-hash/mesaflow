@@ -26,7 +26,14 @@ export interface TableOperationalData {
 export interface TableCardState {
   tone: TableCardTone;
   label: string;
-  /** Anima em pulso suave — reservado para o que precisa de atenção imediata. */
+  /**
+   * Sinaliza que o tile representa algo que pede atenção imediata (pedido
+   * novo, garçom chamado, conta pedida). Não dispara mais uma pulsação
+   * contínua — o flash de transição em `TablesManager`/`TableDrawer` já
+   * acontece para qualquer mudança de tom, urgente ou não. Campo mantido
+   * disponível para uso futuro (ex.: destaque persistente na ordenação da
+   * grade) sem precisar mudar a assinatura de `deriveTableCardState`.
+   */
   pulse: boolean;
 }
 
@@ -72,12 +79,21 @@ export function deriveTableCardState(
   return { tone: "success", label: "Atendimento normal", pulse: false };
 }
 
+/**
+ * Tons sólidos para o tile inteiro (grade de Mesas e cabeçalho do Drawer).
+ * Deliberadamente mais dessaturados que os tokens semânticos globais
+ * (`--success`/`--warning`/`--info`/`--destructive`, usados em Badge/Toast/
+ * Alert/Dashboard) — em badges pequenos a cor vibrante ajuda a chamar
+ * atenção, mas preenchendo um card inteiro o mesmo tom fica com aspecto de
+ * alerta/erro em vez de software profissional. Valores isolados aqui (não
+ * tokens globais) para não afetar nenhum outro componente do design system.
+ */
 export const TABLE_CARD_TONE_CLASSES: Record<TableCardTone, string> = {
   neutral: "border-border bg-surface",
-  success: "border-transparent bg-success text-success-foreground",
-  warning: "border-transparent bg-warning text-warning-foreground",
-  info: "border-transparent bg-info text-info-foreground",
-  destructive: "border-transparent bg-destructive text-destructive-foreground",
+  success: "border-transparent bg-[hsl(152_38%_31%)] text-white",
+  warning: "border-transparent bg-[hsl(36_58%_41%)] text-white",
+  info: "border-transparent bg-[hsl(217_45%_40%)] text-white",
+  destructive: "border-transparent bg-[hsl(358_50%_42%)] text-white",
   muted: "border-border bg-muted/60 opacity-75",
 };
 

@@ -43,7 +43,7 @@ export function CardapioClienteView({
         <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
         <CategoryNav categories={categories} />
 
-        <main className="flex flex-1 flex-col gap-8 px-4 py-6">
+        <main className="flex flex-1 flex-col gap-5 px-4 py-4">
           {!hasCategories ? (
             <EmptyState
               icon={UtensilsCrossed}
@@ -55,16 +55,16 @@ export function CardapioClienteView({
               <section
                 key={category.id}
                 id={categorySectionId(category.id)}
-                className="flex scroll-mt-20 flex-col gap-3"
+                className="flex scroll-mt-14 flex-col gap-2"
               >
-                <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+                <h2 className="font-display text-base font-semibold tracking-tight text-foreground">
                   {category.name}
                 </h2>
 
                 {category.items.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhum produto nesta categoria ainda.</p>
                 ) : (
-                  <div className="flex flex-col gap-2.5">
+                  <div className="flex flex-col gap-2">
                     {category.items.map((item) => (
                       <MenuItemCard key={item.id} item={item} onSelect={setSelectedItem} />
                     ))}

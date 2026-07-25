@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Clock3,
@@ -37,6 +37,7 @@ import {
   TABLE_CARD_TONE_CLASSES,
   TABLE_CARD_FILLED_TONES,
   TABLE_CARD_TONE_DOT_CLASSES,
+  type TableCardTone,
 } from "@/lib/mesas/derive-table-card-state";
 import { createTableSchema, updateTableSchema, TABLE_STATUS_VALUES } from "@/lib/validations/tables";
 import type { OrderListRow } from "@/components/pedidos/orders-list";
@@ -110,11 +111,13 @@ function aggregateByTable(orders: OrderListRow[]): Record<string, TableOperation
  *
  * Realtime: mesmo canal `restaurant:{id}:orders` que a tela de Pedidos já
  * usa (`restaurantOrdersChannel`) — qualquer pedido criado/atualizado
- * refaz a agregação. O pulso de "novo pedido" (tile amarelo) nasce direto
- * de `hasPendingOrder`: enquanto existir um pedido `pending` na mesa, o
- * tile pulsa; para de pulsar assim que alguém manda para a cozinha
- * (`preparing`) — não é uma animação de "flash" cronometrada, é o próprio
- * estado real durando enquanto for verdade.
+ * refaz a agregação. Microinteração de mudança de status: quando o tom
+ * derivado de uma mesa muda (ex.: livre → novo pedido, novo pedido →
+ * atendimento normal), o tile dispara um único flash curto (leve aumento
+ * de escala + reforço de sombra, ~260ms) e volta ao repouso — nunca uma
+ * pulsação contínua. O diff é feito comparando o tom atual com o tom do
+ * render anterior por mesa (`prevTonesRef`), então só acontece na transição
+ * em si, não enquanto o estado "novo pedido" permanece verdadeiro.
  */
 export function TablesManager({ initialTables, restaurantSlug, restaurantId }: TablesManagerProps) {
   const [tables, setTables] = useState<TableEntity[]>(initialTables);
@@ -169,6 +172,42 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
     const interval = setInterval(() => setClockTick((t) => t + 1), 30_000);
     return () => clearInterval(interval);
   }, []);
+
+  // Tom derivado de cada mesa neste render — usado só para detectar
+  // transição (ver useEffect abaixo). Não substitui `deriveTableCardState`
+  // dentro do JSX, que segue sendo a fonte de verdade por card.
+  const currentTones = useMemo(() => {
+    const map: Record<string, TableCardTone> = {};
+    for (const table of tables) {
+      map[table.id] = deriveTableCardState(table.status, operations[table.id] ?? null, []).tone;
+    }
+    return map;
+  }, [tables, operations]);
+
+  const prevTonesRef = useRef<Record<string, TableCardTone>>({});
+  const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const previous = prevTonesRef.current;
+    const changedIds = Object.entries(currentTones)
+      .filter(([id, tone]) => previous[id] !== undefined && previous[id] !== tone)
+      .map(([id]) => id);
+
+    prevTonesRef.current = currentTones;
+
+    if (changedIds.length === 0) return;
+
+    setFlashingIds((prev) => new Set([...prev, ...changedIds]));
+    const timer = setTimeout(() => {
+      setFlashingIds((prev) => {
+        const next = new Set(prev);
+        changedIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    }, 280);
+
+    return () => clearTimeout(timer);
+  }, [currentTones]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -473,10 +512,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
             const data = operations[table.id] ?? null;
             const state = deriveTableCardState(table.status, data, []);
             const isFilled = TABLE_CARD_FILLED_TONES.includes(state.tone);
-            const pulseColorVar =
-              state.tone === "warning"
-                ? undefined
-                : ({ "--tw-ring-pulse-color": `hsl(var(--${state.tone}) / 0.35)` } as CSSProperties);
+            const isFlashing = flashingIds.has(table.id);
 
             const dotClass = isFilled ? "bg-white/70" : TABLE_CARD_TONE_DOT_CLASSES[state.tone];
             const ordersCount = data?.orders.length ?? 0;
@@ -491,23 +527,22 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 onKeyDown={(e) => {
                   if (e.key === "Enter") setDrawerTable(table);
                 }}
-                style={pulseColorVar}
                 className={cn(
-                  "group relative flex h-full cursor-pointer flex-col gap-3 overflow-hidden rounded-2xl border p-3.5 shadow-card transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover active:translate-y-0",
+                  "group relative flex h-full cursor-pointer flex-col gap-2 overflow-hidden rounded-2xl border p-2.5 shadow-card transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover active:translate-y-0",
                   TABLE_CARD_TONE_CLASSES[state.tone],
-                  state.pulse && "animate-ring-pulse",
+                  isFlashing && "animate-status-flash",
                 )}
               >
                 {/* Ícone decorativo — só personalidade visual, sem função. */}
                 <Armchair
                   aria-hidden
                   className={cn(
-                    "pointer-events-none absolute -bottom-3 -right-3 h-16 w-16",
+                    "pointer-events-none absolute -bottom-2 -right-2 h-11 w-11",
                     isFilled ? "text-white/15" : "text-muted-foreground/10",
                   )}
                 />
 
-                <div className="absolute right-1.5 top-1.5 z-10 flex gap-0.5">
+                <div className="absolute right-1 top-1 z-10 flex gap-0.5">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -517,11 +552,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     }}
                     aria-label={`Ver QR Code de ${table.name}`}
                     className={cn(
-                      "h-7 w-7 opacity-70 hover:opacity-100",
+                      "h-6 w-6 opacity-70 hover:opacity-100",
                       isFilled ? "text-white hover:bg-white/15 hover:text-white" : "text-muted-foreground",
                     )}
                   >
-                    <QrCode className="h-3.5 w-3.5" />
+                    <QrCode className="h-3 w-3" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -532,11 +567,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     }}
                     aria-label={`Editar ${table.name}`}
                     className={cn(
-                      "h-7 w-7 opacity-70 hover:opacity-100",
+                      "h-6 w-6 opacity-70 hover:opacity-100",
                       isFilled ? "text-white hover:bg-white/15 hover:text-white" : "text-muted-foreground",
                     )}
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <Pencil className="h-3 w-3" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -547,18 +582,18 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     }}
                     aria-label={`Excluir ${table.name}`}
                     className={cn(
-                      "h-7 w-7 opacity-70 hover:opacity-100",
+                      "h-6 w-6 opacity-70 hover:opacity-100",
                       isFilled ? "text-white hover:bg-white/15 hover:text-white" : "text-destructive",
                     )}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
 
-                {/* 1. Número da mesa — maior elemento do card. */}
+                {/* 1. Número da mesa — maior elemento do card, sem dominá-lo. */}
                 <span
                   className={cn(
-                    "z-10 pr-14 font-numeric text-4xl font-bold leading-none tabular-nums",
+                    "z-10 pr-11 font-numeric text-2xl font-bold leading-none tabular-nums",
                     isFilled ? "text-white" : "text-foreground",
                   )}
                 >
@@ -568,11 +603,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 {/* 2. Status — badge elegante com indicador de cor, nunca texto solto. */}
                 <span
                   className={cn(
-                    "z-10 -mt-1 inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide",
+                    "z-10 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                     isFilled ? "bg-white/20 text-white" : "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
                   )}
                 >
-                  <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotClass)} aria-hidden />
+                  <span className={cn("h-1 w-1 shrink-0 rounded-full", dotClass)} aria-hidden />
                   {state.label}
                 </span>
 
@@ -581,7 +616,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                   <div className="z-10 flex flex-col gap-0.5">
                     <span
                       className={cn(
-                        "font-numeric text-2xl font-bold leading-tight tabular-nums",
+                        "font-numeric text-lg font-bold leading-tight tabular-nums",
                         isFilled ? "text-white" : "text-foreground",
                       )}
                     >
@@ -590,17 +625,17 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     {data.lastOrderAt && (
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1 text-[11px]",
+                          "inline-flex items-center gap-1 text-[10px]",
                           isFilled ? "text-white/70" : "text-muted-foreground",
                         )}
                       >
-                        <Clock3 className="h-3 w-3 shrink-0" aria-hidden />
+                        <Clock3 className="h-2.5 w-2.5 shrink-0" aria-hidden />
                         último pedido {formatRelativeTimeShort(data.lastOrderAt)}
                       </span>
                     )}
                   </div>
                 ) : (
-                  <span className={cn("z-10 text-xs", isFilled ? "text-white/70" : "text-muted-foreground")}>
+                  <span className={cn("z-10 text-[11px]", isFilled ? "text-white/70" : "text-muted-foreground")}>
                     Sem pedidos em aberto
                   </span>
                 )}
@@ -609,19 +644,19 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 {data && (data.itemCount > 0 || ordersCount > 0) && (
                   <div
                     className={cn(
-                      "z-10 flex items-center gap-3 text-[11px]",
+                      "z-10 flex items-center gap-2.5 text-[10px]",
                       isFilled ? "text-white/80" : "text-muted-foreground",
                     )}
                   >
                     {ordersCount > 0 && (
                       <span className="inline-flex items-center gap-1">
-                        <Receipt className="h-3 w-3 shrink-0" aria-hidden />
+                        <Receipt className="h-2.5 w-2.5 shrink-0" aria-hidden />
                         {ordersCount} {ordersCount === 1 ? "pedido" : "pedidos"}
                       </span>
                     )}
                     {data.itemCount > 0 && (
                       <span className="inline-flex items-center gap-1">
-                        <UtensilsCrossed className="h-3 w-3 shrink-0" aria-hidden />
+                        <UtensilsCrossed className="h-2.5 w-2.5 shrink-0" aria-hidden />
                         {data.itemCount} {data.itemCount === 1 ? "item" : "itens"}
                       </span>
                     )}
@@ -638,7 +673,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     setDrawerTable(table);
                   }}
                   className={cn(
-                    "z-10 mt-auto w-full justify-center border font-semibold",
+                    "z-10 mt-auto h-7 w-full justify-center border text-xs font-semibold",
                     isFilled
                       ? "border-white/25 bg-white/10 text-white hover:bg-white/20"
                       : "border-border bg-surface hover:bg-muted",

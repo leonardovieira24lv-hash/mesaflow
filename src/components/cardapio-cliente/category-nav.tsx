@@ -42,7 +42,7 @@ export function CategoryNav({ categories }: CategoryNavProps) {
       // que antes: agora só o próprio <CategoryNav> fica fixo no topo (o
       // header de marca rola junto com a página), então a faixa reservada é
       // só a altura da barra de categorias.
-      { rootMargin: "-72px 0px -60% 0px", threshold: 0 },
+      { rootMargin: "-56px 0px -60% 0px", threshold: 0 },
     );
 
     sections.forEach((section) => observer.observe(section));
@@ -59,7 +59,7 @@ export function CategoryNav({ categories }: CategoryNavProps) {
   return (
     <nav
       aria-label="Categorias do cardápio"
-      className="sticky top-0 z-20 flex gap-2 overflow-x-auto border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/85 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="sticky top-0 z-20 flex gap-1.5 overflow-x-auto border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/85 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {categories.map((category) => (
         <button
@@ -68,7 +68,7 @@ export function CategoryNav({ categories }: CategoryNavProps) {
           onClick={() => handleClick(category.id)}
           aria-current={activeId === category.id ? "true" : undefined}
           className={cn(
-            "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-[background-color,color,transform,box-shadow] duration-150 active:scale-[0.96]",
+            "shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-[background-color,color,transform,box-shadow] duration-150 active:scale-[0.96]",
             activeId === category.id
               ? "bg-primary text-primary-foreground shadow-glow"
               : "bg-muted text-muted-foreground hover:bg-muted/70",

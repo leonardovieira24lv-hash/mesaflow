@@ -4,45 +4,30 @@ interface RestaurantHeaderProps {
 }
 
 /**
- * Hero de marca do cardápio do cliente (Fase 3, item 2: "Exibição das
+ * Cabeçalho do cardápio do cliente (Fase 3, item 2: "Exibição das
  * informações do restaurante"). Puramente apresentacional — sem estado, sem
  * `"use client"` — para poder ser renderizado direto pelo Server Component
  * da página quando não há mesa (ex.: acesso ao cardápio sem QR Code).
  *
- * Sprint "UI Premium": deixou de ser uma barra fixa e virou um bloco de
- * abertura que rola junto com a página — é o primeiro instante depois do
- * scan do QR Code, então carrega a marca (gradiente + tipografia grande) em
- * vez de só repetir o nome em texto plano. Quem assume o posto fixo no topo
- * a partir daqui é o `<CategoryNav>`, como em apps de delivery de
- * referência (a identidade aparece uma vez, a navegação é o que persiste).
+ * Sprint de Refinamento Premium do Cardápio (pedido explícito do dono:
+ * "cabeçalho ocupa espaço demais... reduza a altura... evite banners
+ * grandes"): voltou a ser uma barra compacta — mantém o gradiente de marca
+ * (identidade do MesaFlow), mas sem os blobs decorativos nem a tipografia
+ * grande da versão anterior ("hero de abertura"). Só o essencial: nome do
+ * restaurante e mesa. Não existe campo de logo nem de status
+ * aberto/fechado no contrato do restaurante — não inventados aqui.
  */
 export function RestaurantHeader({ restaurantName, tableName }: RestaurantHeaderProps) {
   return (
-    <header className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--primary-deep))] px-5 pb-7 pt-9 shadow-hero">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-white/10 blur-2xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-white/10 blur-3xl"
-      />
-
-      <div className="relative flex flex-col gap-2">
-        <span className="text-xs font-medium uppercase tracking-wider text-primary-foreground/80">
-          Cardápio digital
+    <header className="relative flex items-center justify-between gap-3 bg-gradient-to-r from-primary to-[hsl(var(--primary-deep))] px-4 py-3">
+      <h1 className="truncate font-display text-lg font-bold tracking-tight text-primary-foreground">
+        {restaurantName}
+      </h1>
+      {tableName && (
+        <span className="shrink-0 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 font-numeric text-[11px] font-medium text-primary-foreground">
+          Mesa {tableName}
         </span>
-        <div className="flex items-end justify-between gap-3">
-          <h1 className="truncate font-display text-3xl font-bold tracking-tight text-primary-foreground">
-            {restaurantName}
-          </h1>
-          {tableName && (
-            <span className="shrink-0 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 font-numeric text-xs font-medium text-primary-foreground backdrop-blur-sm">
-              Mesa {tableName}
-            </span>
-          )}
-        </div>
-      </div>
+      )}
     </header>
   );
 }

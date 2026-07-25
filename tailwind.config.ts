@@ -87,9 +87,10 @@ const config: Config = {
           from: { transform: "translateY(100%)" },
           to: { transform: "translateY(0)" },
         },
-        "ring-pulse": {
-          "0%, 100%": { boxShadow: "0 0 0 0 var(--tw-ring-pulse-color, hsl(var(--warning) / 0.35))" },
-          "50%": { boxShadow: "0 0 0 6px var(--tw-ring-pulse-color, hsl(var(--warning) / 0))" },
+        "status-flash": {
+          "0%": { transform: "scale(1)", boxShadow: "0 1px 2px 0 rgb(15 15 25 / 0.04), 0 1px 3px 0 rgb(15 15 25 / 0.04)" },
+          "35%": { transform: "scale(1.02)", boxShadow: "0 8px 24px -4px rgb(15 15 25 / 0.22)" },
+          "100%": { transform: "scale(1)", boxShadow: "0 1px 2px 0 rgb(15 15 25 / 0.04), 0 1px 3px 0 rgb(15 15 25 / 0.04)" },
         },
         "slide-in-right": {
           from: { transform: "translateX(100%)" },
@@ -103,7 +104,7 @@ const config: Config = {
         "fade-in": "fade-in 0.15s ease-out",
         "scale-in": "scale-in 0.15s ease-out",
         "sheet-up": "sheet-up 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
-        "ring-pulse": "ring-pulse 2.2s ease-in-out infinite",
+        "status-flash": "status-flash 260ms ease-out",
         "slide-in-right": "slide-in-right 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
       },
       boxShadow: {
