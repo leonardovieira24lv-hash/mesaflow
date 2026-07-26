@@ -7,6 +7,11 @@ import { CheckoutView } from "@/components/cardapio-cliente/checkout-view";
 
 export const metadata = { title: "Confirmar pedido" };
 
+// Sprint de Correção de Regressões Críticas — mesma causa raiz do Bug 5
+// (ver `mesa/[token]/page.tsx`): só cliente admin, sem API dinâmica do
+// Next, sujeita a cache estático.
+export const dynamic = "force-dynamic";
+
 /**
  * Tela de checkout (Fase 5, itens 8-12). Server Component: resolve
  * restaurante e (se houver `?mesa=`) o nome da mesa para o cabeçalho — mesmo

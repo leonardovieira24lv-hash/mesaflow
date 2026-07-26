@@ -7,6 +7,12 @@ import { CarrinhoView } from "@/components/cardapio-cliente/carrinho-view";
 
 export const metadata = { title: "Carrinho" };
 
+// Sprint de Correção de Regressões Críticas — mesma causa raiz do Bug 5
+// (ver `mesa/[token]/page.tsx`): só cliente admin, sem API dinâmica do
+// Next, sujeita a cache estático (nome de mesa desatualizado, por exemplo,
+// depois de uma edição).
+export const dynamic = "force-dynamic";
+
 /**
  * Página completa do carrinho (Fase 5, itens 1-7). Server Component: resolve
  * o nome do restaurante e, se houver `?mesa=`, o nome da mesa para o

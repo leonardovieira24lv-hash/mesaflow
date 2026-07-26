@@ -8,6 +8,13 @@ import { CardapioClienteView } from "@/components/cardapio-cliente/cardapio-clie
 
 export const metadata = { title: "Cardápio" };
 
+// Sprint de Correção de Regressões Críticas — mesma causa raiz do Bug 5
+// (ver `mesa/[token]/page.tsx` para a explicação completa): esta página só
+// usa o cliente admin, sem nenhuma API dinâmica do Next, então ficava
+// sujeita a cache estático — preço/disponibilidade desatualizados depois da
+// primeira renderização.
+export const dynamic = "force-dynamic";
+
 /**
  * Cardápio do cliente (contrato seção 3.2, Fase 3 itens 2 a 8). Server
  * Component: resolve restaurante e monta o cardápio consultando o Supabase

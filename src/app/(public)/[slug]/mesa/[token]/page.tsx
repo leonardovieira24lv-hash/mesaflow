@@ -11,6 +11,22 @@ import { withMesaQuery } from "@/lib/cliente-url";
 
 export const metadata = { title: "Bem-vindo" };
 
+// Sprint de Correção de Regressões Críticas — Bug 5 ("QR Code funciona
+// apenas na primeira utilização"): esta página nunca chama nenhuma API
+// dinâmica do Next (sem `cookies()`/`headers()` — usa só o cliente admin,
+// que fala direto com o Supabase por HTTP). Sem nenhum sinal de que precisa
+// rodar por requisição, o Next.js a trata como estática por padrão: a
+// PRIMEIRA vez que alguém escaneava o QR Code, o resultado (para onde
+// redirecionar) ficava em cache — toda leitura seguinte da mesma URL
+// (mesmo `qr_token`, que nunca muda) devolvia o MESMO redirecionamento em
+// cache, ignorando se um pedido novo tinha sido criado, se a mesa entrou em
+// manutenção, ou qualquer outra mudança real no banco desde então. Essa é a
+// causa raiz — nada errado na geração da URL, no `qr_token` ou no
+// middleware. `force-dynamic` garante que esta decisão (cardápio vs.
+// acompanhamento de pedido vs. mesa indisponível) seja recalculada a cada
+// escaneada, sempre contra o estado real do banco.
+export const dynamic = "force-dynamic";
+
 /**
  * Ponto de entrada do QR Code (contrato seção 3.1, Fase 3 item 1): resolve
  * restaurante + mesa e decide para onde encaminhar o cliente —

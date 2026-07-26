@@ -8,6 +8,13 @@ import { OrderTrackingView } from "@/components/cardapio-cliente/order-tracking-
 
 export const metadata = { title: "Acompanhar pedido" };
 
+// Sprint de Correção de Regressões Críticas — mesma causa raiz do Bug 5
+// (ver `mesa/[token]/page.tsx`): só cliente admin, sem API dinâmica do
+// Next, sujeita a cache estático — a carga inicial podia mostrar um status
+// desatualizado até o polling client-side alcançar, ou pior, uma página de
+// "pedido não encontrado" em cache para um pedido recém-criado.
+export const dynamic = "force-dynamic";
+
 /**
  * Acompanhamento do Pedido (contrato seção 3.4). Carga inicial via
  * `getPublicOrderStatus` (mesma query do Route Handler, sem duplicá-la —

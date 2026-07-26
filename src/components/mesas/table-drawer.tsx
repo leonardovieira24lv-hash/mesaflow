@@ -116,7 +116,20 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reage à identidade da mesa/lista de ids, recalculada abaixo
   }, [table.id, openOrders.map((o) => o.id).join(",")]);
 
+  /**
+   * Sprint de Correção de Regressões Críticas — Bug 2: mesmo raciocínio de
+   * `order-detail.tsx` — a checagem de concorrência otimista do endpoint
+   * está correta; o que faltava aqui era resincronizar a tela quando ela
+   * rejeita por causa de dado desatualizado (ex.: o mesmo pedido já foi
+   * avançado pela tela de Pedidos). `onOrdersChanged()` já existe e refaz a
+   * agregação no componente pai — chamando também no caminho de erro (antes
+   * só acontecia no de sucesso), a lista de pedidos abertos desta mesa se
+   * atualiza sozinha em vez de ficar presa mostrando uma ação que vai
+   * falhar de novo.
+   */
   async function handleSendToKitchen(orderId: string) {
+    if (updatingOrderId) return;
+
     setUpdatingOrderId(orderId);
     setError(null);
     try {
@@ -127,7 +140,13 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
       });
       const body = await response.json();
       if (!response.ok) {
-        setError(body?.error?.message ?? "Não foi possível enviar para a cozinha.");
+        const isConflict = body?.error?.code === "CONFLICT";
+        setError(
+          isConflict
+            ? "Este pedido já tinha sido atualizado — a lista foi atualizada com o status mais recente."
+            : (body?.error?.message ?? "Não foi possível enviar para a cozinha."),
+        );
+        onOrdersChanged();
         return;
       }
       toast.success("Pedido enviado para a cozinha");

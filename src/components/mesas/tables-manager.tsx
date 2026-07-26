@@ -605,14 +605,8 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
             return (
               <div
                 key={table.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => void handleOpenTable(table)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void handleOpenTable(table);
-                }}
                 className={cn(
-                  "group relative flex h-full cursor-pointer flex-col gap-2 overflow-hidden rounded-2xl border p-2.5 shadow-card transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover active:translate-y-0",
+                  "group relative flex h-full flex-col gap-2 overflow-hidden rounded-2xl border p-2.5 shadow-card transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
                   TABLE_CARD_TONE_CLASSES[state.tone],
                   isFlashing && "animate-status-flash",
                 )}

@@ -83,7 +83,32 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
 
   const availableTransitions = getAvailableOrderStatusTransitions(order.status);
 
+  /**
+   * Sprint de Correção de Regressões Críticas — Bug 2 ("falso conflito" ao
+   * mudar status). A checagem de concorrência otimista em si
+   * (`orders/[id]/status/route.ts`, Sprint 4 de Correção) está correta —
+   * ela só rejeita quando o status no banco já não é mais o que a tela
+   * mostrava. A causa real do "falso conflito" relatado é a tela ficar
+   * comparando contra um `order.status` desatualizado quando o mesmo pedido
+   * já foi avançado por outro caminho (ex.: "Enviar para cozinha" no Drawer
+   * de Mesas, que chama este mesmo endpoint) sem esta tela ter recebido a
+   * atualização a tempo — o clique parece "do nada" falhar para quem está
+   * vendo só esta tela. Duas correções, nenhuma toca a máquina de estados:
+   *
+   *  1. Guarda contra clique duplo antes mesmo do primeiro `await`
+   *     (`isUpdating` só vira `true` de fato depois de um render — um
+   *     duplo clique bem rápido podia dar tempo de disparar duas
+   *     requisições antes do botão desabilitar de verdade).
+   *  2. Em vez de só mostrar um erro genérico e deixar a tela travada
+   *     mostrando um botão que vai falhar de novo, busca o estado real
+   *     atual do pedido (`GET /api/v1/orders/{id}`) e atualiza a tela — os
+   *     botões disponíveis recalculam sozinhos a partir do status
+   *     verdadeiro, então a pessoa vê o que realmente aconteceu em vez de
+   *     ficar presa num conflito que não entende.
+   */
   async function applyStatusChange(nextStatus: OrderStatus) {
+    if (isUpdating) return;
+
     setIsUpdating(true);
     try {
       const response = await fetch(`/api/v1/orders/${order.id}/status`, {
@@ -95,7 +120,17 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
 
       if (!response.ok) {
         const apiError = body as ApiError;
-        toast.error("Não foi possível atualizar o status", apiError.error?.message);
+
+        if (apiError.error?.code === "CONFLICT") {
+          await resyncOrder();
+          toast.error(
+            "O pedido já tinha sido atualizado",
+            "A tela foi atualizada com o status mais recente — confira antes de tentar de novo.",
+          );
+        } else {
+          toast.error("Não foi possível atualizar o status", apiError.error?.message);
+        }
+
         setIsUpdating(false);
         setPendingStatus(null);
         return;
@@ -110,6 +145,21 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
       toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
       setIsUpdating(false);
       setPendingStatus(null);
+    }
+  }
+
+  /** Rebusca o pedido para resincronizar a tela após um conflito de status (ver `applyStatusChange`). */
+  async function resyncOrder() {
+    try {
+      const response = await fetch(`/api/v1/orders/${order.id}`);
+      const body = await response.json();
+      if (response.ok) {
+        const success = body as ApiSuccess<OrderDetailDto>;
+        setOrder(success.data);
+      }
+    } catch {
+      // Melhor esforço — se isto falhar também, a assinatura Realtime já
+      // ativa (linha ~63) deve alcançar o estado correto em breve.
     }
   }
 
