@@ -5,6 +5,7 @@ import { AppError, handleRouteError } from "@/lib/api/errors";
 import { parseOrThrow } from "@/lib/api/validation";
 import { updateOrderStatusSchema } from "@/lib/validations/orders";
 import { assertValidOrderStatusTransition, TERMINAL_ORDER_STATUSES } from "@/lib/orders/status-transitions";
+import type { ApiErrorDetail } from "@/types/api";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -70,11 +71,129 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     if (!updated) {
-      // O pedido existia (já confirmado acima); se não veio nenhuma linha
-      // agora, é porque o status mudou entre a leitura e esta escrita.
+      // Causa raiz da investigação: este código presumia, sem checar, que
+      // "0 linhas afetadas" só podia significar "o status mudou entre a
+      // leitura e esta escrita" — e reportava isso como certeza absoluta ao
+      // usuário. Mas isso é só UMA hipótese: o UPDATE tem três condições no
+      // WHERE (`id`, `restaurant_id`, `status`) mais o que a política de RLS
+      // aplica por baixo dos panos (`update_own_orders`, migration 0007) —
+      // zero linhas afetadas também acontece se RLS bloquear a escrita por
+      // qualquer motivo, mesmo com todos os valores exatamente como esperado.
+      //
+      // Reconsulta SEM o filtro de `restaurant_id` desta vez, de propósito —
+      // deixa só a política de RLS decidir se a linha é visível. Se RLS
+      // deixar ler, `recheck.restaurant_id` mostra o valor REAL da linha,
+      // pra comparar contra o que foi usado, em vez de simplesmente não
+      // encontrar nada por causa do próprio filtro que eu mesmo apliquei.
+      const { data: recheck, error: recheckError } = await supabase
+        .from("orders")
+        .select("id, status, restaurant_id")
+        .eq("id", id)
+        .maybeSingle();
+
+      const diagnostico = {
+        id_usado: id,
+        restaurant_id_usado: profile.restaurantId,
+        status_esperado: current.status,
+        status_encontrado: recheck?.status ?? null,
+        restaurant_id_encontrado: recheck?.restaurant_id ?? null,
+        linhas_afetadas_pelo_update: 0,
+      };
+
+      // Registrado sempre, independente de qual ramo abaixo for tomado —
+      // pra aparecer nos logs da função na Vercel mesmo quando o motivo
+      // final ficar indeterminado.
+      console.error("[orders.status] UPDATE afetou 0 linhas — diagnóstico completo:", diagnostico);
+
+      const detailsBase: ApiErrorDetail[] = [
+        { field: "id_usado", issue: diagnostico.id_usado },
+        { field: "restaurant_id_usado", issue: diagnostico.restaurant_id_usado },
+        { field: "status_esperado", issue: diagnostico.status_esperado },
+        { field: "linhas_afetadas_pelo_update", issue: "0" },
+      ];
+
+      if (recheckError) {
+        // A própria reconsulta falhou — não há dado nenhum pra comparar.
+        throw new AppError(
+          "INTERNAL_ERROR",
+          "Causa indeterminada. UPDATE afetou 0 linhas, porém não foi possível distinguir entre RLS, política de acesso ou outro bloqueio.",
+          [...detailsBase, { field: "erro_na_reconsulta", issue: recheckError.message }],
+        );
+      }
+
+      if (!recheck) {
+        // Nem sem o filtro de restaurant_id a linha foi encontrada — RLS
+        // está bloqueando até a LEITURA para este usuário; não dá nem pra
+        // ver o restaurant_id real da linha a partir daqui.
+        throw new AppError(
+          "INTERNAL_ERROR",
+          "Causa indeterminada. UPDATE afetou 0 linhas, porém não foi possível distinguir entre RLS, política de acesso ou outro bloqueio.",
+          [
+            ...detailsBase,
+            { field: "status_encontrado", issue: "(linha não encontrada nem sem o filtro de restaurant_id)" },
+            { field: "restaurant_id_encontrado", issue: "(não determinável — leitura bloqueada)" },
+            {
+              field: "motivo_final_identificado",
+              issue: "reconsulta sem filtro de restaurant_id também não encontrou a linha — bloqueio de leitura, não só de escrita",
+            },
+          ],
+        );
+      }
+
+      if (recheck.status !== current.status) {
+        // O status genuinamente mudou entre a leitura e a escrita — conflito real, confirmado por dado, não por suposição.
+        throw new AppError(
+          "CONFLICT",
+          "O status deste pedido foi alterado por outra pessoa. Recarregue a página e tente novamente.",
+          [
+            ...detailsBase,
+            { field: "status_encontrado", issue: recheck.status },
+            { field: "restaurant_id_encontrado", issue: recheck.restaurant_id },
+            { field: "motivo_final_identificado", issue: "status mudou entre a leitura e a escrita — conflito real" },
+          ],
+        );
+      }
+
+      if (recheck.restaurant_id !== profile.restaurantId) {
+        // Cenário defensivo: RLS deixou ler a linha (ela pertence a algum
+        // restaurante do usuário), mas o `restaurant_id` real dela diverge
+        // do usado no filtro original. Não deveria ser possível se a
+        // política de SELECT já limita isso — registrado mesmo assim, sem
+        // inventar por que aconteceria.
+        throw new AppError(
+          "INTERNAL_ERROR",
+          "Causa indeterminada. UPDATE afetou 0 linhas, porém não foi possível distinguir entre RLS, política de acesso ou outro bloqueio.",
+          [
+            ...detailsBase,
+            { field: "status_encontrado", issue: recheck.status },
+            { field: "restaurant_id_encontrado", issue: recheck.restaurant_id },
+            {
+              field: "motivo_final_identificado",
+              issue: "restaurant_id real da linha diverge do usado no filtro, apesar de RLS ter permitido a leitura",
+            },
+          ],
+        );
+      }
+
+      // id, restaurant_id e status batem exatamente com o esperado — e
+      // ainda assim o UPDATE afetou 0 linhas. Não há dado que explique isso;
+      // não invento um culpado. RLS/política de acesso é o candidato mais
+      // plausível (é a única checagem que a leitura e a escrita fazem de
+      // forma diferente), mas não há como confirmar isso a partir da API —
+      // consultar `pg_policies`/logs do Postgres exigiria acesso direto ao
+      // banco, fora do alcance deste endpoint.
       throw new AppError(
-        "CONFLICT",
-        "O status deste pedido foi alterado por outra pessoa. Recarregue a página e tente novamente.",
+        "INTERNAL_ERROR",
+        "Causa indeterminada. UPDATE afetou 0 linhas, porém não foi possível distinguir entre RLS, política de acesso ou outro bloqueio.",
+        [
+          ...detailsBase,
+          { field: "status_encontrado", issue: recheck.status },
+          { field: "restaurant_id_encontrado", issue: recheck.restaurant_id },
+          {
+            field: "motivo_final_identificado",
+            issue: "id, restaurant_id e status batem exatamente com o esperado — bloqueio não explicável pelos dados",
+          },
+        ],
       );
     }
 
