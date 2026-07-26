@@ -17,7 +17,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <AdminShellProvider>
-      <div className="flex min-h-screen">
+      {/* Dark Theme Premium: `.dark` aqui ativa a paleta definida em
+          `globals.css` (bloco `.dark`) só dentro do shell administrativo —
+          Cardápio público, Onboarding e Autenticação ficam de fora, no tema
+          claro original, sem precisar de nenhuma mudança neles. */}
+      <div className="dark flex min-h-screen bg-background">
         <AdminSidebar />
         <div className="flex flex-1 flex-col">
           <AdminHeader userEmail={user.email} />

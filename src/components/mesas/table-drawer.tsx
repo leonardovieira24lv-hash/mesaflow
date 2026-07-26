@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChefHat, Clock3, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { OrderStatusBadge } from "@/components/ui/badge";
+import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Alert } from "@/components/ui/alert";
 import { toast } from "@/components/ui/toast";
@@ -73,8 +73,14 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
   const [details, setDetails] = useState<Record<string, OrderDetail>>({});
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  // Trava síncrona — mesmo raciocínio de `order-detail.tsx`: `setState` só
+  // reflete no próximo render, então um duplo toque rápido podia escapar do
+  // `disabled` do botão antes dele atualizar de verdade.
+  const isSendingToKitchenRef = useRef(false);
   const [isClosingBill, setIsClosingBill] = useState(false);
   const [isReleasing, setIsReleasing] = useState(false);
+  const isClosingBillRef = useRef(false);
+  const isReleasingRef = useRef(false);
   const [confirmingRelease, setConfirmingRelease] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -128,7 +134,8 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
    * falhar de novo.
    */
   async function handleSendToKitchen(orderId: string) {
-    if (updatingOrderId) return;
+    if (isSendingToKitchenRef.current) return;
+    isSendingToKitchenRef.current = true;
 
     setUpdatingOrderId(orderId);
     setError(null);
@@ -155,6 +162,7 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
       setError("Não foi possível conectar. Verifique sua internet e tente novamente.");
     } finally {
       setUpdatingOrderId(null);
+      isSendingToKitchenRef.current = false;
     }
   }
 
@@ -182,6 +190,9 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
    *     atualizado, sem esperar o Realtime.
    */
   async function handleCloseBill() {
+    if (isClosingBillRef.current) return;
+    isClosingBillRef.current = true;
+
     setIsClosingBill(true);
     setError(null);
 
@@ -232,10 +243,14 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
       setError(err instanceof Error ? err.message : "Não foi possível fechar a conta.");
     } finally {
       setIsClosingBill(false);
+      isClosingBillRef.current = false;
     }
   }
 
   async function handleReleaseTable() {
+    if (isReleasingRef.current) return;
+    isReleasingRef.current = true;
+
     setIsReleasing(true);
     setError(null);
     try {
@@ -257,6 +272,7 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
       setError("Não foi possível conectar. Verifique sua internet e tente novamente.");
     } finally {
       setIsReleasing(false);
+      isReleasingRef.current = false;
     }
   }
 
@@ -285,8 +301,8 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
       aria-label={`Mesa ${table.name}`}
       className={cn(
         "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88vh] w-full overflow-hidden rounded-t-3xl border-t border-border bg-surface p-0 text-surface-foreground shadow-sheet",
-        "sm:inset-y-0 sm:left-auto sm:right-0 sm:bottom-0 sm:top-0 sm:m-0 sm:h-full sm:max-h-none sm:w-[420px] sm:rounded-none sm:rounded-l-2xl sm:border-l sm:border-t-0 sm:shadow-2xl",
-        "backdrop:bg-foreground/50 backdrop:backdrop-blur-[2px]",
+        "sm:inset-y-0 sm:left-auto sm:right-0 sm:bottom-0 sm:top-0 sm:m-0 sm:h-full sm:max-h-none sm:w-[420px] sm:rounded-none sm:rounded-l-2xl sm:border-l sm:border-t-0 sm:shadow-card-hover",
+        "backdrop:bg-black/50 backdrop:backdrop-blur-[2px]",
         "open:animate-sheet-up sm:open:animate-slide-in-right",
       )}
     >
@@ -385,7 +401,7 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
                     className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-3.5 shadow-card"
                   >
                     <div className="flex items-center justify-between">
-                      <OrderStatusBadge status={order.status} />
+                      <AdminOrderStatusBadge status={order.status} />
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <Clock3 className="h-3 w-3 shrink-0" aria-hidden />
                         {formatRelativeTimeShort(order.created_at)}

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Inbox } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { OrderStatusBadge } from "@/components/ui/badge";
+import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Alert } from "@/components/ui/alert";
 import { Pagination } from "@/components/ui/pagination";
@@ -251,7 +251,7 @@ export function OrdersList({ restaurantId, initialOrders, initialMeta }: OrdersL
                   >
                     <TableCell className="font-medium text-foreground">{order.table.name}</TableCell>
                     <TableCell>
-                      <OrderStatusBadge status={order.status} />
+                      <AdminOrderStatusBadge status={order.status} />
                     </TableCell>
                     <TableCell>{order.item_count}</TableCell>
                     <TableCell className="font-numeric">{formatCurrency(order.total_amount)}</TableCell>

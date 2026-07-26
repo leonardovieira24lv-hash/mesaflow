@@ -57,8 +57,8 @@ export function Modal({ open, onClose, title, description, children, footer, hid
       aria-labelledby={hideHeader ? undefined : "modal-title"}
       aria-label={hideHeader ? title : undefined}
       className={cn(
-        "m-auto w-full max-w-md rounded-2xl border border-border bg-surface p-0 text-surface-foreground shadow-lg",
-        "backdrop:bg-foreground/40 backdrop:backdrop-blur-[2px]",
+        "m-auto w-full max-w-md rounded-2xl border border-border bg-surface p-0 text-surface-foreground shadow-card-hover",
+        "backdrop:bg-black/50 backdrop:backdrop-blur-[2px]",
         "open:animate-scale-in",
         className,
       )}

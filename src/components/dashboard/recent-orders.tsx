@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getRecentOrders } from "@/lib/dashboard/queries";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { OrderStatusBadge } from "@/components/ui/badge";
+import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionError } from "@/components/dashboard/section-error";
 import { formatCurrency } from "@/lib/format";
@@ -54,7 +54,7 @@ export async function RecentOrders({ restaurantId }: { restaurantId: string }) {
                   <TableRow key={order.id}>
                     <TableCell className="font-numeric">{order.tableName}</TableCell>
                     <TableCell>
-                      <OrderStatusBadge status={order.status} />
+                      <AdminOrderStatusBadge status={order.status} />
                     </TableCell>
                     <TableCell className="font-numeric">{formatCurrency(order.totalAmount)}</TableCell>
                     <TableCell className="font-numeric text-muted-foreground">

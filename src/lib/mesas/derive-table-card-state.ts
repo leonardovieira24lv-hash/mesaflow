@@ -47,9 +47,8 @@ export interface TableCardState {
  * (`alerts` sempre chega `[]` — sem backend, ver acima), mas a ordem já
  * está certa para quando existirem.
  *
- * Mapeamento de cor combinado com o dono nesta sprint (diferente do
- * primeiro redesign de Mesas, que usava verde para "livre"): cinza = livre,
- * verde = ocupada sem pendência, amarelo = pedido novo chegou.
+ * Mapeamento de cor (Sprint "Dark Theme Premium"): cinza elegante = livre,
+ * dourado da marca = ocupada sem pendência, laranja = pedido novo chegou.
  */
 export function deriveTableCardState(
   status: TableStatus,
@@ -87,13 +86,22 @@ export function deriveTableCardState(
  * atenção, mas preenchendo um card inteiro o mesmo tom fica com aspecto de
  * alerta/erro em vez de software profissional. Valores isolados aqui (não
  * tokens globais) para não afetar nenhum outro componente do design system.
+ *
+ * Sprint "Dark Theme Premium": "ocupada" (tone `success`) passou a usar o
+ * dourado da marca, pedido explicitamente no briefing — mas como fundo de
+ * card inteiro, não a cor de destaque em si (`--primary`), para não competir
+ * com botões/foco/indicadores pela mesma cor exata; um tom mais fechado
+ * (menos claro) do mesmo matiz. "Novo pedido" ficou laranja, deliberadamente
+ * um matiz diferente do dourado — as duas cores precisam continuar
+ * distinguíveis à distância na grade, senão o "olhar e entender em 2
+ * segundos" que é o objetivo do Centro de Operações se perde.
  */
 export const TABLE_CARD_TONE_CLASSES: Record<TableCardTone, string> = {
   neutral: "border-border bg-surface",
-  success: "border-transparent bg-[hsl(152_38%_31%)] text-white",
-  warning: "border-transparent bg-[hsl(36_58%_41%)] text-white",
-  info: "border-transparent bg-[hsl(217_45%_40%)] text-white",
-  destructive: "border-transparent bg-[hsl(358_50%_42%)] text-white",
+  success: "border-transparent bg-[hsl(42_60%_34%)] text-white",
+  warning: "border-transparent bg-[hsl(24_75%_45%)] text-white",
+  info: "border-transparent bg-[hsl(212_55%_38%)] text-white",
+  destructive: "border-transparent bg-[hsl(355_55%_40%)] text-white",
   muted: "border-border bg-muted/60 opacity-75",
 };
 

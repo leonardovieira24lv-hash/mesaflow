@@ -22,7 +22,7 @@ export function AdminHeader({ userEmail }: AdminHeaderProps) {
       <button
         aria-label="Abrir menu"
         onClick={() => setMobileNavOpen(true)}
-        className="text-muted-foreground hover:text-foreground md:hidden"
+        className="-ml-2 flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
       >
         <Menu className="h-5 w-5" />
       </button>

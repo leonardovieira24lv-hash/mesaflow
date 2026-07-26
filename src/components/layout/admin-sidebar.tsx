@@ -43,10 +43,10 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150",
               active
-                ? "bg-white/10 text-chrome-foreground"
-                : "text-chrome-muted-foreground hover:bg-white/5 hover:text-chrome-foreground",
+                ? "bg-chrome-active/10 text-chrome-foreground"
+                : "text-chrome-muted-foreground hover:bg-chrome-active/5 hover:text-chrome-foreground",
             )}
           >
             {active && (
@@ -55,7 +55,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
                 className="absolute -left-3 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-chrome-active"
               />
             )}
-            <Icon className="h-4 w-4 shrink-0" aria-hidden />
+            <Icon className={cn("h-4 w-4 shrink-0", active && "text-chrome-active")} aria-hidden />
             {label}
           </Link>
         );
@@ -84,16 +84,16 @@ export function AdminSidebar() {
         <div className="fixed inset-0 z-40 md:hidden">
           <button
             aria-label="Fechar menu"
-            className="absolute inset-0 bg-foreground/40"
+            className="absolute inset-0 bg-black/50"
             onClick={() => setMobileNavOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0 flex w-72 flex-col bg-chrome shadow-lg animate-fade-in">
+          <div className="absolute inset-y-0 left-0 flex w-72 flex-col bg-chrome shadow-sheet animate-slide-in-right">
             <div className="flex items-center justify-between">
               <BrandMark />
               <button
                 aria-label="Fechar menu"
                 onClick={() => setMobileNavOpen(false)}
-                className="mr-4 text-chrome-muted-foreground hover:text-chrome-foreground"
+                className="mr-3 flex h-11 w-11 items-center justify-center rounded-lg text-chrome-muted-foreground transition-colors hover:bg-chrome-active/10 hover:text-chrome-foreground"
               >
                 <X className="h-5 w-5" />
               </button>

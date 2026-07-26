@@ -620,7 +620,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                   )}
                 />
 
-                <div className="absolute right-1 top-1 z-10 flex gap-0.5">
+                <div className="absolute right-1 top-1 z-20 flex gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -630,11 +630,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     }}
                     aria-label={`Ver QR Code de ${table.name}`}
                     className={cn(
-                      "h-6 w-6 opacity-70 hover:opacity-100",
+                      "h-8 w-8 opacity-70 hover:opacity-100",
                       isFilled ? "text-white hover:bg-white/15 hover:text-white" : "text-muted-foreground",
                     )}
                   >
-                    <QrCode className="h-3 w-3" />
+                    <QrCode className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -645,11 +645,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     }}
                     aria-label={`Editar ${table.name}`}
                     className={cn(
-                      "h-6 w-6 opacity-70 hover:opacity-100",
+                      "h-8 w-8 opacity-70 hover:opacity-100",
                       isFilled ? "text-white hover:bg-white/15 hover:text-white" : "text-muted-foreground",
                     )}
                   >
-                    <Pencil className="h-3 w-3" />
+                    <Pencil className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -660,18 +660,18 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     }}
                     aria-label={`Excluir ${table.name}`}
                     className={cn(
-                      "h-6 w-6 opacity-70 hover:opacity-100",
+                      "h-8 w-8 opacity-70 hover:opacity-100",
                       isFilled ? "text-white hover:bg-white/15 hover:text-white" : "text-destructive",
                     )}
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
 
                 {/* 1. Número da mesa — maior elemento do card, sem dominá-lo. */}
                 <span
                   className={cn(
-                    "z-10 pr-11 font-numeric text-2xl font-bold leading-none tabular-nums",
+                    "z-10 pr-14 font-numeric text-2xl font-bold leading-none tabular-nums",
                     isFilled ? "text-white" : "text-foreground",
                   )}
                 >

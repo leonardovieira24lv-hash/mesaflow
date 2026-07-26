@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter, CardDivider } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { OrderStatusBadge } from "@/components/ui/badge";
+import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
@@ -59,6 +59,11 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
   const [order, setOrder] = useState<OrderDetailDto>(initialOrder);
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  // Trava síncrona (além de `isUpdating`) — `setState` só reflete no DOM
+  // (e no `disabled` do botão) no próximo render, então um duplo toque bem
+  // rápido no touchscreen podia disparar duas requisições antes do botão
+  // desabilitar de verdade. Uma ref muda na hora, sem esperar re-render.
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -107,7 +112,8 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
    *     ficar presa num conflito que não entende.
    */
   async function applyStatusChange(nextStatus: OrderStatus) {
-    if (isUpdating) return;
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
 
     setIsUpdating(true);
     try {
@@ -145,6 +151,8 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
       toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
       setIsUpdating(false);
       setPendingStatus(null);
+    } finally {
+      isSubmittingRef.current = false;
     }
   }
 
@@ -192,7 +200,7 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
               Pedido criado em {dateTimeFormatter.format(new Date(order.created_at))}
             </CardDescription>
           </div>
-          <OrderStatusBadge status={order.status} />
+          <AdminOrderStatusBadge status={order.status} />
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <ul className="flex flex-col gap-2">

@@ -53,7 +53,14 @@ const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; variant: Variant
   cancelled: { label: "Cancelado", variant: "destructive" },
 };
 
-/** Badge com rótulo e cor já resolvidos a partir do status de pedido (contrato seção 8.3). */
+/**
+ * Badge com rótulo e cor já resolvidos a partir do status de pedido
+ * (contrato seção 8.3). Usado tanto no painel administrativo quanto na
+ * tela pública de acompanhamento do cliente (`order-tracking-view.tsx`) —
+ * por isso as cores aqui **não** seguem a paleta do Dark Theme Premium
+ * (essa tela do cliente continua no tema claro original). Para o painel
+ * administrativo, usar `AdminOrderStatusBadge` abaixo.
+ */
 export function OrderStatusBadge({ status, className }: { status: OrderStatus; className?: string }) {
   const config = ORDER_STATUS_CONFIG[status];
   return (
@@ -63,9 +70,33 @@ export function OrderStatusBadge({ status, className }: { status: OrderStatus; c
   );
 }
 
+/**
+ * Sprint "Dark Theme Premium": versão só para o painel administrativo, com
+ * a paleta de status pedida no briefing (Preparando=azul, Pronto=verde,
+ * Cancelado=vermelho) — mantida separada de `OrderStatusBadge` de propósito,
+ * para não mudar a cor de status na tela pública de acompanhamento do
+ * cliente, que está fora do escopo desta sprint (só o painel admin).
+ */
+const ADMIN_ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; variant: Variant }> = {
+  pending: { label: "Pendente", variant: "muted" },
+  preparing: { label: "Preparando", variant: "info" },
+  ready: { label: "Pronto", variant: "success" },
+  delivered: { label: "Entregue", variant: "muted" },
+  cancelled: { label: "Cancelado", variant: "destructive" },
+};
+
+export function AdminOrderStatusBadge({ status, className }: { status: OrderStatus; className?: string }) {
+  const config = ADMIN_ORDER_STATUS_CONFIG[status];
+  return (
+    <Badge variant={config.variant} dot className={className}>
+      {config.label}
+    </Badge>
+  );
+}
+
 const TABLE_STATUS_CONFIG: Record<TableStatus, { label: string; variant: Variant }> = {
-  livre: { label: "Livre", variant: "success" },
-  ocupada: { label: "Ocupada", variant: "warning" },
+  livre: { label: "Livre", variant: "muted" },
+  ocupada: { label: "Ocupada", variant: "default" },
   manutencao: { label: "Manutenção", variant: "muted" },
 };
 
