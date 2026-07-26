@@ -272,6 +272,10 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   }, [restaurantId]);
 
   function tableUrl(table: TableEntity) {
+    // eslint-disable-next-line no-console -- DEBUG TEMPORÁRIO, pedido explícito do dono para diagnosticar o host do QR Code. Remover depois de confirmado.
+    console.log("[DEBUG QR] getAppOrigin() ->", origin);
+    // eslint-disable-next-line no-console -- idem acima.
+    console.log("[DEBUG QR] process.env.NEXT_PUBLIC_APP_URL ->", process.env.NEXT_PUBLIC_APP_URL);
     return `${origin}/${restaurantSlug}/mesa/${table.qrToken}`;
   }
 
