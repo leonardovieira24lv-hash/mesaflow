@@ -45,6 +45,15 @@ import type { OrderListRow } from "@/components/pedidos/orders-list";
 import type { Table as TableEntity, TableStatus } from "@/types/domain";
 import type { ApiError, ApiSuccess } from "@/types/api";
 
+// DEBUG TEMPORÁRIO — pedido explícito do dono, para investigar visualmente
+// (direto pelo celular, sem precisar de console de navegador) de onde vem
+// o host errado no QR Code. Aparece se o build não for de produção OU se
+// esta constante estiver `true` — hoje está `true` de propósito, para
+// aparecer mesmo no deploy de produção que está sendo investigado agora.
+// Remover esta constante e o bloco `{showQrDebugBox && (...)}` mais abaixo
+// assim que o problema for identificado.
+const DEBUG = true;
+
 interface TablesManagerProps {
   initialTables: TableEntity[];
   /** Slug do restaurante, para montar a URL codificada no QR Code (`/{slug}/mesa/{qr_token}`). */
@@ -152,6 +161,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   const [, setClockTick] = useState(0);
 
   const origin = getAppOrigin();
+  const showQrDebugBox = DEBUG || process.env.NODE_ENV !== "production";
 
   const fetchOperations = useCallback(async () => {
     try {
@@ -272,10 +282,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   }, [restaurantId]);
 
   function tableUrl(table: TableEntity) {
-    // eslint-disable-next-line no-console -- DEBUG TEMPORÁRIO, pedido explícito do dono para diagnosticar o host do QR Code. Remover depois de confirmado.
-    console.log("[DEBUG QR] getAppOrigin() ->", origin);
-    // eslint-disable-next-line no-console -- idem acima.
-    console.log("[DEBUG QR] process.env.NEXT_PUBLIC_APP_URL ->", process.env.NEXT_PUBLIC_APP_URL);
     return `${origin}/${restaurantSlug}/mesa/${table.qrToken}`;
   }
 
@@ -493,6 +499,29 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
 
   return (
     <div className="flex flex-col gap-5">
+      {showQrDebugBox && (
+        <div className="flex flex-col gap-1.5 rounded-xl border-2 border-dashed border-destructive bg-destructive/5 p-3 font-mono text-[11px] leading-relaxed text-foreground">
+          <p className="font-sans text-xs font-bold uppercase tracking-wide text-destructive">
+            🐞 Debug temporário — origem da URL do QR Code
+          </p>
+          <p className="break-all">
+            <span className="text-muted-foreground">NEXT_PUBLIC_APP_URL:</span>{" "}
+            {process.env.NEXT_PUBLIC_APP_URL ?? "(não definida)"}
+          </p>
+          <p className="break-all">
+            <span className="text-muted-foreground">getAppOrigin():</span> {origin || "(vazio)"}
+          </p>
+          <p className="break-all">
+            <span className="text-muted-foreground">tableUrl() [1ª mesa da lista]:</span>{" "}
+            {tables[0] ? tableUrl(tables[0]) : "(nenhuma mesa cadastrada)"}
+          </p>
+          <p className="break-all">
+            <span className="text-muted-foreground">URL final enviada ao TableQrModal:</span>{" "}
+            {qrTable ? tableUrl(qrTable) : "(nenhum modal de QR Code aberto agora — toque em \"Ver QR Code\" de uma mesa)"}
+          </p>
+        </div>
+      )}
+
       {operationsError && (
         <Alert variant="warning">
           {operationsError} — os tiles mostram só o status da mesa, sem dado de pedido em aberto.
