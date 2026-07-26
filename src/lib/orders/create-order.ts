@@ -58,9 +58,28 @@ export async function createPublicOrder({
       .maybeSingle();
 
     if (existingError) {
-      throw new AppError("INTERNAL_ERROR", "Não foi possível verificar o pedido.");
-    }
-    if (existing) {
+      // Sprint "Corrigir o fluxo de confirmação do pedido" — causa raiz
+      // encontrada: `existingError.code === "42703"` é o código do Postgres
+      // para "coluna não existe" (undefined_column). Isso acontece se a
+      // migration 0008 (que adiciona `idempotency_key` a `orders`) ainda não
+      // tiver sido aplicada à instância real do Supabase — mesma classe de
+      // problema já encontrada nas últimas investigações (migrations mais
+      // recentes nem sempre presentes no banco de verdade). Como
+      // `idempotency_key` é só uma proteção contra duplicidade em retry de
+      // rede — uma otimização, não o pedido em si — bloquear TODO pedido
+      // por causa da ausência dessa coluna é desproporcional: trata esse
+      // erro específico como "nenhum pedido existente encontrado" e segue o
+      // fluxo normal (sem proteção de idempotência até a migration ser
+      // aplicada, mas o cliente consegue pedir). Qualquer OUTRO erro de
+      // banco continua bloqueando o pedido, como antes — só este código de
+      // erro específico tem esse desvio.
+      if (existingError.code !== "42703") {
+        throw new AppError("INTERNAL_ERROR", "Não foi possível verificar o pedido.");
+      }
+      console.error(
+        "[create-order] coluna orders.idempotency_key não existe ainda — aplique a migration 0008. Prosseguindo sem checagem de idempotência.",
+      );
+    } else if (existing) {
       return { id: existing.id, status: existing.status as OrderStatus, total_amount: existing.total_amount };
     }
   }
@@ -170,7 +189,7 @@ export async function createPublicOrder({
     }
   }
 
-  const { data: order, error: orderError } = await admin
+  let { data: order, error: orderError } = await admin
     .from("orders")
     .insert({
       restaurant_id: restaurantId,
@@ -183,6 +202,29 @@ export async function createPublicOrder({
     })
     .select("id, status, total_amount")
     .single();
+
+  if (orderError?.code === "42703") {
+    // Mesma causa raiz do desvio na checagem de idempotência acima: a
+    // coluna `idempotency_key` (migration 0008) pode não existir ainda
+    // nesta instância do Supabase. Tenta de novo sem ela — o pedido em si
+    // não depende dessa coluna para existir, só a proteção extra contra
+    // duplicidade em retry de rede é que fica temporariamente indisponível.
+    console.error(
+      "[create-order] INSERT com idempotency_key falhou (coluna ausente) — tentando novamente sem ela. Aplique a migration 0008.",
+    );
+    ({ data: order, error: orderError } = await admin
+      .from("orders")
+      .insert({
+        restaurant_id: restaurantId,
+        table_id: tableId,
+        order_session_id: orderSessionId,
+        status: "pending",
+        total_amount: totalAmount,
+        notes: input.notes || null,
+      })
+      .select("id, status, total_amount")
+      .single());
+  }
 
   if (orderError || !order) {
     throw new AppError("INTERNAL_ERROR", "Não foi possível registrar o pedido. Tente novamente.");
