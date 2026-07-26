@@ -247,6 +247,35 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
     }
   }
 
+  /**
+   * Sprint "Correção do QR Code" — causa raiz real da regressão: "Liberar
+   * mesa" sempre só fez `PATCH tables/{id}` (`status: livre`) — nunca tocou
+   * os pedidos. Se havia pedido aberto no momento (a própria confirmação já
+   * avisa "ainda tem N pedido(s) em aberto — liberar mesmo assim?", ou seja,
+   * era um caminho sempre permitido, não um caso raro), esse pedido ficava
+   * para sempre com status não-terminal no banco — "ocupada" só na tela,
+   * nunca resolvido de verdade.
+   *
+   * `getActiveOrderForTable` (lib/orders/active-order.ts) busca por
+   * `table_id` + status não-terminal, sem nenhuma noção de "sessão" — então
+   * esse pedido órfão continuava sendo encontrado por ela indefinidamente.
+   * E é exatamente essa função que decide para onde o resolvedor do QR Code
+   * (`mesa/[token]/page.tsx`) redireciona: `activeOrder` truthy →
+   * acompanhamento do pedido; senão → cardápio. Resultado comprovado por
+   * simulação: um cliente novo, sentando na mesma mesa física dias depois,
+   * escaneando o mesmo QR Code impresso, era redirecionado para o
+   * acompanhamento do pedido de um cliente completamente diferente, de uma
+   * visita anterior — não porque o QR Code aponta para o domínio errado,
+   * mas porque a mesa nunca foi "encerrada" de verdade no banco.
+   *
+   * Correção: liberar a mesa agora cancela primeiro qualquer pedido ainda
+   * aberto (mesmo laço sequencial já usado em `handleCloseBill`, só que para
+   * "cancelled" em vez de "delivered" — cancelar é uma transição válida a
+   * partir de qualquer status não-terminal, `lib/orders/status-transitions.ts`
+   * não mudou). Preserva o comportamento existente de "liberar mesmo assim"
+   * (a confirmação continua avisando e pedindo confirmação), só deixa de
+   * abandonar dado no banco ao fazer isso.
+   */
   async function handleReleaseTable() {
     if (isReleasingRef.current) return;
     isReleasingRef.current = true;
@@ -254,6 +283,23 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
     setIsReleasing(true);
     setError(null);
     try {
+      const stillOpenOrders = openOrders.filter((o) => o.status !== "delivered" && o.status !== "cancelled");
+
+      for (const order of stillOpenOrders) {
+        const cancelResponse = await fetch(`/api/v1/orders/${order.id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "cancelled" }),
+        });
+        if (!cancelResponse.ok) {
+          const cancelBody = await cancelResponse.json().catch(() => null);
+          onOrdersChanged();
+          throw new Error(
+            cancelBody?.error?.message ?? "Não foi possível cancelar um dos pedidos abertos desta mesa.",
+          );
+        }
+      }
+
       const response = await fetch(`/api/v1/tables/${table.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -261,15 +307,17 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
       });
       const body = await response.json();
       if (!response.ok) {
+        onOrdersChanged();
         setError(body?.error?.message ?? "Não foi possível liberar a mesa.");
         return;
       }
       toast.success("Mesa liberada");
+      onOrdersChanged();
       onTableUpdated({ id: table.id, name: table.name, status: "livre", qrToken: table.qrToken });
       setConfirmingRelease(false);
       onClose();
-    } catch {
-      setError("Não foi possível conectar. Verifique sua internet e tente novamente.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível liberar a mesa.");
     } finally {
       setIsReleasing(false);
       isReleasingRef.current = false;

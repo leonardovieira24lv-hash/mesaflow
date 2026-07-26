@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrency, formatRelativeTimeShort } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import { restaurantOrdersChannel, restaurantTablesChannel } from "@/lib/realtime/channels";
+import { getAppOrigin } from "@/lib/cliente-url";
 import { TableQrModal } from "@/components/mesas/table-qr-modal";
 import { TableDrawer } from "@/components/mesas/table-drawer";
 import {
@@ -150,7 +151,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   // sem isso, o texto ficaria parado até o próximo evento Realtime.
   const [, setClockTick] = useState(0);
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const origin = getAppOrigin();
 
   const fetchOperations = useCallback(async () => {
     try {

@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/toast";
 import { OnboardingProgress } from "@/components/onboarding/onboarding-progress";
 import { TableQrCode } from "@/components/onboarding/table-qr-code";
 import { getOnboardingSlug, setOnboardingSlug } from "@/lib/onboarding-session";
+import { getAppOrigin } from "@/lib/cliente-url";
 import { createTablesSchema } from "@/lib/validations/onboarding";
 import type { ApiError } from "@/types/api";
 
@@ -114,7 +115,7 @@ export function TablesForm() {
     }
   }
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const origin = getAppOrigin();
 
   if (stage === "review") {
     return (
