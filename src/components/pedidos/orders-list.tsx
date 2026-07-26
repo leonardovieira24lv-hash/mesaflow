@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Inbox } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -128,6 +128,26 @@ export function OrdersList({ restaurantId, initialOrders, initialMeta }: OrdersL
     setPage(1);
   }
 
+  // Sprint 4 de Correção (Fase de Estabilização) — bug da auditoria: o
+  // efeito de Realtime abaixo só reassina quando `restaurantId` muda
+  // (de propósito, para não recriar o canal a cada troca de filtro/página).
+  // Só que o handler chamava `fetchOrders(page, statusFilter)` lendo essas
+  // duas variáveis direto do closure em que o efeito foi criado — como elas
+  // não estão nas deps do efeito, ficavam "congeladas" no valor que tinham
+  // no primeiro render (page 1, filtro "Todos"). Resultado: um evento de
+  // Realtime chegando enquanto o atendente estava numa página/filtro
+  // diferente jogava a lista de volta para a página 1 sem filtro, sem
+  // aviso. Refs sempre atualizadas resolvem isso sem precisar recriar o
+  // canal a cada mudança de filtro/página.
+  const pageRef = useRef(page);
+  const statusFilterRef = useRef(statusFilter);
+  useEffect(() => {
+    pageRef.current = page;
+  }, [page]);
+  useEffect(() => {
+    statusFilterRef.current = statusFilter;
+  }, [statusFilter]);
+
   // Supabase Realtime: qualquer pedido criado/atualizado deste restaurante
   // dispara um refetch da página/filtro atuais — mais simples e mais
   // correto do que tentar reconciliar o evento bruto (insert/update) com
@@ -140,7 +160,7 @@ export function OrdersList({ restaurantId, initialOrders, initialMeta }: OrdersL
         "postgres_changes",
         { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` },
         () => {
-          void fetchOrders(page, statusFilter);
+          void fetchOrders(pageRef.current, statusFilterRef.current);
         },
       )
       .subscribe();
@@ -148,9 +168,8 @@ export function OrdersList({ restaurantId, initialOrders, initialMeta }: OrdersL
     return () => {
       void supabase.removeChannel(channel);
     };
-    // Reassina só quando o restaurante muda — `page`/`statusFilter` são lidos
-    // via closure mais recente porque `fetchOrders` já os recebe como
-    // argumento explícito na hora da chamada, não precisam entrar aqui.
+    // Reassina só quando o restaurante muda — a página/filtro atuais são
+    // lidos das refs acima no momento em que o evento chega, não daqui.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId]);
 

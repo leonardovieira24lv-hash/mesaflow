@@ -43,7 +43,14 @@ export async function PATCH(request: Request) {
     // client-js — atualiza uma a uma; a lista de categorias de um
     // restaurante é pequena (dezenas, no máximo), então o custo é
     // desprezível.
-    await Promise.all(
+    //
+    // Sprint 3 de Correção (Fase de Estabilização) — bug da auditoria: os
+    // resultados de cada UPDATE não eram checados. `Promise.all` só rejeita
+    // com uma exceção de JS de verdade — o supabase-js nunca lança, ele
+    // devolve `{ data, error }`, então um erro em qualquer uma das N
+    // atualizações passava despercebido e a resposta ainda dizia sucesso,
+    // com a mesa... com as categorias numa ordem parcialmente aplicada.
+    const results = await Promise.all(
       orderedIds.map((id, index) =>
         supabase
           .from("menu_categories")
@@ -52,6 +59,13 @@ export async function PATCH(request: Request) {
           .eq("restaurant_id", profile.restaurantId),
       ),
     );
+
+    if (results.some((result) => result.error)) {
+      throw new AppError(
+        "INTERNAL_ERROR",
+        "Não foi possível salvar a nova ordem por completo. Recarregue a página e tente novamente.",
+      );
+    }
 
     const { data: reordered, error: reorderedError } = await supabase
       .from("menu_categories")

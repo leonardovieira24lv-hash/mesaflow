@@ -29,7 +29,7 @@ import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatRelativeTimeShort } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
-import { restaurantOrdersChannel } from "@/lib/realtime/channels";
+import { restaurantOrdersChannel, restaurantTablesChannel } from "@/lib/realtime/channels";
 import { TableQrModal } from "@/components/mesas/table-qr-modal";
 import { TableDrawer } from "@/components/mesas/table-drawer";
 import {
@@ -137,6 +137,10 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   const [qrTable, setQrTable] = useState<TableEntity | null>(null);
   const [drawerTable, setDrawerTable] = useState<TableEntity | null>(null);
 
+  // Sprint 2 de Correção: id da mesa que está sendo aberta agora (PATCH em
+  // andamento) — evita um duplo clique disparar duas requisições.
+  const [openingTableId, setOpeningTableId] = useState<string | null>(null);
+
   // Estado puramente visual (busca + filtro de status na grade). Não é
   // consumido por nenhuma API/hook — só decide o que é renderizado.
   const [searchQuery, setSearchQuery] = useState("");
@@ -227,8 +231,88 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
     };
   }, [restaurantId, fetchOperations]);
 
+  // Sprint 2 de Correção (Fase de Estabilização): sincroniza mudanças de
+  // status de mesa entre dispositivos — abrir/liberar/editar numa mesa
+  // (deste painel, do Drawer, ou pelo próprio pedido de um cliente via QR
+  // Code) agora aparece em qualquer outro painel de Mesas aberto, sem
+  // precisar recarregar a página. Atualiza tanto a grade (`tables`) quanto o
+  // Drawer aberto no momento, se for a mesma mesa — senão o cabeçalho do
+  // Drawer ficaria com o status antigo enquanto a grade já mostraria o novo.
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(restaurantTablesChannel(restaurantId))
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tables", filter: `restaurant_id=eq.${restaurantId}` },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const deletedId = (payload.old as { id?: string }).id;
+            if (!deletedId) return;
+            setTables((prev) => prev.filter((t) => t.id !== deletedId));
+            setDrawerTable((prev) => (prev?.id === deletedId ? null : prev));
+            return;
+          }
+
+          const updated = fromDto(payload.new as TableDto);
+          setTables((prev) => {
+            const exists = prev.some((t) => t.id === updated.id);
+            if (!exists) return [...prev, updated].sort((a, b) => a.name.localeCompare(b.name));
+            return prev.map((t) => (t.id === updated.id ? updated : t));
+          });
+          setDrawerTable((prev) => (prev?.id === updated.id ? updated : prev));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [restaurantId]);
+
   function tableUrl(table: TableEntity) {
     return `${origin}/${restaurantSlug}/mesa/${table.qrToken}`;
+  }
+
+  /**
+   * Sprint 2 de Correção — bug da auditoria: "Abrir mesa" só abria o
+   * Drawer, sem executar a ação que o rótulo promete. Agora, para uma mesa
+   * `livre`, marca de fato `status: "ocupada"` (`PATCH /api/v1/tables/{id}`,
+   * mesmo endpoint já usado pelo modal de edição) antes de abrir o Drawer —
+   * a atualização local (`setTables`) reflete na grade imediatamente, e a
+   * assinatura Realtime acima propaga para qualquer outro painel aberto.
+   * Para uma mesa que já não está livre, mantém o comportamento de sempre
+   * (só abre o Drawer para consulta/gestão).
+   */
+  async function handleOpenTable(table: TableEntity) {
+    if (table.status !== "livre") {
+      setDrawerTable(table);
+      return;
+    }
+
+    setOpeningTableId(table.id);
+    try {
+      const response = await fetch(`/api/v1/tables/${table.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ocupada" }),
+      });
+      const body = await response.json();
+
+      if (!response.ok) {
+        const apiError = body as ApiError;
+        toast.error("Não foi possível abrir a mesa", apiError?.error?.message ?? "Tente novamente.");
+        return;
+      }
+
+      const opened = fromDto(body.data as TableDto);
+      setTables((prev) => prev.map((t) => (t.id === opened.id ? opened : t)));
+      setDrawerTable(opened);
+    } catch {
+      toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
+    } finally {
+      setOpeningTableId(null);
+    }
   }
 
   function openCreateModal() {
@@ -523,9 +607,9 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 key={table.id}
                 role="button"
                 tabIndex={0}
-                onClick={() => setDrawerTable(table)}
+                onClick={() => void handleOpenTable(table)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") setDrawerTable(table);
+                  if (e.key === "Enter") void handleOpenTable(table);
                 }}
                 className={cn(
                   "group relative flex h-full cursor-pointer flex-col gap-2 overflow-hidden rounded-2xl border p-2.5 shadow-card transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover active:translate-y-0",
@@ -668,9 +752,10 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                   type="button"
                   variant="ghost"
                   size="sm"
+                  isLoading={openingTableId === table.id}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setDrawerTable(table);
+                    void handleOpenTable(table);
                   }}
                   className={cn(
                     "z-10 mt-auto h-7 w-full justify-center border text-xs font-semibold",

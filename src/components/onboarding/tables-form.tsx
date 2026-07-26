@@ -11,7 +11,7 @@ import { Alert } from "@/components/ui/alert";
 import { toast } from "@/components/ui/toast";
 import { OnboardingProgress } from "@/components/onboarding/onboarding-progress";
 import { TableQrCode } from "@/components/onboarding/table-qr-code";
-import { getOnboardingSlug } from "@/lib/onboarding-session";
+import { getOnboardingSlug, setOnboardingSlug } from "@/lib/onboarding-session";
 import { createTablesSchema } from "@/lib/validations/onboarding";
 import type { ApiError } from "@/types/api";
 
@@ -31,6 +31,16 @@ export function TablesForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tables, setTables] = useState<CreatedTable[]>([]);
   const [isConfirming, setIsConfirming] = useState(false);
+
+  // Sprint Final (RC1) — correção de confiabilidade: `slug` normalmente vem
+  // do `sessionStorage` gravado no Passo 1 (mesma aba, wizard em sequência).
+  // Se por algum motivo não estiver lá (aba nova, storage limpo), o código
+  // antigo caía silenciosamente para `table.qr_token` sozinho no lugar da
+  // URL — um QR Code que não aponta para lugar nenhum, impresso sem
+  // nenhum aviso. Agora, se faltar, busca o slug de verdade em
+  // `GET /api/v1/restaurant` (o usuário já está autenticado neste ponto,
+  // pela própria sessão que acabou de criar as mesas).
+  const [slug, setSlug] = useState<string | null>(() => getOnboardingSlug());
 
   async function handleCreateTables(event: FormEvent) {
     event.preventDefault();
@@ -61,6 +71,22 @@ export function TablesForm() {
       setTables(body.data as CreatedTable[]);
       setStage("review");
       setIsSubmitting(false);
+
+      if (!slug) {
+        try {
+          const restaurantResponse = await fetch("/api/v1/restaurant");
+          const restaurantBody = await restaurantResponse.json();
+          if (restaurantResponse.ok) {
+            const fetchedSlug = (restaurantBody.data as { slug: string }).slug;
+            setOnboardingSlug(fetchedSlug);
+            setSlug(fetchedSlug);
+          }
+        } catch {
+          // Melhor esforço — se isto falhar também, a tela de revisão ainda
+          // mostra os QR Codes com o fallback antigo (ver render abaixo),
+          // só não estará com a URL completa.
+        }
+      }
     } catch {
       setError("Não foi possível conectar. Verifique sua internet e tente novamente.");
       setIsSubmitting(false);
@@ -88,7 +114,6 @@ export function TablesForm() {
     }
   }
 
-  const slug = getOnboardingSlug();
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   if (stage === "review") {

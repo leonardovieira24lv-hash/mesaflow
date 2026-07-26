@@ -40,6 +40,19 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     assertValidOrderStatusTransition(current.status, nextStatus);
 
+    // Sprint 4 de Correção (Fase de Estabilização) — bug da auditoria: o
+    // UPDATE abaixo não checava se `status` continuava sendo o mesmo lido
+    // em `current` alguns instantes atrás. Duas pessoas mudando o status do
+    // mesmo pedido quase ao mesmo tempo (ex.: uma marca "pronto", outra
+    // cancela) podiam ambas passar pela validação de transição (as duas
+    // leram o mesmo `current.status` antes de qualquer uma escrever) e o
+    // resultado final era só o que "ganhasse a corrida" no UPDATE — a outra
+    // mudança, já confirmada como sucesso para quem clicou, desaparecia
+    // silenciosamente. Adicionar `current.status` ao filtro do UPDATE torna
+    // isso uma checagem otimista: se o status já não for mais o esperado, o
+    // UPDATE não afeta nenhuma linha e a resposta vira um conflito explícito
+    // em vez de aplicar uma transição validada contra dado obsoleto.
+    //
     // Sem trigger de `updated_at` no banco (migration 0001 só define o
     // default na criação) — mesmo padrão manual já usado em
     // `tables/qr-codes/print-confirmation/route.ts` (seção 7.5).
@@ -48,11 +61,21 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       .update({ status: nextStatus, updated_at: new Date().toISOString() })
       .eq("id", id)
       .eq("restaurant_id", profile.restaurantId)
+      .eq("status", current.status)
       .select("id, status, total_amount, created_at")
       .maybeSingle();
 
-    if (updateError || !updated) {
+    if (updateError) {
       throw new AppError("INTERNAL_ERROR", "Não foi possível atualizar o status do pedido.");
+    }
+
+    if (!updated) {
+      // O pedido existia (já confirmado acima); se não veio nenhuma linha
+      // agora, é porque o status mudou entre a leitura e esta escrita.
+      throw new AppError(
+        "CONFLICT",
+        "O status deste pedido foi alterado por outra pessoa. Recarregue a página e tente novamente.",
+      );
     }
 
     // Contrato 8.3: "se o novo status for terminal, também pode encerrar a

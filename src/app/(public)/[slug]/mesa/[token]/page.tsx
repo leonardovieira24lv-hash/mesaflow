@@ -46,6 +46,18 @@ export default async function ResolverMesaPage({
       : withMesaQuery(ROUTES.clienteMenu(slug), token);
   } catch (err) {
     if (err instanceof AppError) {
+      // Sprint 1 de Correção: mesa em manutenção é um caso diferente de "QR
+      // inválido" — a mesa foi encontrada normalmente, só não está
+      // disponível agora. Mostrar a mensagem genérica de QR inválido aqui
+      // seria confuso e incorreto (o código do cliente não fez nada errado).
+      if (err.code === "CONFLICT") {
+        return (
+          <div className="flex min-h-screen items-center justify-center p-6">
+            <EmptyState icon={QrCode} title="Mesa indisponível" description={err.message} />
+          </div>
+        );
+      }
+
       return (
         <div className="flex min-h-screen items-center justify-center p-6">
           <EmptyState

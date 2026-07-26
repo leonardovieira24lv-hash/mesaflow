@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AppError } from "@/lib/api/errors";
 import type { RestaurantStatus } from "@/types/domain";
+import type { Database } from "@/types/database.types";
 
 export interface RestaurantOverview {
   id: string;
@@ -37,8 +38,7 @@ export interface RestaurantOverview {
  * em `supabase/migrations/0004_dashboard_reads.sql`.
  */
 export async function getRestaurantOverview(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Database ainda é `any` (placeholder, ver types/database.types.ts)
-  supabase: SupabaseClient<any>,
+  supabase: SupabaseClient<Database>,
   restaurantId: string,
 ): Promise<RestaurantOverview> {
   const [restaurantResult, categoriesResult, productsResult, tablesResult] = await Promise.all([

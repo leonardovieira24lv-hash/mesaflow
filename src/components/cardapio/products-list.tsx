@@ -98,13 +98,23 @@ export function ProductsList({ categories, initialItems, initialMeta }: Products
     setModalOpen(true);
   }
 
-  function handleSaved(saved: MenuItem) {
-    setItems((prev) => {
-      const exists = prev.some((i) => i.id === saved.id);
-      return exists ? prev.map((i) => (i.id === saved.id ? saved : i)) : [...prev, saved];
-    });
+  /**
+   * Sprint 3 de Correção (Fase de Estabilização) — bug da auditoria: antes,
+   * ao criar ou editar um produto, o código só fazia `setItems(prev => [...prev, saved])`
+   * (ou substituía o item em edição) direto no array local — sem considerar
+   * a paginação (`meta`) nem o filtro de categoria ativo. Isso causava duas
+   * falhas reais: (1) criar um produto numa categoria diferente da que
+   * estava filtrada fazia o produto aparecer na lista mesmo sem pertencer ao
+   * filtro atual; (2) o total/total_pages exibidos na paginação ficavam
+   * desatualizados, podendo mostrar mais itens na tela do que `per_page`
+   * permite. Reconsultar a página atual do servidor (mesma função já usada
+   * pelo filtro e pela paginação) resolve os dois de uma vez — sempre reflete
+   * exatamente o que o filtro/página atual devem mostrar.
+   */
+  function handleSaved() {
     toast.success(editingItem ? "Produto atualizado" : "Produto criado");
     setModalOpen(false);
+    void fetchPage(meta.page, categoryFilter);
   }
 
   async function handleToggleAvailability(item: MenuItem) {

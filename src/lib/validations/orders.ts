@@ -43,6 +43,12 @@ export const createOrderSchema = z.object({
   table_token: z.string().trim().min(1, "Informe o token da mesa."),
   notes: orderNotesSchema,
   items: z.array(createOrderItemSchema).min(1, "O pedido precisa ter ao menos um item."),
+  // Opcional — Sprint 1 de Correção (Fase de Estabilização): identifica uma
+  // única tentativa de checkout do cliente, para o servidor reconhecer um
+  // reenvio por timeout de rede e devolver o pedido já criado em vez de
+  // duplicá-lo (ver `lib/orders/create-order.ts`). Requisições sem esta
+  // chave continuam funcionando como antes, sem checagem de duplicidade.
+  idempotency_key: z.string().trim().min(1).max(100).optional(),
 });
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 

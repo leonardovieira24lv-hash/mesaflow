@@ -108,19 +108,24 @@
   }
 }
 
-/* Painel de Mesas → Drawer → "Imprimir": `#print-comanda` fica com
+/* Painel de Mesas → Drawer / Modal de QR Code → "Imprimir": o alvo fica com
    `hidden` (display:none) na tela normal; ao imprimir, ele vira a única
    coisa visível na página — técnica puramente de CSS, sem nenhuma
-   integração de impressora térmica no backend. */
+   integração de impressora térmica no backend. Sprint 2 de Correção: os dois
+   componentes usavam o mesmo id (`#print-comanda`), HTML inválido — agora
+   cada um tem o seu. */
 @media print {
   body * {
     visibility: hidden;
   }
-  #print-comanda,
-  #print-comanda * {
+  #print-comanda-drawer,
+  #print-comanda-drawer *,
+  #print-comanda-qr,
+  #print-comanda-qr * {
     visibility: visible;
   }
-  #print-comanda {
+  #print-comanda-drawer,
+  #print-comanda-qr {
     display: block !important;
     position: absolute;
     inset: 0;

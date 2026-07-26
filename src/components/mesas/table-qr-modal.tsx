@@ -31,9 +31,10 @@ interface TableQrModalProps {
  * contrato documentando esse comportamento.
  *
  * "Imprimir" segue o mesmo mecanismo puramente de CSS já usado pelo Drawer
- * (`#print-comanda` + `@media print` em `globals.css`, que só torna esse id
- * visível na folha impressa) — nada novo em `globals.css`, só reaproveita a
- * regra que já existe lá.
+ * (`#print-comanda-qr` + `@media print` em `globals.css`, que só torna esse
+ * id visível na folha impressa) — nada novo em `globals.css`, só reaproveita
+ * a regra que já existe lá. Id próprio desde a Sprint 2 de Correção; antes
+ * era o mesmo `#print-comanda` do Drawer, uma colisão de id.
  */
 export function TableQrModal({ open, onClose, tableName, url }: TableQrModalProps) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
@@ -135,8 +136,10 @@ export function TableQrModal({ open, onClose, tableName, url }: TableQrModalProp
         </div>
       </div>
 
-      {/* View de impressão — só visível em @media print (globals.css), some do resto da UI. */}
-      <div id="print-comanda" className="hidden">
+      {/* View de impressão — só visível em @media print (globals.css), some do resto da UI.
+          Sprint 2 de Correção: id próprio ("print-comanda-qr", antes era o mesmo
+          "print-comanda" do TableDrawer — ver nota lá). */}
+      <div id="print-comanda-qr" className="hidden">
         <div style={{ textAlign: "center" }}>
           <h1>{tableName}</h1>
           {dataUrl && (

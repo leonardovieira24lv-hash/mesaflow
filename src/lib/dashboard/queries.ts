@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { OrderStatus } from "@/types/domain";
+import type { Database } from "@/types/database.types";
 
 export interface RecentOrder {
   id: string;
@@ -11,18 +12,20 @@ export interface RecentOrder {
 
 /**
  * Últimos pedidos do restaurante, para o widget "Últimos pedidos" do
- * Dashboard. Somente leitura, sob demanda (sem Supabase Realtime) — a
- * versão com atualização em tempo real é o módulo de Pedidos (contrato
- * seção 8.1), fora do escopo desta sprint.
+ * Dashboard. Somente leitura, sob demanda (sem Supabase Realtime) — o
+ * Dashboard só atualiza este widget ao recarregar a página; a tela com
+ * atualização em tempo real de verdade é o Painel de Pedidos (contrato
+ * seção 8.1), que já existe desde a Sprint 8.
  *
- * Como o módulo de Pedidos ainda não existe, esta consulta hoje sempre
- * volta vazia — é dado real, não um placeholder: assim que pedidos
- * passarem a ser criados (Área do Cliente, seção 3.3), aparecem aqui
- * automaticamente, sem qualquer mudança neste código.
+ * Nota corrigida na Sprint Final (RC1): o comentário original desta função
+ * (da Sprint 5, quando o Dashboard foi construído antes do módulo de
+ * Pedidos existir) dizia que esta consulta "sempre volta vazia" — isso
+ * deixou de ser verdade desde a Sprint 8, quando pedidos passaram a ser
+ * criados de verdade. A consulta é real e já reflete dado real; o
+ * comentário antigo só nunca tinha sido atualizado.
  */
 export async function getRecentOrders(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Database ainda é `any` (placeholder)
-  supabase: SupabaseClient<any>,
+  supabase: SupabaseClient<Database>,
   restaurantId: string,
   limit = 5,
 ): Promise<RecentOrder[]> {
@@ -61,8 +64,7 @@ export async function getRecentOrders(
 
 /** Contagem de pedidos criados desde o início do dia local — indicador rápido do Dashboard. */
 export async function getOrdersTodayCount(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Database ainda é `any` (placeholder)
-  supabase: SupabaseClient<any>,
+  supabase: SupabaseClient<Database>,
   restaurantId: string,
 ): Promise<number> {
   const startOfDay = new Date();

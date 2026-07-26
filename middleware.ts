@@ -43,6 +43,16 @@ const ADMIN_ROUTE_PREFIXES = [
   "/cardapio",
   "/mesas",
   "/configuracoes",
+  // Sprint Final (RC1) — correção de confiabilidade: nenhuma das duas
+  // rotas abaixo era protegida, apesar de as duas exigirem sessão para
+  // funcionar de verdade.
+  // - "/design-system": vitrine interna de componentes, sem motivo para
+  //   ficar acessível publicamente em produção.
+  // - "/onboarding/mesas": só o Passo 2/3 do wizard (precisa da sessão
+  //   criada no Passo 1). "/onboarding/restaurante" (o cadastro em si)
+  //   continua de propósito fora desta lista — tem que ser público.
+  "/design-system",
+  "/onboarding/mesas",
 ];
 
 export const config = {

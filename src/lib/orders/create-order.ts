@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppError } from "@/lib/api/errors";
 import type { CreateOrderInput } from "@/lib/validations/orders";
+import type { OrderStatus } from "@/types/domain";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -13,7 +14,11 @@ interface CreatePublicOrderParams {
 
 interface CreatedOrderSummary {
   id: string;
-  status: "pending";
+  // Sprint 1 de Correção: numa resposta de replay idempotente (ver
+  // abaixo), o pedido pode já ter avançado de status desde a criação
+  // original — devolver sempre "pending" aqui seria mentir sobre o estado
+  // real do pedido.
+  status: OrderStatus;
   total_amount: number;
 }
 
@@ -38,6 +43,28 @@ export async function createPublicOrder({
   tableId,
   input,
 }: CreatePublicOrderParams): Promise<CreatedOrderSummary> {
+  // Sprint 1 de Correção (Fase de Estabilização): replay idempotente. Se o
+  // cliente já enviou esta mesma tentativa de checkout antes (retry por
+  // timeout de rede, não um novo pedido intencional), devolve o pedido que
+  // já existe em vez de criar um segundo. Não revalida itens nem reabre
+  // sessão — o pedido original já passou por tudo isso; um replay só
+  // precisa devolver o que já foi decidido.
+  if (input.idempotency_key) {
+    const { data: existing, error: existingError } = await admin
+      .from("orders")
+      .select("id, status, total_amount")
+      .eq("restaurant_id", restaurantId)
+      .eq("idempotency_key", input.idempotency_key)
+      .maybeSingle();
+
+    if (existingError) {
+      throw new AppError("INTERNAL_ERROR", "Não foi possível verificar o pedido.");
+    }
+    if (existing) {
+      return { id: existing.id, status: existing.status as OrderStatus, total_amount: existing.total_amount };
+    }
+  }
+
   const menuItemIds = [...new Set(input.items.map((item) => item.menu_item_id))];
 
   const { data: menuItems, error: menuItemsError } = await admin
@@ -94,6 +121,14 @@ export async function createPublicOrder({
   // para a mesa)" — reaproveita a sessão em aberto se existir, em vez de
   // sempre abrir uma nova (uma mesa pode receber vários pedidos na mesma
   // visita antes de fechar a conta — contrato 3.1: "active_order").
+  //
+  // Sprint 1 de Correção: entre o SELECT e o INSERT abaixo não há
+  // transação — duas requisições concorrentes para a mesma mesa podiam
+  // ambas ler "nenhuma sessão aberta" e inserir uma cada, fragmentando a
+  // comanda. A migration 0008 adiciona um índice único (uma sessão aberta
+  // por mesa); a segunda inserção concorrente agora falha com `23505`, e em
+  // vez de propagar esse erro, reconsultamos a sessão que a outra
+  // requisição acabou de criar e seguimos com ela.
   const { data: openSession, error: openSessionError } = await admin
     .from("order_sessions")
     .select("id")
@@ -114,11 +149,25 @@ export async function createPublicOrder({
       .select("id")
       .single();
 
-    if (newSessionError || !newSession) {
-      throw new AppError("INTERNAL_ERROR", "Não foi possível abrir a comanda da mesa.");
-    }
+    if (newSessionError?.code === "23505") {
+      // Outra requisição venceu a corrida e já criou a sessão aberta desta
+      // mesa entre o nosso SELECT e este INSERT — busca a que existe agora.
+      const { data: raceWinnerSession, error: raceWinnerError } = await admin
+        .from("order_sessions")
+        .select("id")
+        .eq("table_id", tableId)
+        .is("closed_at", null)
+        .maybeSingle();
 
-    orderSessionId = newSession.id;
+      if (raceWinnerError || !raceWinnerSession) {
+        throw new AppError("INTERNAL_ERROR", "Não foi possível abrir a comanda da mesa.");
+      }
+      orderSessionId = raceWinnerSession.id;
+    } else if (newSessionError || !newSession) {
+      throw new AppError("INTERNAL_ERROR", "Não foi possível abrir a comanda da mesa.");
+    } else {
+      orderSessionId = newSession.id;
+    }
   }
 
   const { data: order, error: orderError } = await admin
@@ -130,6 +179,7 @@ export async function createPublicOrder({
       status: "pending",
       total_amount: totalAmount,
       notes: input.notes || null,
+      idempotency_key: input.idempotency_key ?? null,
     })
     .select("id, status, total_amount")
     .single();
@@ -153,6 +203,30 @@ export async function createPublicOrder({
       "INTERNAL_ERROR",
       "Não foi possível registrar os itens do pedido. Tente novamente.",
     );
+  }
+
+  // Sprint 1 de Correção — bug crítico da auditoria: nada gravava
+  // `tables.status = 'ocupada'` quando um pedido real era criado pelo
+  // cliente via QR Code. O painel de Mesas prioriza `table.status` sobre os
+  // dados agregados de pedido (`deriveTableCardState`), então uma mesa podia
+  // ter um pedido ativo e continuar aparecendo como "Livre" indefinidamente,
+  // até um humano lembrar de editar o status manualmente. Só atualiza se o
+  // status atual for "livre" — nunca sobrescreve "manutencao" (uma mesa em
+  // manutenção não devia sequer ter chegado até aqui, ver
+  // `resolveTableByToken`, mas por segurança não tocamos nesse caso) nem
+  // reafirma "ocupada" à toa quando a mesa já está ocupada.
+  const { error: tableStatusError } = await admin
+    .from("tables")
+    .update({ status: "ocupada" })
+    .eq("id", tableId)
+    .eq("status", "livre");
+
+  if (tableStatusError) {
+    // Best-effort: o pedido já foi criado com sucesso e é isso que importa
+    // para o cliente. Se isto falhar, a mesa fica visualmente desatualizada
+    // no painel até uma edição manual — não crítico o bastante para fazer o
+    // pedido inteiro falhar por causa de um UPDATE cosmético.
+    console.error("[create-order] falha ao marcar mesa como ocupada", tableStatusError);
   }
 
   return {

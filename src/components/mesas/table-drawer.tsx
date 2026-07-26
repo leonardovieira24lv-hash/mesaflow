@@ -60,7 +60,7 @@ interface TableDrawerProps {
  *   (`lib/orders/order-status-transitions-map.ts`), então o botão avisa em
  *   vez de tentar e falhar.
  * - "Solicitar impressão" — `window.print()` sobre uma view formatada
- *   (`#print-comanda`, ver `globals.css`). Não existe impressora térmica
+ *   (`#print-comanda-drawer`, ver `globals.css`). Não existe impressora térmica
  *   integrada; isto imprime pelo navegador, real e funcional, não decorativo.
  * - "Liberar mesa" — `PATCH /api/v1/tables/{id}` (`status: livre`), a mesma
  *   ação que já existia no seletor rápido do card.
@@ -141,20 +141,54 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
 
   const allReady = openOrders.length > 0 && openOrders.every((o) => o.status === "ready");
 
+  /**
+   * Sprint Pós-Auditoria (RC1.1) — item 3: antes, o laço de PATCH sequencial
+   * lançava no primeiro erro e esquecia o que já tinha dado certo. Se o
+   * atendente tentasse de novo antes do Realtime atualizar `openOrders`
+   * (prop vinda do pai), o pedido que JÁ estava `delivered` era reenviado —
+   * e a máquina de estados rejeita `delivered → delivered`, um erro confuso
+   * que não deixa claro que parte do trabalho já tinha sido feita.
+   *
+   * Duas mudanças, nenhuma delas toca a máquina de estados
+   * (`lib/orders/status-transitions.ts` continua exatamente igual):
+   *
+   *  1. Filtra `openOrders` para só tentar pedidos que ainda não estão num
+   *     estado terminal — um retry nunca mais reenvia um pedido que já foi
+   *     fechado com sucesso, mesmo que `openOrders` ainda esteja
+   *     desatualizado no momento do clique.
+   *  2. Se algo falhar no meio do caminho, a mensagem de erro conta
+   *     exatamente quantos pedidos já foram fechados e quantos ainda
+   *     faltam — e `onOrdersChanged()` é chamado imediatamente (não só no
+   *     caminho de sucesso), então o próximo clique já parte de um estado
+   *     atualizado, sem esperar o Realtime.
+   */
   async function handleCloseBill() {
     setIsClosingBill(true);
     setError(null);
+
+    const pendingOrders = openOrders.filter((o) => o.status !== "delivered" && o.status !== "cancelled");
+    let closedCount = 0;
+
     try {
-      for (const order of openOrders) {
+      for (const order of pendingOrders) {
         const response = await fetch(`/api/v1/orders/${order.id}/status`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: "delivered" }),
         });
+
         if (!response.ok) {
           const body = await response.json().catch(() => null);
-          throw new Error(body?.error?.message ?? "Não foi possível fechar um dos pedidos.");
+          const remaining = pendingOrders.length - closedCount;
+          onOrdersChanged();
+          throw new Error(
+            closedCount > 0
+              ? `${closedCount} de ${pendingOrders.length} pedidos foram fechados. ${remaining === 1 ? "Falta 1" : `Faltam ${remaining}`} — ${body?.error?.message ?? "tente novamente"}.`
+              : (body?.error?.message ?? "Não foi possível fechar os pedidos. Tente novamente."),
+          );
         }
+
+        closedCount += 1;
       }
 
       const tableResponse = await fetch(`/api/v1/tables/${table.id}`, {
@@ -164,7 +198,11 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
       });
       const tableBody = await tableResponse.json();
       if (!tableResponse.ok) {
-        throw new Error(tableBody?.error?.message ?? "Pedidos fechados, mas não foi possível liberar a mesa.");
+        onOrdersChanged();
+        throw new Error(
+          tableBody?.error?.message ??
+            "Todos os pedidos foram fechados, mas não foi possível liberar a mesa. Tente liberar manualmente.",
+        );
       }
 
       toast.success("Conta fechada", `${table.name} foi liberada.`);
@@ -393,8 +431,11 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
           )}
         </div>
 
-        {/* View de impressão — só visível em @media print (globals.css), some do resto da UI. */}
-        <div id="print-comanda" className="hidden">
+        {/* View de impressão — só visível em @media print (globals.css), some do resto da UI.
+            Sprint 2 de Correção: id próprio (antes era "print-comanda", igual ao usado por
+            TableQrModal — dois elementos com o mesmo id no DOM é HTML inválido e faria a
+            regra de impressão em globals.css aplicar aos dois ao mesmo tempo). */}
+        <div id="print-comanda-drawer" className="hidden">
           <h1>{table.name}</h1>
           {openOrders.map((order) => (
             <div key={order.id}>

@@ -50,6 +50,15 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
   const [staleItems, setStaleItems] = useState<string[] | null>(null);
   const redirectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Sprint 1 de Correção (Fase de Estabilização): uma única chave por
+  // tentativa de checkout — gerada uma vez quando esta tela monta, reusada
+  // em qualquer retry dentro da mesma visita a ela (ex.: erro de rede,
+  // cliente tenta de novo). O servidor usa isto para reconhecer um reenvio
+  // e devolver o pedido já criado em vez de duplicá-lo
+  // (`lib/orders/create-order.ts`). Uma nova visita a esta tela (novo mount)
+  // gera uma chave nova, então isto nunca impede um pedido novo legítimo.
+  const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
+
   // Sprint 10 (auditoria): o `setTimeout` de `handleSubmit` (abaixo) não
   // tinha cleanup — se o componente desmontasse antes dos 1200ms (ex.:
   // cliente fecha a aba logo após o pedido ser aceito), o timer ainda
@@ -77,6 +86,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
         body: JSON.stringify({
           table_token: tableToken,
           notes: notes.trim() || undefined,
+          idempotency_key: idempotencyKeyRef.current,
           items: items.map((item) => ({
             menu_item_id: item.menuItemId,
             quantity: item.quantity,
