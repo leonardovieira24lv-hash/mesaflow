@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChefHat, Clock3, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
+import { CheckCircle2, ChefHat, Clock3, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -52,13 +52,19 @@ interface TableDrawerProps {
  * - "Enviar para cozinha" — transição real `pending → preparing`
  *   (`PATCH /api/v1/orders/{id}/status`, o mesmo endpoint da tela de
  *   Pedidos).
- * - "Fechar conta" — não existe um endpoint de "fechar comanda" único;
- *   isto compõe dois passos reais (marcar cada pedido aberto como
- *   `delivered` + liberar a mesa) e só fica disponível quando todo pedido
- *   aberto já está `ready` — pular direto de `pending`/`preparing` para
- *   `delivered` violaria a máquina de estados real
- *   (`lib/orders/order-status-transitions-map.ts`), então o botão avisa em
- *   vez de tentar e falhar.
+ * - "Pedido pronto" (Sprint "Fluxo Operacional das Mesas", item 2 do
+ *   checklist) — transição real `preparing → ready`, mesmo endpoint acima;
+ *   antes só existia na tela de Pedidos, obrigando o atendente a sair de
+ *   Mesas para avançar um pedido em preparo.
+ * - "Fechar conta" / "Finalizar atendimento" (item 3 do checklist: mesmo
+ *   botão, rótulo muda conforme o estágio) — não existe um endpoint de
+ *   "fechar comanda" único; isto compõe dois passos reais (marcar cada
+ *   pedido aberto como `delivered` + liberar a mesa) e só fica disponível
+ *   quando todo pedido aberto já está `ready` (aí o rótulo vira "Finalizar
+ *   atendimento", a etapa final do fluxo) — pular direto de
+ *   `pending`/`preparing` para `delivered` violaria a máquina de estados
+ *   real (`lib/orders/order-status-transitions-map.ts`), então o botão
+ *   avisa em vez de tentar e falhar.
  * - "Solicitar impressão" — `window.print()` sobre uma view formatada
  *   (`#print-comanda-drawer`, ver `globals.css`). Não existe impressora térmica
  *   integrada; isto imprime pelo navegador, real e funcional, não decorativo.
@@ -77,6 +83,10 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
   // reflete no próximo render, então um duplo toque rápido podia escapar do
   // `disabled` do botão antes dele atualizar de verdade.
   const isSendingToKitchenRef = useRef(false);
+  // Item 2 do checklist do fluxo operacional das mesas — mesmo raciocínio do
+  // lock acima, mas para a transição preparing→ready ("Pedido pronto"), que
+  // antes só existia na tela de Pedidos.
+  const isMarkingReadyRef = useRef(false);
   const [isClosingBill, setIsClosingBill] = useState(false);
   const [isReleasing, setIsReleasing] = useState(false);
   const isClosingBillRef = useRef(false);
@@ -166,6 +176,47 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
     }
   }
 
+  /**
+   * Item 2 do checklist do fluxo operacional das mesas — a ação
+   * `preparing → ready` ("Pedido pronto") não existia em nenhum lugar do
+   * módulo de Mesas, só na tela de Pedidos. Mesma estrutura exata de
+   * `handleSendToKitchen` acima (mesmo endpoint, mesmo tratamento de
+   * conflito, mesmo `onOrdersChanged()` no sucesso e no erro) — só muda o
+   * status de destino e as mensagens.
+   */
+  async function handleMarkReady(orderId: string) {
+    if (isMarkingReadyRef.current) return;
+    isMarkingReadyRef.current = true;
+
+    setUpdatingOrderId(orderId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/v1/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ready" }),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        const isConflict = body?.error?.code === "CONFLICT";
+        setError(
+          isConflict
+            ? "Este pedido já tinha sido atualizado — a lista foi atualizada com o status mais recente."
+            : (body?.error?.message ?? "Não foi possível marcar como pronto."),
+        );
+        onOrdersChanged();
+        return;
+      }
+      toast.success("Pedido pronto para servir");
+      onOrdersChanged();
+    } catch {
+      setError("Não foi possível conectar. Verifique sua internet e tente novamente.");
+    } finally {
+      setUpdatingOrderId(null);
+      isMarkingReadyRef.current = false;
+    }
+  }
+
   const allReady = openOrders.length > 0 && openOrders.every((o) => o.status === "ready");
 
   /**
@@ -235,7 +286,7 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
         );
       }
 
-      toast.success("Conta fechada", `${table.name} foi liberada.`);
+      toast.success("Atendimento finalizado", `${table.name} foi liberada.`);
       onOrdersChanged();
       onTableUpdated({ id: table.id, name: table.name, status: "livre", qrToken: table.qrToken });
       onClose();
@@ -327,13 +378,14 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
   const subtotal = openOrders.reduce((sum, o) => sum + o.total_amount, 0);
   const itemCount = openOrders.reduce((sum, o) => sum + o.item_count, 0);
   const hasPendingOrder = openOrders.some((o) => o.status === "pending");
+  const hasPreparingOrder = openOrders.some((o) => o.status === "preparing");
   const orderTimestamps = openOrders.map((o) => o.created_at);
   const openedAt = orderTimestamps.length > 0 ? orderTimestamps.reduce((a, b) => (a < b ? a : b)) : null;
   const lastOrderAt = orderTimestamps.length > 0 ? orderTimestamps.reduce((a, b) => (a > b ? a : b)) : null;
 
   const cardState = deriveTableCardState(
     table.status,
-    openOrders.length > 0 ? { totalAmount: subtotal, itemCount, lastOrderAt, hasPendingOrder } : null,
+    openOrders.length > 0 ? { totalAmount: subtotal, itemCount, lastOrderAt, hasPendingOrder, hasPreparingOrder } : null,
     [],
   );
   const isFilled = TABLE_CARD_FILLED_TONES.includes(cardState.tone);
@@ -507,6 +559,21 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
                         Enviar para cozinha
                       </Button>
                     )}
+
+                    {/* Item 2 do checklist do fluxo operacional das mesas. */}
+                    {order.status === "preparing" && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleMarkReady(order.id)}
+                        isLoading={updatingOrderId === order.id}
+                        className="w-full justify-center"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Pedido pronto
+                      </Button>
+                    )}
                   </div>
                 );
               })}
@@ -559,13 +626,19 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
             onClick={handleCloseBill}
             isLoading={isClosingBill}
             disabled={!allReady}
-            title={!allReady ? "Só é possível fechar a conta quando todos os pedidos estiverem prontos" : undefined}
+            title={!allReady ? "Só é possível finalizar quando todos os pedidos estiverem prontos" : undefined}
           >
-            Fechar conta
+            {/* Item 3 do checklist do fluxo operacional das mesas: mesmo
+                botão/ação de sempre (marca tudo como entregue + libera a
+                mesa, `handleCloseBill` acima) — só o rótulo muda para
+                comunicar "esta é a etapa final" assim que a mesa realmente
+                chega no estado "Pronto para servir". */}
+            {allReady && <CheckCircle2 className="h-4 w-4" />}
+            {allReady ? "Finalizar atendimento" : "Fechar conta"}
           </Button>
           {!allReady && openOrders.length > 0 && (
             <p className="text-center text-xs text-muted-foreground">
-              Ainda há pedido{openOrders.length > 1 ? "s" : ""} em preparo — fechar a conta libera quando tudo estiver pronto.
+              Ainda há pedido{openOrders.length > 1 ? "s" : ""} em preparo — finalizar libera quando tudo estiver pronto.
             </p>
           )}
 

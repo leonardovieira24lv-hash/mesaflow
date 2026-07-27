@@ -88,6 +88,8 @@ interface TableOperations {
   itemCount: number;
   lastOrderAt: string | null;
   hasPendingOrder: boolean;
+  /** Item 1 do checklist do fluxo operacional — ver `TableOperationalData` em `derive-table-card-state.ts`. */
+  hasPreparingOrder: boolean;
   orders: OrderListRow[];
 }
 
@@ -97,7 +99,14 @@ function aggregateByTable(orders: OrderListRow[]): Record<string, TableOperation
   for (const order of orders) {
     const tableId = order.table.id;
     if (!map[tableId]) {
-      map[tableId] = { totalAmount: 0, itemCount: 0, lastOrderAt: null, hasPendingOrder: false, orders: [] };
+      map[tableId] = {
+        totalAmount: 0,
+        itemCount: 0,
+        lastOrderAt: null,
+        hasPendingOrder: false,
+        hasPreparingOrder: false,
+        orders: [],
+      };
     }
     const entry = map[tableId];
     entry.totalAmount += order.total_amount;
@@ -105,6 +114,7 @@ function aggregateByTable(orders: OrderListRow[]): Record<string, TableOperation
     entry.orders.push(order);
     if (!entry.lastOrderAt || order.created_at > entry.lastOrderAt) entry.lastOrderAt = order.created_at;
     if (order.status === "pending") entry.hasPendingOrder = true;
+    if (order.status === "preparing") entry.hasPreparingOrder = true;
   }
 
   return map;
