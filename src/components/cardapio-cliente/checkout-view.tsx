@@ -145,7 +145,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
 
   if (items.length === 0) {
     return (
-      <div className="mx-auto flex min-h-screen max-w-xl flex-col sm:border-x sm:border-border sm:shadow-card">
+      <div className="mx-auto flex min-h-screen max-w-xl flex-col sm:border-x sm:border-border sm:shadow-card animate-fade-in">
         <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
         <main className="flex flex-1 items-center justify-center p-6">
           <EmptyState
@@ -160,7 +160,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-8 sm:border-x sm:border-border sm:shadow-card">
+    <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-8 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
       <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
 
       <div className="px-4 pt-4">

@@ -65,7 +65,7 @@ export function OrderTrackingView({ slug, orderId, restaurantName, initialOrder 
   }, [slug, orderId, isTerminal]);
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col animate-fade-in">
       <RestaurantHeader restaurantName={restaurantName} />
 
       <main className="flex flex-1 flex-col gap-6 px-4 py-6">

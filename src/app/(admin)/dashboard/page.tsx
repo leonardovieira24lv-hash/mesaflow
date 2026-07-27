@@ -5,6 +5,7 @@ import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
 import { RecentOrders } from "@/components/dashboard/recent-orders";
 import { QuickActions } from "@/components/dashboard/quick-actions";
+import { DashboardRealtimeSync } from "@/components/dashboard/dashboard-realtime-sync";
 import {
   StatusHeaderSkeleton,
   SummaryCardsSkeleton,
@@ -21,15 +22,23 @@ export const metadata = { title: "Dashboard" };
  * outras. `restaurantId` é resolvido uma única vez aqui (via
  * `requirePageSession`, com `cache()`) e passado como prop para quem
  * precisa — nenhum componente filho refaz essa consulta.
+ *
+ * Sprint 2 (Painel Vivo): `<DashboardRealtimeSync>` assina o Realtime de
+ * pedidos do restaurante e chama `router.refresh()` nas mudanças — todas
+ * as seções acima (incluindo "Pedidos hoje" em `SummaryCards` e a lista em
+ * `RecentOrders`) passam a atualizar sozinhas, sem duplicar nenhuma query.
  */
 export default async function DashboardPage() {
   const { profile } = await requirePageSession();
 
   return (
     <div className="flex flex-col gap-8">
-      <Suspense fallback={<StatusHeaderSkeleton />}>
-        <RestaurantStatusHeader restaurantId={profile.restaurantId} />
-      </Suspense>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <Suspense fallback={<StatusHeaderSkeleton />}>
+          <RestaurantStatusHeader restaurantId={profile.restaurantId} />
+        </Suspense>
+        <DashboardRealtimeSync restaurantId={profile.restaurantId} />
+      </div>
 
       <Suspense fallback={<SummaryCardsSkeleton />}>
         <SummaryCards restaurantId={profile.restaurantId} />

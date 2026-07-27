@@ -11,7 +11,7 @@ import { formatCurrency } from "@/lib/format";
 const timeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
 /**
- * Últimos pedidos — sob demanda (sem Realtime; ver `lib/dashboard/queries.ts`).
+ * Últimos pedidos — consulta real (`lib/dashboard/queries.ts`).
  *
  * Nota (Sprint 10, auditoria de qualidade): o comentário original desta
  * função dizia que a lista "sempre mostra o estado vazio, porque a Área do
@@ -20,6 +20,11 @@ const timeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute
  * (contrato 3.3). `getRecentOrders` já consulta a tabela `orders` de verdade
  * e não precisou de nenhuma mudança para isso — só a documentação estava
  * errada, corrigida aqui.
+ *
+ * Sprint 2 (Painel Vivo): este componente continua um Server Component sem
+ * nenhuma assinatura própria — quem mantém a lista atual é
+ * `<DashboardRealtimeSync>` (`page.tsx`), chamando `router.refresh()` a
+ * cada mudança em `orders`, o que reexecuta esta consulta no servidor.
  */
 export async function RecentOrders({ restaurantId }: { restaurantId: string }) {
   try {
@@ -30,7 +35,7 @@ export async function RecentOrders({ restaurantId }: { restaurantId: string }) {
       <Card>
         <CardHeader>
           <CardTitle>Últimos pedidos</CardTitle>
-          <CardDescription>Atualização sob demanda — tempo real chega no módulo de Pedidos.</CardDescription>
+          <CardDescription>Atualiza sozinha assim que um pedido é criado ou muda de status.</CardDescription>
         </CardHeader>
         <CardContent>
           {orders.length === 0 ? (

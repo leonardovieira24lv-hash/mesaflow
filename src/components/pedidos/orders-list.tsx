@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import { restaurantOrdersChannel } from "@/lib/realtime/channels";
+import { useRealtimeConnectionStatus } from "@/lib/realtime/use-realtime-connection-status";
+import { RealtimeStatusIndicator } from "@/components/realtime/realtime-status-indicator";
 import { ROUTES } from "@/constants/routes";
 import type { ApiSuccess } from "@/types/api";
 import type { OrderStatus } from "@/types/domain";
@@ -83,6 +85,18 @@ export function OrdersList({ restaurantId, initialOrders, initialMeta }: OrdersL
 
   const isInitialRequest = statusFilter === "all" && page === 1;
 
+  // Sprint 2 (Painel Vivo): status do canal Realtime já assinado abaixo,
+  // exibido via `<RealtimeStatusIndicator>`.
+  const { status: realtimeStatus, reportStatus } = useRealtimeConnectionStatus(["orders"]);
+
+  // Microinteração: quando um pedido chega ou muda de status, sua linha
+  // recebe um destaque suave (fundo + fade, sem afetar o layout da
+  // tabela) por ~900ms — mesmo padrão de diff-por-transição já usado no
+  // flash dos tiles de mesa (`tables-manager.tsx`), adaptado para não usar
+  // `scale`/`boxShadow` (não fazem sentido numa linha de tabela).
+  const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
+  const prevStatusesRef = useRef<Record<string, OrderStatus>>({});
+
   const fetchOrders = useCallback(
     async (targetPage: number, targetStatus: OrderStatus | "all") => {
       setIsLoading(true);
@@ -122,6 +136,38 @@ export function OrdersList({ restaurantId, initialOrders, initialMeta }: OrdersL
     void fetchOrders(page, statusFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só deve reagir a page/statusFilter; fetchOrders é estável (useCallback sem deps).
   }, [page, statusFilter]);
+
+  useEffect(() => {
+    const previous = prevStatusesRef.current;
+    const currentStatuses: Record<string, OrderStatus> = {};
+    const changedIds: string[] = [];
+
+    for (const order of orders) {
+      currentStatuses[order.id] = order.status;
+      if (previous[order.id] === undefined || previous[order.id] !== order.status) {
+        changedIds.push(order.id);
+      }
+    }
+
+    const isFirstLoad = Object.keys(previous).length === 0;
+    prevStatusesRef.current = currentStatuses;
+
+    // Pula o destaque na primeiríssima carga (dado inicial do Server
+    // Component) — só marca "novo/mudou" quando já havia um estado
+    // anterior para comparar, igual ao mesmo cuidado em `tables-manager.tsx`.
+    if (isFirstLoad || changedIds.length === 0) return;
+
+    setHighlightedIds((prev) => new Set([...prev, ...changedIds]));
+    const timer = setTimeout(() => {
+      setHighlightedIds((prev) => {
+        const next = new Set(prev);
+        changedIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    }, 900);
+
+    return () => clearTimeout(timer);
+  }, [orders]);
 
   function handleFilterChange(value: OrderStatus | "all") {
     setStatusFilter(value);
@@ -163,7 +209,7 @@ export function OrdersList({ restaurantId, initialOrders, initialMeta }: OrdersL
           void fetchOrders(pageRef.current, statusFilterRef.current);
         },
       )
-      .subscribe();
+      .subscribe((subscriptionStatus) => reportStatus("orders", subscriptionStatus));
 
     return () => {
       void supabase.removeChannel(channel);
@@ -196,12 +242,15 @@ export function OrdersList({ restaurantId, initialOrders, initialMeta }: OrdersL
 
   return (
     <div className="flex flex-col gap-4">
-      <div
-        role="tablist"
-        aria-label="Filtrar pedidos por status"
-        className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {filterTabs}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          role="tablist"
+          aria-label="Filtrar pedidos por status"
+          className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {filterTabs}
+        </div>
+        <RealtimeStatusIndicator status={realtimeStatus} className="self-start sm:self-auto" />
       </div>
 
       {loadError && (
@@ -247,7 +296,10 @@ export function OrdersList({ restaurantId, initialOrders, initialMeta }: OrdersL
                     onKeyDown={(e) => {
                       if (e.key === "Enter") router.push(ROUTES.pedidoDetalhe(order.id));
                     }}
-                    className="cursor-pointer focus-visible:bg-muted/40 focus-visible:outline-none"
+                    className={cn(
+                      "cursor-pointer transition-colors duration-700 focus-visible:bg-muted/40 focus-visible:outline-none",
+                      highlightedIds.has(order.id) && "bg-primary/10",
+                    )}
                   >
                     <TableCell className="font-medium text-foreground">{order.table.name}</TableCell>
                     <TableCell>

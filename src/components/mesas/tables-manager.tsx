@@ -30,6 +30,8 @@ import { cn } from "@/lib/utils";
 import { formatCurrency, formatRelativeTimeShort } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import { restaurantOrdersChannel, restaurantTablesChannel } from "@/lib/realtime/channels";
+import { useRealtimeConnectionStatus } from "@/lib/realtime/use-realtime-connection-status";
+import { RealtimeStatusIndicator } from "@/components/realtime/realtime-status-indicator";
 import { getAppOrigin } from "@/lib/cliente-url";
 import { TableQrModal } from "@/components/mesas/table-qr-modal";
 import { TableDrawer } from "@/components/mesas/table-drawer";
@@ -199,6 +201,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
     return map;
   }, [tables, operations]);
 
+  // Sprint 2 (Painel Vivo): status agregado dos dois canais assinados logo
+  // abaixo (`orders` e `tables`) — nenhum canal novo, só observação do que
+  // já existe. Renderizado no header via `<RealtimeStatusIndicator>`.
+  const { status: realtimeStatus, reportStatus } = useRealtimeConnectionStatus(["orders", "tables"]);
+
   const prevTonesRef = useRef<Record<string, TableCardTone>>({});
   const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set());
 
@@ -235,12 +242,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           void fetchOperations();
         },
       )
-      .subscribe();
+      .subscribe((subscriptionStatus) => reportStatus("orders", subscriptionStatus));
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [restaurantId, fetchOperations]);
+  }, [restaurantId, fetchOperations, reportStatus]);
 
   // Sprint 2 de Correção (Fase de Estabilização): sincroniza mudanças de
   // status de mesa entre dispositivos — abrir/liberar/editar numa mesa
@@ -274,12 +281,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           setDrawerTable((prev) => (prev?.id === updated.id ? updated : prev));
         },
       )
-      .subscribe();
+      .subscribe((subscriptionStatus) => reportStatus("tables", subscriptionStatus));
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [restaurantId]);
+  }, [restaurantId, reportStatus]);
 
   function tableUrl(table: TableEntity) {
     return `${origin}/${restaurantSlug}/mesa/${table.qrToken}`;
@@ -543,10 +550,13 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
             </p>
           </div>
         </div>
-        <Button onClick={openCreateModal}>
-          <Plus className="h-4 w-4" />
-          Nova mesa
-        </Button>
+        <div className="flex items-center gap-3">
+          <RealtimeStatusIndicator status={realtimeStatus} />
+          <Button onClick={openCreateModal}>
+            <Plus className="h-4 w-4" />
+            Nova mesa
+          </Button>
+        </div>
       </div>
 
       {/* Indicadores */}
