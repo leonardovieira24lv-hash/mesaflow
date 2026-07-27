@@ -187,6 +187,8 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   // deixaria de ser estável e o efeito do canal (que depende dela) reassinaria
   // o canal a cada fetch, o que seria um bug novo introduzido pelo log.
   const operationsRef = useRef<Record<string, TableOperations>>({});
+  // Mesmo raciocínio, para `fetchTableEvents` (ver comentário lá).
+  const tableEventsRef = useRef<Record<string, TableCardAlert[]>>({});
 
   const fetchOperations = useCallback(async (trigger: string) => {
     // LOG — prova que fetchOperations() foi de fato invocada, e por quê
@@ -233,6 +235,13 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
     pushMesasDebugLog("operations: estado React confirmado (useEffect)", { keys: Object.keys(operations) });
   }, [operations]);
 
+  // Mesmo raciocínio acima, para `tableEvents` — só dispara depois que o
+  // React de fato commitou o novo estado (diferente do log "setTableEvents:
+  // invocado com", que só prova a chamada do setter).
+  useEffect(() => {
+    pushMesasDebugLog("tableEvents: estado React confirmado (useEffect)", { keys: Object.keys(tableEvents) });
+  }, [tableEvents]);
+
   // Correção Sprint 2 (Painel Vivo) — causa raiz do "só atualiza com F5":
   // o Supabase Realtime NÃO reenvia eventos perdidos enquanto o canal
   // estava desconectado (aba em segundo plano, blip de rede, renovação de
@@ -268,18 +277,42 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   // mesa no cliente. Chamada no mount e a cada (re)conexão do canal de
   // eventos (efeito logo abaixo), pelo mesmo motivo já documentado acima.
   const fetchTableEvents = useCallback(async () => {
+    // LOG — início da chamada, mesmo padrão de "fetchOperations: chamada iniciada".
+    pushMesasDebugLog("fetchTableEvents: chamada iniciada", {});
     try {
       const response = await fetch("/api/v1/tables/events?status=open");
-      if (!response.ok) return;
+      if (!response.ok) {
+        pushMesasDebugLog("fetchTableEvents: resposta não-ok", { status: response.status });
+        return;
+      }
       const body = (await response.json()) as ApiSuccess<TableEvent[]>;
+      // LOG — resposta bruta da API, mesmo padrão de "fetchOperations: resposta crua".
+      pushMesasDebugLog("fetchTableEvents: resposta crua", {
+        count: body.data.length,
+        events: body.data.map((e) => ({ id: e.id, table_id: e.table.id, type: e.type, status: e.status })),
+      });
+
       const map: Record<string, TableCardAlert[]> = {};
       for (const event of body.data) {
         const tableId = event.table.id;
         if (!map[tableId]) map[tableId] = [];
         map[tableId].push({ id: event.id, type: event.type, createdAt: event.createdAt });
       }
+
+      // LOG — atualização do estado (setTableEvents), mesmo padrão de
+      // "setOperations: invocado com". `activeEventsCount` é a quantidade
+      // de eventos ativos recebidos (soma de todas as mesas), não o número
+      // de mesas com alerta.
+      pushMesasDebugLog("setTableEvents: invocado com", {
+        previousKeys: Object.keys(tableEventsRef.current),
+        nextKeys: Object.keys(map),
+        activeEventsCount: body.data.length,
+      });
+      tableEventsRef.current = map;
       setTableEvents(map);
-    } catch {
+    } catch (err) {
+      // LOG — qualquer erro durante o fetch.
+      pushMesasDebugLog("fetchTableEvents: exceção", { err: String(err) });
       // Mesmo raciocínio best-effort de `fetchTables`/`fetchOperations`: a
       // próxima reconexão do canal tenta de novo.
     }
@@ -472,7 +505,14 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "table_events", filter: `restaurant_id=eq.${restaurantId}` },
-        () => {
+        (payload) => {
+          // LOG — evento Realtime recebido no canal de eventos de mesa,
+          // mesmo padrão de "canal orders/tables: evento recebido".
+          pushMesasDebugLog("canal table_events: evento recebido", {
+            eventType: payload.eventType,
+            new: payload.new,
+            old: payload.old,
+          });
           void fetchTableEvents();
         },
       )
@@ -484,6 +524,9 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
       });
 
     return () => {
+      pushMesasDebugLog("canal table_events: cleanup/removeChannel (componente desmontando ou restaurantId mudou)", {
+        restaurantId,
+      });
       void supabase.removeChannel(channel);
     };
   }, [restaurantId, reportStatus, fetchTableEvents]);

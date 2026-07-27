@@ -53,7 +53,10 @@ function categorize(tag: string): LogCategory {
     tag.startsWith("fetchTables") ||
     tag.startsWith("setOperations") ||
     tag.startsWith("aggregateByTable") ||
-    tag.startsWith("operations: estado React confirmado")
+    tag.startsWith("operations: estado React confirmado") ||
+    tag.startsWith("fetchTableEvents") ||
+    tag.startsWith("setTableEvents") ||
+    tag.startsWith("tableEvents: estado React confirmado")
   ) {
     return "aggregation";
   }
