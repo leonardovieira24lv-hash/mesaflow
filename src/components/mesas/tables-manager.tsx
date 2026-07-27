@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
   Clock3,
@@ -32,6 +33,7 @@ import { createClient } from "@/lib/supabase/client";
 import { restaurantOrdersChannel, restaurantTablesChannel } from "@/lib/realtime/channels";
 import { useRealtimeConnectionStatus } from "@/lib/realtime/use-realtime-connection-status";
 import { RealtimeStatusIndicator } from "@/components/realtime/realtime-status-indicator";
+import { pushMesasDebugLog } from "@/lib/debug/mesas-debug-log";
 import { getAppOrigin } from "@/lib/cliente-url";
 import { TableQrModal } from "@/components/mesas/table-qr-modal";
 import { TableDrawer } from "@/components/mesas/table-drawer";
@@ -165,18 +167,39 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   const origin = getAppOrigin();
   const showQrDebugBox = DEBUG || process.env.NODE_ENV !== "production";
 
+  // Ref só para o LOG 3 abaixo (valor "anterior" de `operations` no momento do
+  // fetch) — não pode ser a própria `operations` do estado, ou `fetchOperations`
+  // deixaria de ser estável e o efeito do canal (que depende dela) reassinaria
+  // o canal a cada fetch, o que seria um bug novo introduzido pelo log.
+  const operationsRef = useRef<Record<string, TableOperations>>({});
+
   const fetchOperations = useCallback(async () => {
     try {
       const response = await fetch("/api/v1/orders?status=pending,preparing,ready&per_page=100");
       const body = await response.json();
       if (!response.ok) {
+        pushMesasDebugLog("fetchOperations: resposta não-ok", { status: response.status, body });
         setOperationsError(body?.error?.message ?? "Não foi possível carregar os pedidos em aberto.");
         return;
       }
       const success = body as ApiSuccess<OrderListRow[]>;
-      setOperations(aggregateByTable(success.data));
+      // LOG 4 — resposta crua de fetchOperations(), antes de qualquer agregação.
+      pushMesasDebugLog("fetchOperations: resposta crua", {
+        count: success.data.length,
+        orders: success.data.map((o) => ({ id: o.id, table_id: o.table.id, table_name: o.table.name, status: o.status })),
+      });
+      const aggregated = aggregateByTable(success.data);
+      // LOG 3 — estado React sendo atualizado (setOperations), antes/depois.
+      pushMesasDebugLog("setOperations: valor anterior vs novo", {
+        previousKeys: Object.keys(operationsRef.current),
+        nextKeys: Object.keys(aggregated),
+        next: aggregated,
+      });
+      operationsRef.current = aggregated;
+      setOperations(aggregated);
       setOperationsError(null);
-    } catch {
+    } catch (err) {
+      pushMesasDebugLog("fetchOperations: exceção", { err: String(err) });
       setOperationsError("Não foi possível conectar para carregar os pedidos em aberto.");
     }
   }, []);
@@ -199,6 +222,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
       const body = await response.json();
       if (!response.ok) return;
       const success = body as ApiSuccess<TableDto[]>;
+      pushMesasDebugLog("fetchTables: resposta crua", { tables: success.data });
       const freshTables = success.data.map(fromDto).sort((a, b) => a.name.localeCompare(b.name));
       setTables(freshTables);
       setDrawerTable((prev) => (prev ? (freshTables.find((t) => t.id === prev.id) ?? prev) : prev));
@@ -266,11 +290,19 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` },
-        () => {
+        (payload) => {
+          // LOG 1 — evento Realtime recebido no canal de pedidos.
+          pushMesasDebugLog("canal orders: evento recebido", {
+            eventType: payload.eventType,
+            new: payload.new,
+            old: payload.old,
+          });
           void fetchOperations();
         },
       )
       .subscribe((subscriptionStatus) => {
+        // LOG 2 — callback do canal (status da subscrição).
+        pushMesasDebugLog("canal orders: subscriptionStatus", { subscriptionStatus, restaurantId });
         reportStatus("orders", subscriptionStatus);
         if (subscriptionStatus === "SUBSCRIBED") {
           void fetchOperations();
@@ -297,6 +329,13 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
         "postgres_changes",
         { event: "*", schema: "public", table: "tables", filter: `restaurant_id=eq.${restaurantId}` },
         (payload) => {
+          // LOG 1 — evento Realtime recebido no canal de mesas.
+          pushMesasDebugLog("canal tables: evento recebido", {
+            eventType: payload.eventType,
+            new: payload.new,
+            old: payload.old,
+          });
+
           if (payload.eventType === "DELETE") {
             const deletedId = (payload.old as { id?: string }).id;
             if (!deletedId) return;
@@ -306,6 +345,8 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           }
 
           const updated = fromDto(payload.new as TableDto);
+          // LOG 3 — estado React sendo atualizado (setTables).
+          pushMesasDebugLog("setTables: mesa atualizada via realtime", { updated });
           setTables((prev) => {
             const exists = prev.some((t) => t.id === updated.id);
             if (!exists) return [...prev, updated].sort((a, b) => a.name.localeCompare(b.name));
@@ -315,6 +356,8 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
         },
       )
       .subscribe((subscriptionStatus) => {
+        // LOG 2 — callback do canal (status da subscrição).
+        pushMesasDebugLog("canal tables: subscriptionStatus", { subscriptionStatus, restaurantId });
         reportStatus("tables", subscriptionStatus);
         if (subscriptionStatus === "SUBSCRIBED") {
           void fetchTables();
@@ -487,6 +530,17 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   }
 
   const drawerOperations = drawerTable ? operations[drawerTable.id] : undefined;
+  if (drawerTable) {
+    // LOG complementar — exatamente o dado que o Drawer recebe (onde aparece
+    // "Nenhum pedido em aberto" quando isso vem vazio).
+    pushMesasDebugLog("TableDrawer: openOrders calculado", {
+      drawerTableId: drawerTable.id,
+      drawerTableName: drawerTable.name,
+      hasOperationsEntry: drawerTable.id in operations,
+      openOrdersCount: drawerOperations?.orders.length ?? 0,
+      operationsKeysAvailable: Object.keys(operations),
+    });
+  }
 
   // Agregados derivados do que já está carregado (tables + operations) —
   // nenhum dado novo, só leitura do que o componente já tem em mãos.
@@ -590,6 +644,15 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
         </div>
         <div className="flex items-center gap-3">
           <RealtimeStatusIndicator status={realtimeStatus} />
+          {/* INSTRUMENTAÇÃO TEMPORÁRIA — Sprint 2, investigação do bug de
+              agregação. Remover junto com `lib/debug/mesas-debug-log.ts` e a
+              rota `/admin/debug/mesas` assim que a causa raiz for corrigida. */}
+          <Link
+            href="/admin/debug/mesas"
+            className="text-xs font-medium text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground"
+          >
+            Ver logs de debug
+          </Link>
           <Button onClick={openCreateModal}>
             <Plus className="h-4 w-4" />
             Nova mesa
@@ -677,19 +740,37 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           {filteredTables.map((table) => {
             const data = operations[table.id] ?? null;
             const state = deriveTableCardState(table.status, data, []);
+            // LOG 5 — resultado de deriveTableCardState() para esta mesa, neste render.
+            pushMesasDebugLog("deriveTableCardState", {
+              tableId: table.id,
+              tableName: table.name,
+              tableStatus: table.status,
+              hasOperationsEntry: operations[table.id] !== undefined,
+              data,
+              tone: state.tone,
+              label: state.label,
+            });
             const isFilled = TABLE_CARD_FILLED_TONES.includes(state.tone);
             const isFlashing = flashingIds.has(table.id);
 
             const dotClass = isFilled ? "bg-white/70" : TABLE_CARD_TONE_DOT_CLASSES[state.tone];
             const ordersCount = data?.orders.length ?? 0;
             const actionLabel = table.status === "livre" ? "Abrir mesa" : "Ver mesa";
+            const toneClass = TABLE_CARD_TONE_CLASSES[state.tone];
+            // LOG 6 — classe de cor efetivamente aplicada ao card no render.
+            pushMesasDebugLog("render do card da mesa", {
+              tableId: table.id,
+              tableName: table.name,
+              tone: state.tone,
+              toneClass,
+            });
 
             return (
               <div
                 key={table.id}
                 className={cn(
                   "group relative flex h-full flex-col gap-2 overflow-hidden rounded-2xl border p-2.5 shadow-card transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
-                  TABLE_CARD_TONE_CLASSES[state.tone],
+                  toneClass,
                   isFlashing && "animate-status-flash",
                 )}
               >
