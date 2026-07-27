@@ -1,5 +1,17 @@
 # Roadmap: eventos de mesa (chamar garçom / solicitar conta)
 
+> ✅ **IMPLEMENTADO** — Sprint "Chamar garçom / Solicitar conta" (2026-07-27).
+> Este documento continua aqui como referência da especificação original;
+> ver `supabase/migrations/0012_table_events.sql`,
+> `src/lib/table-events/create-table-event.ts`,
+> `src/app/api/v1/public/[slug]/tables/[token]/{call-waiter,request-bill}`,
+> `src/app/api/v1/tables/events/`, e a integração em `TablesManager`/
+> `TableDrawer`/`TableAssistanceActions`. Duas rotas administrativas saíram
+> um pouco diferentes do desenho original abaixo — ver nota de arquitetura
+> nos próprios arquivos de rota — porque a leitura precisa ser "todos os
+> eventos do restaurante numa chamada" (mesmo padrão de `fetchOperations`),
+> não uma consulta por mesa.
+
 Estados pedidos para o Painel de Mesas que **não existem hoje** no backend:
 "Cliente chamou o garçom" (azul) e "Cliente solicitou a conta" (vermelho).
 

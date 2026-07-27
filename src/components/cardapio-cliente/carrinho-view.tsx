@@ -7,6 +7,7 @@ import { RestaurantHeader } from "@/components/cardapio-cliente/restaurant-heade
 import { CartProvider, useCart } from "@/components/cardapio-cliente/cart-context";
 import { CartLineItem } from "@/components/cardapio-cliente/cart-line-item";
 import { OrderSummaryBar } from "@/components/cardapio-cliente/order-summary-bar";
+import { TableAssistanceActions } from "@/components/cardapio-cliente/table-assistance-actions";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -46,6 +47,7 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
   return (
     <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-8 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
       <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
+      <TableAssistanceActions slug={slug} tableToken={tableToken} />
 
       <div className="flex items-center justify-between px-4 pt-4">
         <ButtonLink href={menuHref} variant="ghost" size="sm">

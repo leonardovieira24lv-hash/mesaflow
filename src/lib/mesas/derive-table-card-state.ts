@@ -36,6 +36,7 @@ export type TableCardTone =
  * onde hoje sempre chega `[]`.
  */
 export interface TableCardAlert {
+  id: string;
   type: "waiter_call" | "bill_request";
   createdAt: string;
 }

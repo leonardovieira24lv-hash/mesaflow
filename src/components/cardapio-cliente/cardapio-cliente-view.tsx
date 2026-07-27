@@ -8,6 +8,7 @@ import { MenuItemCard } from "@/components/cardapio-cliente/menu-item-card";
 import { ProductDetailModal } from "@/components/cardapio-cliente/product-detail-modal";
 import { CartProvider } from "@/components/cardapio-cliente/cart-context";
 import { CartSummaryBar } from "@/components/cardapio-cliente/cart-summary-bar";
+import { TableAssistanceActions } from "@/components/cardapio-cliente/table-assistance-actions";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { PublicMenuCategory, PublicMenuItem } from "@/lib/orders/public-menu";
 
@@ -41,6 +42,7 @@ export function CardapioClienteView({
     <CartProvider slug={slug} tableToken={tableToken}>
       <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-24 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
         <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
+        <TableAssistanceActions slug={slug} tableToken={tableToken} />
         <CategoryNav categories={categories} />
 
         <main className="flex flex-1 flex-col gap-5 px-4 py-4">

@@ -23,6 +23,16 @@ export function restaurantTablesChannel(restaurantId: string): string {
   return `restaurant:${restaurantId}:tables`;
 }
 
+/**
+ * Canal administrativo — eventos de mesa (Chamar garçom / Solicitar conta),
+ * docs/table-events-roadmap.md. Mesmo padrão de `restaurantOrdersChannel` e
+ * `restaurantTablesChannel`: um canal por restaurante, filtrado por
+ * `restaurant_id` na inscrição client-side.
+ */
+export function restaurantTableEventsChannel(restaurantId: string): string {
+  return `restaurant:${restaurantId}:table_events`;
+}
+
 /** Canal de acompanhamento do cliente (contrato 3.4) — um único pedido específico. */
 export function orderTrackingChannel(orderId: string): string {
   return `orders:id=eq.${orderId}`;

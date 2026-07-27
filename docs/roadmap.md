@@ -56,7 +56,15 @@ quê — nenhuma infraestrutura nova foi introduzida, como pedido.
   agora nunca reenvia um pedido que já foi fechado com sucesso, e uma falha
   parcial no meio do processo mostra exatamente quantos pedidos fecharam e
   quantos faltam, em vez de um erro genérico e confuso (Sprint Pós-Auditoria
-  / RC1.1) — a máquina de estados dos pedidos não foi alterada.
+  / RC1.1) — a máquina de estados dos pedidos não foi alterada. Fluxo
+  operacional completo (Novo Pedido → Preparando → Pronto → Finalizar →
+  Livre) agora acontece inteiro dentro de Mesas, sem precisar abrir Pedidos:
+  modelo de tom com 8 estados dedicados (`TableCardTone`), ação "Pedido
+  pronto" e rótulo "Finalizar atendimento" quando tudo está pronto (Sprint
+  "Fluxo Operacional das Mesas"). "Chamar garçom" / "Solicitar conta"
+  implementado de ponta a ponta (tabela `table_events`, endpoints públicos e
+  administrativos, canal Realtime dedicado, botões na Área do Cliente e no
+  Drawer) — ver `docs/table-events-roadmap.md`.
 - **Módulo de Pedidos administrativo** — listagem com filtro por status,
   detalhe com itens, atualização de status seguindo a máquina de estados
   (`pending → preparing → ready → delivered`, `cancelled` a partir de
@@ -83,17 +91,6 @@ quê — nenhuma infraestrutura nova foi introduzida, como pedido.
   para o motivo de cada um).
 
 ## 🚧 Funcionalidades Parcialmente Implementadas
-
-- **"Chamou Garçom" / "Solicitou Conta"**
-  - **Já existe:** o frontend inteiro já está preparado — `TableCardAlert`
-    e a lógica de prioridade em `deriveTableCardState`
-    (`src/lib/mesas/derive-table-card-state.ts`) já sabem desenhar esses
-    dois estados (azul e vermelho) assim que existir dado real.
-  - **Falta:** o backend inteiro — tabela `table_events`, endpoints
-    públicos (cliente chama o garçom / pede a conta) e administrativos
-    (reconhecer/resolver o evento), canal Realtime dedicado. Especificado
-    em detalhe em `docs/table-events-roadmap.md`.
-  - **Módulo:** Mesas / Área do Cliente.
 
 - **Exclusão de mesa**
   - **Já existe:** exclusão bloqueada corretamente enquanto há uma comanda
@@ -148,8 +145,6 @@ Com base no que o contrato (`docs/api-contracts-v1.md`, seção 10) já
 documenta como fora do escopo da v1, mais o que foi identificado nas
 auditorias:
 
-- **Sistema de eventos de mesa** (chamar garçom, solicitar conta) — ver 🚧
-  acima; é a única destas que já tem o frontend pronto esperando o backend.
 - **Funcionários/convites** — hoje só existe `owner`/`staff` no schema, sem
   fluxo de convite nem tela de gestão de equipe. Planejado para v1.1.
 - **Variações de produto** (`menu_item_variations` — ex.: tamanho, sabor,

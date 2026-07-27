@@ -16,6 +16,7 @@ import {
   TABLE_CARD_FILLED_TONES,
   TABLE_CARD_TONE_DOT_CLASSES,
   TABLE_CARD_TONE_CLASSES,
+  type TableCardAlert,
 } from "@/lib/mesas/derive-table-card-state";
 import type { OrderListRow } from "@/components/pedidos/orders-list";
 import type { Table as TableEntity } from "@/types/domain";
@@ -33,9 +34,13 @@ interface OrderDetail {
 interface TableDrawerProps {
   table: TableEntity;
   openOrders: OrderListRow[];
+  /** "Chamar garçom" / "Solicitar conta" em aberto nesta mesa (docs/table-events-roadmap.md). */
+  alerts: TableCardAlert[];
   onClose: () => void;
   /** Chamado depois de qualquer ação que muda um pedido — o pai refaz a agregação. */
   onOrdersChanged: () => void;
+  /** Chamado depois de reconhecer/resolver um alerta — o pai refaz a busca de eventos. */
+  onAlertsChanged: () => void;
   /** Chamado depois de liberar/fechar a mesa — o pai atualiza a lista de mesas local. */
   onTableUpdated: (table: TableEntity) => void;
 }
@@ -74,7 +79,15 @@ interface TableDrawerProps {
  *   administrativo para adicionar item a um pedido já criado — só o
  *   cliente cria pedidos, pela própria mesa. Ver `docs/table-events-roadmap.md`.
  */
-export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTableUpdated }: TableDrawerProps) {
+export function TableDrawer({
+  table,
+  openOrders,
+  alerts,
+  onClose,
+  onOrdersChanged,
+  onAlertsChanged,
+  onTableUpdated,
+}: TableDrawerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const [details, setDetails] = useState<Record<string, OrderDetail>>({});
   const [loadingDetails, setLoadingDetails] = useState(true);
@@ -87,6 +100,11 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
   // lock acima, mas para a transição preparing→ready ("Pedido pronto"), que
   // antes só existia na tela de Pedidos.
   const isMarkingReadyRef = useRef(false);
+  // "Chamar garçom" / "Solicitar conta" — mesmo raciocínio de lock, para
+  // não deixar um duplo toque em "Atendido"/"Conta entregue" disparar duas
+  // requisições para o mesmo evento.
+  const [resolvingAlertId, setResolvingAlertId] = useState<string | null>(null);
+  const isResolvingAlertRef = useRef(false);
   const [isClosingBill, setIsClosingBill] = useState(false);
   const [isReleasing, setIsReleasing] = useState(false);
   const isClosingBillRef = useRef(false);
@@ -216,6 +234,52 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
       isMarkingReadyRef.current = false;
     }
   }
+
+  /**
+   * "Chamar garçom" / "Solicitar conta" — botões "Atendido" / "Conta
+   * impressa/entregue" (docs/table-events-roadmap.md seção 4, item 3).
+   * Sempre resolve direto (`status: "resolved"`), sem passar por
+   * `"acknowledged"` — para o fluxo de um atendente sozinho, "vi e já
+   * resolvi" é o caso comum; `acknowledged` fica disponível na API para uso
+   * futuro (ex.: um segundo atendente "reservando" o alerta antes de ir até
+   * a mesa), mas não tem UI própria ainda por não ser um pedido feito nesta
+   * sprint.
+   */
+  async function handleResolveAlert(eventId: string) {
+    if (isResolvingAlertRef.current) return;
+    isResolvingAlertRef.current = true;
+
+    setResolvingAlertId(eventId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/v1/tables/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "resolved" }),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        const isConflict = body?.error?.code === "CONFLICT";
+        setError(
+          isConflict
+            ? "Este alerta já tinha sido resolvido — a lista foi atualizada."
+            : (body?.error?.message ?? "Não foi possível atualizar o alerta."),
+        );
+        onAlertsChanged();
+        return;
+      }
+      toast.success("Alerta resolvido");
+      onAlertsChanged();
+    } catch {
+      setError("Não foi possível conectar. Verifique sua internet e tente novamente.");
+    } finally {
+      setResolvingAlertId(null);
+      isResolvingAlertRef.current = false;
+    }
+  }
+
+  const waiterCallAlert = alerts.find((a) => a.type === "waiter_call");
+  const billRequestAlert = alerts.find((a) => a.type === "bill_request");
 
   const allReady = openOrders.length > 0 && openOrders.every((o) => o.status === "ready");
 
@@ -386,7 +450,7 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
   const cardState = deriveTableCardState(
     table.status,
     openOrders.length > 0 ? { totalAmount: subtotal, itemCount, lastOrderAt, hasPendingOrder, hasPreparingOrder } : null,
-    [],
+    alerts,
   );
   const isFilled = TABLE_CARD_FILLED_TONES.includes(cardState.tone);
 
@@ -462,6 +526,41 @@ export function TableDrawer({ table, openOrders, onClose, onOrdersChanged, onTab
             )}
           </div>
         </div>
+
+        {(waiterCallAlert || billRequestAlert) && (
+          <div className="flex flex-col gap-2 border-b border-border px-5 py-3">
+            {waiterCallAlert && (
+              <Alert variant="info" className="items-center justify-between">
+                <span className="font-medium">Chamando garçom · há {formatRelativeTimeShort(waiterCallAlert.createdAt)}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="ml-3 shrink-0"
+                  onClick={() => handleResolveAlert(waiterCallAlert.id)}
+                  isLoading={resolvingAlertId === waiterCallAlert.id}
+                >
+                  Atendido
+                </Button>
+              </Alert>
+            )}
+            {billRequestAlert && (
+              <Alert variant="destructive" className="items-center justify-between">
+                <span className="font-medium">Conta solicitada · há {formatRelativeTimeShort(billRequestAlert.createdAt)}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="ml-3 shrink-0"
+                  onClick={() => handleResolveAlert(billRequestAlert.id)}
+                  isLoading={resolvingAlertId === billRequestAlert.id}
+                >
+                  Conta entregue
+                </Button>
+              </Alert>
+            )}
+          </div>
+        )}
 
         {openOrders.length > 0 && (
           <div className="grid grid-cols-2 gap-2 border-b border-border px-5 py-3">

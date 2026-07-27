@@ -91,3 +91,18 @@ export interface Profile {
   restaurantId: string;
   role: UserRole;
 }
+
+// ── Eventos de mesa (Chamar garçom / Solicitar conta) ───────────────────────
+// Ver docs/table-events-roadmap.md e supabase/migrations/0012_table_events.sql.
+// Evento pontual que se resolve — não é um estado permanente da mesa.
+
+export type TableEventType = "waiter_call" | "bill_request";
+export type TableEventStatus = "open" | "acknowledged" | "resolved";
+
+export interface TableEvent {
+  id: string;
+  table: Pick<Table, "id" | "name">;
+  type: TableEventType;
+  status: TableEventStatus;
+  createdAt: string;
+}

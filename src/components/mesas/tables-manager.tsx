@@ -30,7 +30,7 @@ import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatRelativeTimeShort } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
-import { restaurantOrdersChannel, restaurantTablesChannel } from "@/lib/realtime/channels";
+import { restaurantOrdersChannel, restaurantTablesChannel, restaurantTableEventsChannel } from "@/lib/realtime/channels";
 import { useRealtimeConnectionStatus } from "@/lib/realtime/use-realtime-connection-status";
 import { RealtimeStatusIndicator } from "@/components/realtime/realtime-status-indicator";
 import { pushMesasDebugLog } from "@/lib/debug/mesas-debug-log";
@@ -43,10 +43,11 @@ import {
   TABLE_CARD_FILLED_TONES,
   TABLE_CARD_TONE_DOT_CLASSES,
   type TableCardTone,
+  type TableCardAlert,
 } from "@/lib/mesas/derive-table-card-state";
 import { createTableSchema, updateTableSchema, TABLE_STATUS_VALUES } from "@/lib/validations/tables";
 import type { OrderListRow } from "@/components/pedidos/orders-list";
-import type { Table as TableEntity, TableStatus } from "@/types/domain";
+import type { Table as TableEntity, TableStatus, TableEvent } from "@/types/domain";
 import type { ApiError, ApiSuccess } from "@/types/api";
 
 // DEBUG TEMPORÁRIO — pedido explícito do dono, para investigar visualmente
@@ -147,6 +148,10 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   const [tables, setTables] = useState<TableEntity[]>(initialTables);
   const [operations, setOperations] = useState<Record<string, TableOperations>>({});
   const [operationsError, setOperationsError] = useState<string | null>(null);
+  // "Chamar garçom" / "Solicitar conta" (docs/table-events-roadmap.md) —
+  // eventos em aberto, agregados por mesa. Mesmo padrão de `operations`:
+  // um Record por table.id, alimentado por `fetchTableEvents()`.
+  const [tableEvents, setTableEvents] = useState<Record<string, TableCardAlert[]>>({});
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<TableEntity | null>(null);
@@ -257,9 +262,36 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
     }
   }, []);
 
+  // "Chamar garçom" / "Solicitar conta" (docs/table-events-roadmap.md) —
+  // mesmo padrão exato de `fetchOperations`: uma única busca para todo o
+  // restaurante (`GET /api/v1/tables/events?status=open`), agregada por
+  // mesa no cliente. Chamada no mount e a cada (re)conexão do canal de
+  // eventos (efeito logo abaixo), pelo mesmo motivo já documentado acima.
+  const fetchTableEvents = useCallback(async () => {
+    try {
+      const response = await fetch("/api/v1/tables/events?status=open");
+      if (!response.ok) return;
+      const body = (await response.json()) as ApiSuccess<TableEvent[]>;
+      const map: Record<string, TableCardAlert[]> = {};
+      for (const event of body.data) {
+        const tableId = event.table.id;
+        if (!map[tableId]) map[tableId] = [];
+        map[tableId].push({ id: event.id, type: event.type, createdAt: event.createdAt });
+      }
+      setTableEvents(map);
+    } catch {
+      // Mesmo raciocínio best-effort de `fetchTables`/`fetchOperations`: a
+      // próxima reconexão do canal tenta de novo.
+    }
+  }, []);
+
   useEffect(() => {
     void fetchOperations("mount");
   }, [fetchOperations]);
+
+  useEffect(() => {
+    void fetchTableEvents();
+  }, [fetchTableEvents]);
 
   useEffect(() => {
     const interval = setInterval(() => setClockTick((t) => t + 1), 30_000);
@@ -272,15 +304,19 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   const currentTones = useMemo(() => {
     const map: Record<string, TableCardTone> = {};
     for (const table of tables) {
-      map[table.id] = deriveTableCardState(table.status, operations[table.id] ?? null, []).tone;
+      map[table.id] = deriveTableCardState(
+        table.status,
+        operations[table.id] ?? null,
+        tableEvents[table.id] ?? [],
+      ).tone;
     }
     return map;
-  }, [tables, operations]);
+  }, [tables, operations, tableEvents]);
 
   // Sprint 2 (Painel Vivo): status agregado dos dois canais assinados logo
   // abaixo (`orders` e `tables`) — nenhum canal novo, só observação do que
   // já existe. Renderizado no header via `<RealtimeStatusIndicator>`.
-  const { status: realtimeStatus, reportStatus } = useRealtimeConnectionStatus(["orders", "tables"]);
+  const { status: realtimeStatus, reportStatus } = useRealtimeConnectionStatus(["orders", "tables", "table_events"]);
 
   const prevTonesRef = useRef<Record<string, TableCardTone>>({});
   const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set());
@@ -420,6 +456,37 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
       void supabase.removeChannel(channel);
     };
   }, [restaurantId, reportStatus, fetchTables]);
+
+  // "Chamar garçom" / "Solicitar conta" (docs/table-events-roadmap.md) —
+  // mesmo padrão exato dos outros dois canais: qualquer INSERT/UPDATE em
+  // `table_events` refaz a busca inteira (`fetchTableEvents`), e a busca
+  // também roda a cada (re)conexão do canal (`SUBSCRIBED`), fechando a
+  // mesma lacuna de eventos perdidos durante uma desconexão já corrigida
+  // para `orders`/`tables`.
+  useEffect(() => {
+    pushMesasDebugLog("canal table_events: assinando", { restaurantId, at: new Date().toISOString() });
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(restaurantTableEventsChannel(restaurantId))
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "table_events", filter: `restaurant_id=eq.${restaurantId}` },
+        () => {
+          void fetchTableEvents();
+        },
+      )
+      .subscribe((subscriptionStatus) => {
+        reportStatus("table_events", subscriptionStatus);
+        if (subscriptionStatus === "SUBSCRIBED") {
+          void fetchTableEvents();
+        }
+      });
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [restaurantId, reportStatus, fetchTableEvents]);
 
   function tableUrl(table: TableEntity) {
     return `${origin}/${restaurantSlug}/mesa/${table.qrToken}`;
@@ -791,7 +858,8 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {filteredTables.map((table) => {
             const data = operations[table.id] ?? null;
-            const state = deriveTableCardState(table.status, data, []);
+            const alerts = tableEvents[table.id] ?? [];
+            const state = deriveTableCardState(table.status, data, alerts);
             // LOG 5 — resultado de deriveTableCardState() para esta mesa, neste render.
             pushMesasDebugLog("deriveTableCardState", {
               tableId: table.id,
@@ -1048,8 +1116,10 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
         <TableDrawer
           table={drawerTable}
           openOrders={drawerOperations?.orders ?? []}
+          alerts={tableEvents[drawerTable.id] ?? []}
           onClose={() => setDrawerTable(null)}
           onOrdersChanged={() => void fetchOperations("ação manual no TableDrawer (enviar p/ cozinha, fechar conta, etc.)")}
+          onAlertsChanged={() => void fetchTableEvents()}
           onTableUpdated={(updated) => {
             setTables((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
             setDrawerTable(updated);

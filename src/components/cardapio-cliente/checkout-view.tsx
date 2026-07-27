@@ -7,6 +7,7 @@ import { RestaurantHeader } from "@/components/cardapio-cliente/restaurant-heade
 import { CartProvider, useCart } from "@/components/cardapio-cliente/cart-context";
 import { CartLineItem } from "@/components/cardapio-cliente/cart-line-item";
 import { OrderSummaryBar } from "@/components/cardapio-cliente/order-summary-bar";
+import { TableAssistanceActions } from "@/components/cardapio-cliente/table-assistance-actions";
 import { ButtonLink } from "@/components/ui/button-link";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -147,6 +148,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
     return (
       <div className="mx-auto flex min-h-screen max-w-xl flex-col sm:border-x sm:border-border sm:shadow-card animate-fade-in">
         <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
+        <TableAssistanceActions slug={slug} tableToken={tableToken} />
         <main className="flex flex-1 items-center justify-center p-6">
           <EmptyState
             icon={ShoppingBag}
@@ -162,6 +164,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
   return (
     <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-8 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
       <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
+      <TableAssistanceActions slug={slug} tableToken={tableToken} />
 
       <div className="px-4 pt-4">
         <ButtonLink href={cartHref} variant="ghost" size="sm">
