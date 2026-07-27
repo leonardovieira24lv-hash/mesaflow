@@ -181,6 +181,34 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
     }
   }, []);
 
+  // Correção Sprint 2 (Painel Vivo) — causa raiz do "só atualiza com F5":
+  // o Supabase Realtime NÃO reenvia eventos perdidos enquanto o canal
+  // estava desconectado (aba em segundo plano, blip de rede, renovação de
+  // token — tudo isso derruba o WebSocket por alguns instantes, rotineiramente,
+  // sem nenhum aviso visível). Um pedido criado/alterado exatamente nesse
+  // intervalo nunca chega — só um F5 (que refaz a busca do zero) corrige.
+  // `fetchTables` espelha `fetchOperations`, mas para a lista de mesas
+  // (`GET /api/v1/tables`, mesmo endpoint que já alimenta o CRUD deste
+  // painel — nenhum contrato novo). Ambas são chamadas sempre que um canal
+  // (re)conecta (`subscriptionStatus === "SUBSCRIBED"`, nos dois efeitos
+  // logo abaixo) — não só na primeira carga — para fechar exatamente essa
+  // lacuna, sem depender de polling nem de o usuário recarregar a página.
+  const fetchTables = useCallback(async () => {
+    try {
+      const response = await fetch("/api/v1/tables");
+      const body = await response.json();
+      if (!response.ok) return;
+      const success = body as ApiSuccess<TableDto[]>;
+      const freshTables = success.data.map(fromDto).sort((a, b) => a.name.localeCompare(b.name));
+      setTables(freshTables);
+      setDrawerTable((prev) => (prev ? (freshTables.find((t) => t.id === prev.id) ?? prev) : prev));
+    } catch {
+      // Resync best-effort: se esta busca falhar, a próxima reconexão do
+      // canal tenta de novo — não há necessidade de expor erro para isso,
+      // a grade continua mostrando o último estado válido conhecido.
+    }
+  }, []);
+
   useEffect(() => {
     void fetchOperations();
   }, [fetchOperations]);
@@ -242,7 +270,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           void fetchOperations();
         },
       )
-      .subscribe((subscriptionStatus) => reportStatus("orders", subscriptionStatus));
+      .subscribe((subscriptionStatus) => {
+        reportStatus("orders", subscriptionStatus);
+        if (subscriptionStatus === "SUBSCRIBED") {
+          void fetchOperations();
+        }
+      });
 
     return () => {
       void supabase.removeChannel(channel);
@@ -281,12 +314,17 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           setDrawerTable((prev) => (prev?.id === updated.id ? updated : prev));
         },
       )
-      .subscribe((subscriptionStatus) => reportStatus("tables", subscriptionStatus));
+      .subscribe((subscriptionStatus) => {
+        reportStatus("tables", subscriptionStatus);
+        if (subscriptionStatus === "SUBSCRIBED") {
+          void fetchTables();
+        }
+      });
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [restaurantId, reportStatus]);
+  }, [restaurantId, reportStatus, fetchTables]);
 
   function tableUrl(table: TableEntity) {
     return `${origin}/${restaurantSlug}/mesa/${table.qrToken}`;

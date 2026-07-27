@@ -49,6 +49,17 @@ export interface TableCardState {
  *
  * Mapeamento de cor (Sprint "Dark Theme Premium"): cinza elegante = livre,
  * dourado da marca = ocupada sem pendência, laranja = pedido novo chegou.
+ *
+ * Correção (Sprint 2, Painel Vivo — bug de teste "a cor da mesa permanece
+ * laranja independente do status"): o dourado (`success`, hue ~42) e o
+ * laranja (`warning`, hue ~24) partiam de matizes vizinhos no círculo
+ * cromático, com saturação/luminosidade parecidas — na prática, os dois
+ * liam como "a mesma cor laranja" num tile pequeno de celular, então a
+ * troca de tom ao avançar/entregar um pedido passava despercebida mesmo
+ * quando os dados já estavam corretos. `TABLE_CARD_TONE_CLASSES` abaixo
+ * afasta os dois matizes (dourado mais claro/amarelado, laranja mais
+ * escuro/avermelhado) para a distinção ficar perceptível à distância, sem
+ * mudar a lógica de decisão acima nem os tokens semânticos globais.
  */
 export function deriveTableCardState(
   status: TableStatus,
@@ -98,8 +109,8 @@ export function deriveTableCardState(
  */
 export const TABLE_CARD_TONE_CLASSES: Record<TableCardTone, string> = {
   neutral: "border-border bg-surface",
-  success: "border-transparent bg-[hsl(42_60%_34%)] text-white",
-  warning: "border-transparent bg-[hsl(24_75%_45%)] text-white",
+  success: "border-transparent bg-[hsl(45_65%_42%)] text-white",
+  warning: "border-transparent bg-[hsl(16_78%_46%)] text-white",
   info: "border-transparent bg-[hsl(212_55%_38%)] text-white",
   destructive: "border-transparent bg-[hsl(355_55%_40%)] text-white",
   muted: "border-border bg-muted/60 opacity-75",
