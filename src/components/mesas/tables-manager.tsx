@@ -173,7 +173,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   // o canal a cada fetch, o que seria um bug novo introduzido pelo log.
   const operationsRef = useRef<Record<string, TableOperations>>({});
 
-  const fetchOperations = useCallback(async () => {
+  const fetchOperations = useCallback(async (trigger: string) => {
+    // LOG — prova que fetchOperations() foi de fato invocada, e por quê
+    // (mount, evento realtime, canal reconectado) — antes mesmo do fetch
+    // sair, para isolar "foi chamada mas travou no fetch" de "nunca foi chamada".
+    pushMesasDebugLog("fetchOperations: chamada iniciada", { trigger });
     try {
       const response = await fetch("/api/v1/orders?status=pending,preparing,ready&per_page=100");
       const body = await response.json();
@@ -189,11 +193,14 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
         orders: success.data.map((o) => ({ id: o.id, table_id: o.table.id, table_name: o.table.name, status: o.status })),
       });
       const aggregated = aggregateByTable(success.data);
-      // LOG 3 — estado React sendo atualizado (setOperations), antes/depois.
-      pushMesasDebugLog("setOperations: valor anterior vs novo", {
+      // LOG — resultado isolado de aggregateByTable(), antes de tocar em setOperations.
+      pushMesasDebugLog("aggregateByTable: resultado", { tableIds: Object.keys(aggregated), aggregated });
+      // LOG 3 — chamada de setOperations() (a INVOCAÇÃO do setter, não prova
+      // ainda que o React commitou — isso é confirmado à parte, no useEffect
+      // que observa `operations` mais abaixo).
+      pushMesasDebugLog("setOperations: invocado com", {
         previousKeys: Object.keys(operationsRef.current),
         nextKeys: Object.keys(aggregated),
-        next: aggregated,
       });
       operationsRef.current = aggregated;
       setOperations(aggregated);
@@ -203,6 +210,13 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
       setOperationsError("Não foi possível conectar para carregar os pedidos em aberto.");
     }
   }, []);
+
+  // LOG 7 — confirma que o estado React de fato foi commitado (dispara só
+  // depois que `operations` mudou de verdade, diferente do log de
+  // "setOperations: invocado com" acima, que só prova a chamada do setter).
+  useEffect(() => {
+    pushMesasDebugLog("operations: estado React confirmado (useEffect)", { keys: Object.keys(operations) });
+  }, [operations]);
 
   // Correção Sprint 2 (Painel Vivo) — causa raiz do "só atualiza com F5":
   // o Supabase Realtime NÃO reenvia eventos perdidos enquanto o canal
@@ -234,7 +248,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   }, []);
 
   useEffect(() => {
-    void fetchOperations();
+    void fetchOperations("mount");
   }, [fetchOperations]);
 
   useEffect(() => {
@@ -284,6 +298,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   }, [currentTones]);
 
   useEffect(() => {
+    // LOG 1 (marco inicial) — canal sendo criado/assinado neste mount do
+    // componente. Serve de "linha zero" da linha do tempo: tudo que acontecer
+    // depois disso, até o cleanup, pertence a esta mesma assinatura.
+    pushMesasDebugLog("canal orders: assinando", { restaurantId, at: new Date().toISOString() });
+
     const supabase = createClient();
     const channel = supabase
       .channel(restaurantOrdersChannel(restaurantId))
@@ -291,13 +310,22 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
         "postgres_changes",
         { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` },
         (payload) => {
-          // LOG 1 — evento Realtime recebido no canal de pedidos.
+          const receivedAt = Date.now();
+          const row = (payload.new ?? payload.old) as { updated_at?: string; created_at?: string } | null;
+          const rowTimestamp = row?.updated_at ?? row?.created_at;
+          // LOG 1 — evento Realtime recebido no canal de pedidos. `latencyMs`
+          // compara o timestamp que o PRÓPRIO banco gravou na linha
+          // (created_at/updated_at) com o instante em que o navegador recebeu
+          // o evento — é a prova objetiva de "o evento chegou, e chegou em X ms".
           pushMesasDebugLog("canal orders: evento recebido", {
             eventType: payload.eventType,
             new: payload.new,
             old: payload.old,
+            rowTimestamp,
+            receivedAt: new Date(receivedAt).toISOString(),
+            latencyMsSinceRowTimestamp: rowTimestamp ? receivedAt - new Date(rowTimestamp).getTime() : null,
           });
-          void fetchOperations();
+          void fetchOperations("evento realtime canal orders");
         },
       )
       .subscribe((subscriptionStatus) => {
@@ -305,11 +333,14 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
         pushMesasDebugLog("canal orders: subscriptionStatus", { subscriptionStatus, restaurantId });
         reportStatus("orders", subscriptionStatus);
         if (subscriptionStatus === "SUBSCRIBED") {
-          void fetchOperations();
+          void fetchOperations("canal orders reconectou (SUBSCRIBED)");
         }
       });
 
     return () => {
+      pushMesasDebugLog("canal orders: cleanup/removeChannel (componente desmontando ou restaurantId mudou)", {
+        restaurantId,
+      });
       void supabase.removeChannel(channel);
     };
   }, [restaurantId, fetchOperations, reportStatus]);
@@ -322,6 +353,8 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   // Drawer aberto no momento, se for a mesma mesa — senão o cabeçalho do
   // Drawer ficaria com o status antigo enquanto a grade já mostraria o novo.
   useEffect(() => {
+    pushMesasDebugLog("canal tables: assinando", { restaurantId, at: new Date().toISOString() });
+
     const supabase = createClient();
     const channel = supabase
       .channel(restaurantTablesChannel(restaurantId))
@@ -329,11 +362,17 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
         "postgres_changes",
         { event: "*", schema: "public", table: "tables", filter: `restaurant_id=eq.${restaurantId}` },
         (payload) => {
+          const receivedAt = Date.now();
+          const row = (payload.new ?? payload.old) as { updated_at?: string; created_at?: string } | null;
+          const rowTimestamp = row?.updated_at ?? row?.created_at;
           // LOG 1 — evento Realtime recebido no canal de mesas.
           pushMesasDebugLog("canal tables: evento recebido", {
             eventType: payload.eventType,
             new: payload.new,
             old: payload.old,
+            rowTimestamp,
+            receivedAt: new Date(receivedAt).toISOString(),
+            latencyMsSinceRowTimestamp: rowTimestamp ? receivedAt - new Date(rowTimestamp).getTime() : null,
           });
 
           if (payload.eventType === "DELETE") {
@@ -365,6 +404,9 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
       });
 
     return () => {
+      pushMesasDebugLog("canal tables: cleanup/removeChannel (componente desmontando ou restaurantId mudou)", {
+        restaurantId,
+      });
       void supabase.removeChannel(channel);
     };
   }, [restaurantId, reportStatus, fetchTables]);
@@ -997,7 +1039,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           table={drawerTable}
           openOrders={drawerOperations?.orders ?? []}
           onClose={() => setDrawerTable(null)}
-          onOrdersChanged={() => void fetchOperations()}
+          onOrdersChanged={() => void fetchOperations("ação manual no TableDrawer (enviar p/ cozinha, fechar conta, etc.)")}
           onTableUpdated={(updated) => {
             setTables((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
             setDrawerTable(updated);

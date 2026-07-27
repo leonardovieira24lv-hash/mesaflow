@@ -48,7 +48,13 @@ type LogCategory = "error" | "realtime" | "aggregation" | "state" | "other";
 function categorize(tag: string): LogCategory {
   if (tag.includes("exceção") || tag.includes("não-ok") || tag.toLowerCase().includes("erro")) return "error";
   if (tag.startsWith("canal ") || tag === "setTables: mesa atualizada via realtime") return "realtime";
-  if (tag.startsWith("fetchOperations") || tag.startsWith("fetchTables") || tag.startsWith("setOperations")) {
+  if (
+    tag.startsWith("fetchOperations") ||
+    tag.startsWith("fetchTables") ||
+    tag.startsWith("setOperations") ||
+    tag.startsWith("aggregateByTable") ||
+    tag.startsWith("operations: estado React confirmado")
+  ) {
     return "aggregation";
   }
   if (tag === "deriveTableCardState" || tag === "render do card da mesa" || tag.startsWith("TableDrawer")) {
