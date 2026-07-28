@@ -89,9 +89,18 @@ const config: Config = {
           to: { transform: "translateY(0)" },
         },
         "status-flash": {
-          "0%": { transform: "scale(1)", boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.3)" },
-          "35%": { transform: "scale(1.02)", boxShadow: "0 8px 24px -4px rgb(0 0 0 / 0.6)" },
-          "100%": { transform: "scale(1)", boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.3)" },
+          "0%": {
+            transform: "scale(1)",
+            boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 0 0 0 hsl(var(--primary) / 0)",
+          },
+          "40%": {
+            transform: "scale(1.035)",
+            boxShadow: "0 10px 28px -4px rgb(0 0 0 / 0.65), 0 0 0 4px hsl(var(--primary) / 0.55)",
+          },
+          "100%": {
+            transform: "scale(1)",
+            boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 0 0 0 hsl(var(--primary) / 0)",
+          },
         },
         "slide-in-right": {
           from: { transform: "translateX(100%)" },
@@ -105,7 +114,7 @@ const config: Config = {
         "fade-in": "fade-in 0.15s ease-out",
         "scale-in": "scale-in 0.15s ease-out",
         "sheet-up": "sheet-up 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
-        "status-flash": "status-flash 260ms ease-out",
+        "status-flash": "status-flash 700ms ease-out",
         "slide-in-right": "slide-in-right 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
       },
       boxShadow: {

@@ -139,7 +139,8 @@ function aggregateByTable(orders: OrderListRow[]): Record<string, TableOperation
  * refaz a agregação. Microinteração de mudança de status: quando o tom
  * derivado de uma mesa muda (ex.: livre → novo pedido, novo pedido →
  * atendimento normal), o tile dispara um único flash curto (leve aumento
- * de escala + reforço de sombra, ~260ms) e volta ao repouso — nunca uma
+ * de escala + sombra reforçada + ring/brilho temporário na cor da marca,
+ * ~700ms) e volta ao repouso — nunca uma
  * pulsação contínua. O diff é feito comparando o tom atual com o tom do
  * render anterior por mesa (`prevTonesRef`), então só acontece na transição
  * em si, não enquanto o estado "novo pedido" permanece verdadeiro.
@@ -353,6 +354,22 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
 
   const prevTonesRef = useRef<Record<string, TableCardTone>>({});
   const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set());
+  // Corrige o bug auditado: um único `setTimeout` compartilhado fazia o
+  // cleanup de um `useEffect` (disparado por QUALQUER mesa mudando de tom)
+  // cancelar a remoção agendada de OUTRA mesa que ainda estava "piscando"
+  // dentro da mesma janela de ~700ms. Agora cada mesa tem seu próprio timer,
+  // indexado por table.id neste Map — remover/cancelar o de uma nunca afeta
+  // o de outra.
+  const flashTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  // Limpa qualquer timer pendente quando o componente desmonta (evita
+  // `setFlashingIds` chamado depois de desmontado).
+  useEffect(() => {
+    return () => {
+      for (const timer of flashTimersRef.current.values()) clearTimeout(timer);
+      flashTimersRef.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     const previous = prevTonesRef.current;
@@ -381,20 +398,42 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
     pushMesasDebugLog("flashingIds: mesas adicionadas", { changedIds, startedAt: new Date(flashStartedAt).toISOString() });
 
     setFlashingIds((prev) => new Set([...prev, ...changedIds]));
-    const timer = setTimeout(() => {
-      // LOG 5 — quanto tempo a mesa permaneceu em flashingIds.
-      pushMesasDebugLog("flashingIds: mesas removidas", {
-        changedIds,
-        elapsedMs: Date.now() - flashStartedAt,
-      });
-      setFlashingIds((prev) => {
-        const next = new Set(prev);
-        changedIds.forEach((id) => next.delete(id));
-        return next;
-      });
-    }, 280);
 
-    return () => clearTimeout(timer);
+    // Um timer POR MESA, não um só para o grupo inteiro de `changedIds`
+    // deste run. Se essa mesa específica já tinha um timer pendente (ela
+    // piscou de novo antes do anterior terminar), cancela só o dela e
+    // reinicia a janela — nunca mexe no timer de nenhuma outra mesa.
+    for (const id of changedIds) {
+      const existingTimer = flashTimersRef.current.get(id);
+      if (existingTimer) clearTimeout(existingTimer);
+
+      const timer = setTimeout(() => {
+        // LOG 5 — quanto tempo esta mesa (e só esta) permaneceu em flashingIds.
+        pushMesasDebugLog("flashingIds: mesas removidas", {
+          tableId: id,
+          elapsedMs: Date.now() - flashStartedAt,
+        });
+        setFlashingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        flashTimersRef.current.delete(id);
+        // 700ms = mesma duração de "status-flash" em tailwind.config.ts. Se
+        // esse número mudar lá, precisa mudar aqui também — senão a classe
+        // `animate-status-flash` é removida antes da animação CSS terminar,
+        // cortando o efeito no meio em vez de deixá-lo concluir suavemente.
+      }, 700);
+
+      flashTimersRef.current.set(id, timer);
+    }
+
+    // Sem `return () => clearTimeout(...)` aqui de propósito — é exatamente
+    // isso que causava o bug: um cleanup genérico cancelava o timer de
+    // qualquer mesa sempre que ESTE efeito rodasse de novo por causa de
+    // OUTRA mesa. Cada timer agora é dono de si mesmo, gerenciado só pelo
+    // Map acima; o cleanup do efeito de unmount (logo acima) cuida de
+    // limpar tudo se o componente sair de tela com timers pendentes.
   }, [currentTones]);
 
   // LOG 6 — verificação real no DOM: para cada mesa atualmente em
