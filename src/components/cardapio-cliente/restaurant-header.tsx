@@ -25,17 +25,26 @@ interface RestaurantHeaderProps {
  * restaurante sempre "Aberto"), o que o próprio projeto já evitou em telas
  * anteriores. Ficam como candidatos a uma sprint futura que adicione esses
  * campos de verdade ao contrato/banco.
+ *
+ * Sprint "Refinamento Premium do Cardápio" (2026-07-28, seguinte): o
+ * banner verde cheio (`bg-gradient-to-r from-primary...`) foi trocado por
+ * um fundo neutro (branco/`--surface`) com uma borda inferior sutil —
+ * pedido explícito do dono de reduzir o verde a poucos pontos de destaque
+ * (preço, botão "+", categoria ativa). Como este componente é reaproveitado
+ * por Carrinho/Checkout/Acompanhamento de Pedido, a mudança de cor também
+ * aparece nessas telas — nenhuma delas teve estrutura ou lógica alterada,
+ * só essa cor de fundo compartilhada.
  */
 export function RestaurantHeader({ restaurantName, tableName, searchTerm, onSearchChange }: RestaurantHeaderProps) {
   const hasSearch = onSearchChange !== undefined;
   return (
-    <header className="relative flex flex-col gap-2.5 bg-gradient-to-r from-primary to-[hsl(var(--primary-deep))] px-4 pb-3 pt-3.5">
+    <header className="relative flex flex-col gap-3 border-b border-border bg-surface px-4 pb-3.5 pt-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="truncate font-display text-lg font-bold tracking-tight text-primary-foreground">
+        <h1 className="truncate font-display text-lg font-bold tracking-tight text-foreground">
           {restaurantName}
         </h1>
         {tableName && (
-          <span className="shrink-0 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 font-numeric text-[11px] font-medium text-primary-foreground">
+          <span className="shrink-0 rounded-full border border-border bg-muted px-2.5 py-1 font-numeric text-[11px] font-medium text-muted-foreground">
             Mesa {tableName}
           </span>
         )}
@@ -54,7 +63,7 @@ export function RestaurantHeader({ restaurantName, tableName, searchTerm, onSear
             onChange={(e) => onSearchChange?.(e.target.value)}
             placeholder="Buscar no cardápio..."
             aria-label="Buscar produtos no cardápio"
-            className="w-full rounded-full border-0 bg-surface py-2.5 pl-9 pr-9 text-sm text-surface-foreground placeholder:text-muted-foreground shadow-card focus:outline-none focus:ring-2 focus:ring-white/60"
+            className="w-full rounded-full border border-border bg-muted/60 py-2.5 pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           {searchTerm && (
             <button

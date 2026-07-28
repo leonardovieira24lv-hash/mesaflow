@@ -19,15 +19,21 @@ import { Skeleton } from "@/components/ui/skeleton";
  * (Sprint "Redesign Premium do Cardápio", 2026-07-28) porque só a tela do
  * Cardápio ganhou a barra de busca — Carrinho/Checkout/Acompanhamento
  * continuam com o cabeçalho compacto de sempre, sem essa linha extra.
+ *
+ * Sprint "Refinamento Premium do Cardápio" (2026-07-28, seguinte): cores
+ * do skeleton do cabeçalho passaram de branco-sobre-verde para
+ * cinza-sobre-branco, acompanhando o novo fundo neutro de
+ * `restaurant-header.tsx` — evita um flash verde→branco entre o loading e
+ * o conteúdo real.
  */
 function RestaurantHeaderSkeleton({ withSearch = false }: { withSearch?: boolean }) {
   return (
-    <div className="flex flex-col gap-2.5 bg-gradient-to-r from-primary to-[hsl(var(--primary-deep))] px-4 pb-3 pt-3.5">
+    <div className="flex flex-col gap-3 border-b border-border bg-surface px-4 pb-3.5 pt-4">
       <div className="flex items-center justify-between gap-3">
-        <Skeleton className="h-6 w-40 bg-white/20" />
-        <Skeleton className="h-6 w-16 shrink-0 rounded-full bg-white/20" />
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-6 w-16 shrink-0 rounded-full" />
       </div>
-      {withSearch && <Skeleton className="h-10 w-full rounded-full bg-white/20" />}
+      {withSearch && <Skeleton className="h-10 w-full rounded-full" />}
     </div>
   );
 }
@@ -44,14 +50,14 @@ export function MenuSkeleton() {
         ))}
       </div>
 
-      <div className="flex flex-col gap-5 px-4 py-4">
-        <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-7 px-4 py-5">
+        <div className="flex flex-col gap-3">
           <Skeleton className="h-4 w-28" />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex flex-col overflow-hidden rounded-2xl border border-border">
-                <Skeleton className="aspect-[4/3] w-full rounded-none" />
-                <div className="flex flex-col gap-1.5 px-3.5 pb-3.5 pt-3">
+              <div key={i} className="flex flex-col overflow-hidden rounded-2xl border border-border/70">
+                <Skeleton className="aspect-[4/5] w-full rounded-none" />
+                <div className="flex flex-col gap-1.5 px-3.5 pb-3.5 pt-4">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
                   <Skeleton className="mt-1 h-4 w-1/3 rounded-md" />

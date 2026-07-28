@@ -36,6 +36,11 @@ interface CardapioClienteViewProps {
  * alterada. Categorias sem nenhum resultado após o filtro somem da tela;
  * a barra de categorias usa sempre a lista completa (não teria sentido
  * "pular" para uma categoria que a busca escondeu).
+ *
+ * Sprint "Refinamento Premium do Cardápio" (2026-07-28, seguinte): só
+ * espaçamento — mais respiro entre o título de cada categoria e o grid,
+ * entre seções, e nas margens da página. Busca, categorias, grid e botão
+ * adicionar continuam exatamente na mesma estrutura/ordem de antes.
  */
 export function CardapioClienteView({
   slug,
@@ -78,7 +83,7 @@ export function CardapioClienteView({
         <TableAssistanceActions slug={slug} tableToken={tableToken} />
         <CategoryNav categories={categories} />
 
-        <main className="flex flex-1 flex-col gap-5 px-4 py-4">
+        <main className="flex flex-1 flex-col gap-7 px-4 py-5">
           {!hasCategories ? (
             <EmptyState
               icon={UtensilsCrossed}
@@ -96,13 +101,13 @@ export function CardapioClienteView({
               <section
                 key={category.id}
                 id={categorySectionId(category.id)}
-                className="flex scroll-mt-14 flex-col gap-2"
+                className="flex scroll-mt-16 flex-col gap-3"
               >
                 <h2 className="font-display text-base font-semibold tracking-tight text-foreground">
                   {category.name}
                 </h2>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   {category.items.map((item) => (
                     <MenuItemCard key={item.id} item={item} onSelect={setSelectedItem} />
                   ))}
