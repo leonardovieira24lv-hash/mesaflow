@@ -12,18 +12,18 @@ interface MenuItemCardProps {
 }
 
 /**
- * Linha de produto (Fase 3, item 4/5: listagem e organização visual dos
+ * Card de produto (Fase 3, item 4/5: listagem e organização visual dos
  * produtos).
  *
- * Sprint de Refinamento Premium do Cardápio (pedido explícito: "cards
- * grandes demais... permitir visualizar 3-4 produtos na tela sem muito
- * scroll"): a foto voltou a encolher (112px → 80px) e os espaçamentos
- * internos foram apertados — a v2 anterior tinha crescido a foto e o botão
- * "+" para dar mais presença ao card; agora a prioridade inverteu para
- * densidade/velocidade de leitura, então parte desse ganho de área volta.
- * Estrutura (foto à esquerda, texto à direita, preço em destaque, "+"
- * pequeno) e os tokens de marca (`--primary`, `.btn-primary-surface`)
- * continuam os mesmos.
+ * Sprint "Redesign Premium do Cardápio" (2026-07-28): reformulação completa
+ * do card, de linha horizontal (foto pequena à esquerda) para cartão
+ * vertical com a foto grande no topo — a foto volta a ser o maior destaque
+ * visual, na linha dos melhores apps de delivery. Isso inverte
+ * deliberadamente a decisão da sprint anterior de encolher a foto para
+ * priorizar densidade (mais itens visíveis sem scroll); a troca aqui é
+ * consciente: menos itens por tela, mais apelo comercial por item. Nenhuma
+ * lógica de seleção/carrinho foi alterada — `onSelect` continua abrindo o
+ * mesmo `<ProductDetailModal>` de sempre.
  */
 export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
   const isAvailable = item.is_available;
@@ -36,13 +36,13 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
       onClick={() => onSelect(item)}
       aria-label={isAvailable ? `Ver detalhes de ${item.name}` : `${item.name} — indisponível no momento`}
       className={cn(
-        "group flex w-full items-center gap-3 rounded-xl border border-border bg-surface p-2 pr-3 text-left shadow-card transition-[border-color,box-shadow,transform] duration-200",
+        "group flex w-full flex-col overflow-hidden rounded-2xl border border-border bg-surface text-left shadow-card transition-[border-color,box-shadow,transform] duration-200",
         isAvailable
-          ? "hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover active:translate-y-0 active:scale-[0.98] active:shadow-card"
+          ? "hover:-translate-y-1 hover:border-primary/30 hover:shadow-card-hover active:translate-y-0 active:scale-[0.98] active:shadow-card"
           : "cursor-not-allowed opacity-60",
       )}
     >
-      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg">
+      <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-muted">
         {item.image_url ? (
           <>
             {!imageLoaded && <div className="skeleton-shimmer absolute inset-0 z-10 animate-shimmer" aria-hidden />}
@@ -50,52 +50,52 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
               src={item.image_url}
               alt=""
               fill
-              sizes="80px"
+              sizes="(min-width: 640px) 280px, 50vw"
               onLoad={() => setImageLoaded(true)}
               className={cn(
                 "object-cover transition-[opacity,transform] duration-300",
-                isAvailable && "group-hover:scale-[1.08]",
+                isAvailable && "group-hover:scale-[1.06]",
                 imageLoaded ? "opacity-100" : "opacity-0",
               )}
             />
-            <div className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-black/5" aria-hidden />
           </>
         ) : (
           // Placeholder elegante em vez de um retângulo cinza vazio: um
           // círculo com o tom de marca sobre um degradê suave — comunica
           // "prato sem foto ainda", não "algo quebrou".
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/[0.07] via-muted to-muted">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-surface shadow-card">
-              <UtensilsCrossed className="h-4 w-4 text-primary/60" aria-hidden />
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/[0.08] via-muted to-muted">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface shadow-card">
+              <UtensilsCrossed className="h-5 w-5 text-primary/60" aria-hidden />
             </div>
           </div>
         )}
+
+        {!isAvailable && (
+          <div className="absolute inset-0 flex items-center justify-center bg-surface/70 backdrop-blur-[1px]">
+            <Badge variant="muted">Indisponível</Badge>
+          </div>
+        )}
+
+        {isAvailable && (
+          <span
+            aria-hidden
+            className="btn-primary-surface absolute bottom-2.5 right-2.5 flex h-10 w-10 items-center justify-center rounded-full text-primary-foreground shadow-glow transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
+          >
+            <Plus className="h-[18px] w-[18px]" strokeWidth={2.5} />
+          </span>
+        )}
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5 py-0.5">
-        <p className="line-clamp-1 font-display text-sm font-semibold leading-tight text-foreground">
+      <div className="flex flex-1 flex-col gap-1 px-3.5 pb-3.5 pt-3">
+        <p className="line-clamp-1 font-display text-[15px] font-semibold leading-tight text-foreground">
           {item.name}
         </p>
         {item.description && (
-          <p className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">{item.description}</p>
+          <p className="line-clamp-2 text-[12px] leading-snug text-muted-foreground">{item.description}</p>
         )}
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-numeric text-[13px] font-bold tabular-nums text-primary">
-            {formatCurrency(item.price)}
-          </span>
-          {isAvailable ? (
-            <span
-              aria-hidden
-              className="btn-primary-surface flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-primary-foreground shadow-glow transition-transform duration-200 group-hover:scale-110 group-active:scale-90"
-            >
-              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-            </span>
-          ) : (
-            <Badge variant="muted" className="shrink-0">
-              Indisponível
-            </Badge>
-          )}
-        </div>
+        <span className="mt-1.5 font-numeric text-base font-bold tabular-nums text-primary">
+          {formatCurrency(item.price)}
+        </span>
       </div>
     </button>
   );

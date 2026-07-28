@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { UtensilsCrossed } from "lucide-react";
+import { useMemo, useState } from "react";
+import { SearchX, UtensilsCrossed } from "lucide-react";
 import { RestaurantHeader } from "@/components/cardapio-cliente/restaurant-header";
 import { CategoryNav, categorySectionId } from "@/components/cardapio-cliente/category-nav";
 import { MenuItemCard } from "@/components/cardapio-cliente/menu-item-card";
@@ -27,6 +27,15 @@ interface CardapioClienteViewProps {
  * detalhes do produto (item 7). O carrinho (item 8) é só a estrutura —
  * `<CartProvider>` guarda o estado, `<CartSummaryBar>` reflete o total,
  * mas a tela de carrinho/finalização em si chega na Fase 4.
+ *
+ * Sprint "Redesign Premium do Cardápio" (2026-07-28): produtos passaram de
+ * lista vertical para grid de 2 colunas com os novos cards de foto grande;
+ * a busca do cabeçalho filtra `categories` inteiramente no cliente (nome +
+ * descrição, sem acento/caixa) — é estado local deste componente, nenhuma
+ * chamada nova de API, hook compartilhado, contexto global ou tipagem
+ * alterada. Categorias sem nenhum resultado após o filtro somem da tela;
+ * a barra de categorias usa sempre a lista completa (não teria sentido
+ * "pular" para uma categoria que a busca escondeu).
  */
 export function CardapioClienteView({
   slug,
@@ -36,12 +45,36 @@ export function CardapioClienteView({
   categories,
 }: CardapioClienteViewProps) {
   const [selectedItem, setSelectedItem] = useState<PublicMenuItem | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const hasCategories = categories.length > 0;
+
+  const normalizedSearch = searchTerm.trim().toLocaleLowerCase("pt-BR");
+
+  const visibleCategories = useMemo(() => {
+    if (!normalizedSearch) return categories;
+
+    return categories
+      .map((category) => ({
+        ...category,
+        items: category.items.filter((item) => {
+          const haystack = `${item.name} ${item.description ?? ""}`.toLocaleLowerCase("pt-BR");
+          return haystack.includes(normalizedSearch);
+        }),
+      }))
+      .filter((category) => category.items.length > 0);
+  }, [categories, normalizedSearch]);
+
+  const hasResults = visibleCategories.length > 0;
 
   return (
     <CartProvider slug={slug} tableToken={tableToken}>
       <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-24 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
-        <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
+        <RestaurantHeader
+          restaurantName={restaurantName}
+          tableName={tableName}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+        />
         <TableAssistanceActions slug={slug} tableToken={tableToken} />
         <CategoryNav categories={categories} />
 
@@ -52,8 +85,14 @@ export function CardapioClienteView({
               title="Cardápio ainda não disponível"
               description="Este restaurante ainda não cadastrou categorias ou produtos."
             />
+          ) : !hasResults ? (
+            <EmptyState
+              icon={SearchX}
+              title="Nenhum produto encontrado"
+              description={`Não encontramos nada para "${searchTerm.trim()}". Tente buscar por outro termo.`}
+            />
           ) : (
-            categories.map((category) => (
+            visibleCategories.map((category) => (
               <section
                 key={category.id}
                 id={categorySectionId(category.id)}
@@ -63,15 +102,11 @@ export function CardapioClienteView({
                   {category.name}
                 </h2>
 
-                {category.items.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum produto nesta categoria ainda.</p>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {category.items.map((item) => (
-                      <MenuItemCard key={item.id} item={item} onSelect={setSelectedItem} />
-                    ))}
-                  </div>
-                )}
+                <div className="grid grid-cols-2 gap-3">
+                  {category.items.map((item) => (
+                    <MenuItemCard key={item.id} item={item} onSelect={setSelectedItem} />
+                  ))}
+                </div>
               </section>
             ))
           )}

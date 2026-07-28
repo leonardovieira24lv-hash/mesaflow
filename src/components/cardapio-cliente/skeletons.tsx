@@ -15,13 +15,19 @@ import { Skeleton } from "@/components/ui/skeleton";
  *
  * O cabeçalho compacto (`RestaurantHeaderSkeleton`) é comum às quatro —
  * mesmas dimensões de `restaurant-header.tsx` — então fica isolado também,
- * em vez de repetido dentro de cada skeleton de tela.
+ * em vez de repetido dentro de cada skeleton de tela. Aceita `withSearch`
+ * (Sprint "Redesign Premium do Cardápio", 2026-07-28) porque só a tela do
+ * Cardápio ganhou a barra de busca — Carrinho/Checkout/Acompanhamento
+ * continuam com o cabeçalho compacto de sempre, sem essa linha extra.
  */
-function RestaurantHeaderSkeleton() {
+function RestaurantHeaderSkeleton({ withSearch = false }: { withSearch?: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-primary to-[hsl(var(--primary-deep))] px-4 py-3">
-      <Skeleton className="h-6 w-40 bg-white/20" />
-      <Skeleton className="h-6 w-16 shrink-0 rounded-full bg-white/20" />
+    <div className="flex flex-col gap-2.5 bg-gradient-to-r from-primary to-[hsl(var(--primary-deep))] px-4 pb-3 pt-3.5">
+      <div className="flex items-center justify-between gap-3">
+        <Skeleton className="h-6 w-40 bg-white/20" />
+        <Skeleton className="h-6 w-16 shrink-0 rounded-full bg-white/20" />
+      </div>
+      {withSearch && <Skeleton className="h-10 w-full rounded-full bg-white/20" />}
     </div>
   );
 }
@@ -30,22 +36,22 @@ function RestaurantHeaderSkeleton() {
 export function MenuSkeleton() {
   return (
     <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-24 sm:border-x sm:border-border sm:shadow-card">
-      <RestaurantHeaderSkeleton />
+      <RestaurantHeaderSkeleton withSearch />
 
-      <div className="flex gap-1.5 border-b border-border px-4 py-2">
+      <div className="flex gap-2 border-b border-border px-4 py-3">
         {["w-16", "w-20", "w-14", "w-16"].map((widthClass, i) => (
-          <Skeleton key={i} className={`h-7 ${widthClass} shrink-0 rounded-full`} />
+          <Skeleton key={i} className={`h-9 ${widthClass} shrink-0 rounded-full`} />
         ))}
       </div>
 
       <div className="flex flex-col gap-5 px-4 py-4">
         <div className="flex flex-col gap-2">
           <Skeleton className="h-4 w-28" />
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 rounded-xl border border-border p-2 pr-3">
-                <Skeleton className="h-20 w-20 shrink-0 rounded-lg" />
-                <div className="flex flex-1 flex-col gap-1.5 py-0.5">
+              <div key={i} className="flex flex-col overflow-hidden rounded-2xl border border-border">
+                <Skeleton className="aspect-[4/3] w-full rounded-none" />
+                <div className="flex flex-col gap-1.5 px-3.5 pb-3.5 pt-3">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
                   <Skeleton className="mt-1 h-4 w-1/3 rounded-md" />
