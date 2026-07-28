@@ -60,7 +60,16 @@ function categorize(tag: string): LogCategory {
   ) {
     return "aggregation";
   }
-  if (tag === "deriveTableCardState" || tag === "render do card da mesa" || tag.startsWith("TableDrawer")) {
+  if (
+    tag === "deriveTableCardState" ||
+    tag === "render do card da mesa" ||
+    tag.startsWith("TableDrawer") ||
+    tag.startsWith("currentTones") ||
+    tag.startsWith("prevTonesRef") ||
+    tag.startsWith("flashingIds") ||
+    tag.startsWith("render:") ||
+    tag.startsWith("DOM:")
+  ) {
     return "state";
   }
   return "other";

@@ -356,16 +356,37 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
 
   useEffect(() => {
     const previous = prevTonesRef.current;
+
+    // LOG 1 — currentTones mudou (o useMemo recalculou e este efeito rodou).
+    pushMesasDebugLog("currentTones: mudou", { previous, current: currentTones });
+
     const changedIds = Object.entries(currentTones)
       .filter(([id, tone]) => previous[id] !== undefined && previous[id] !== tone)
       .map(([id]) => id);
+
+    // LOG 2 — resultado da comparação prevTonesRef vs currentTones.
+    pushMesasDebugLog("prevTonesRef: comparado com currentTones", {
+      previousKeysCount: Object.keys(previous).length,
+      currentKeysCount: Object.keys(currentTones).length,
+      changedIds,
+    });
 
     prevTonesRef.current = currentTones;
 
     if (changedIds.length === 0) return;
 
+    const flashStartedAt = Date.now();
+
+    // LOG 3 — quais mesas entraram em flashingIds.
+    pushMesasDebugLog("flashingIds: mesas adicionadas", { changedIds, startedAt: new Date(flashStartedAt).toISOString() });
+
     setFlashingIds((prev) => new Set([...prev, ...changedIds]));
     const timer = setTimeout(() => {
+      // LOG 5 — quanto tempo a mesa permaneceu em flashingIds.
+      pushMesasDebugLog("flashingIds: mesas removidas", {
+        changedIds,
+        elapsedMs: Date.now() - flashStartedAt,
+      });
       setFlashingIds((prev) => {
         const next = new Set(prev);
         changedIds.forEach((id) => next.delete(id));
@@ -375,6 +396,30 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
 
     return () => clearTimeout(timer);
   }, [currentTones]);
+
+  // LOG 6 — verificação real no DOM: para cada mesa atualmente em
+  // `flashingIds`, confirma se o navegador de fato registrou a animação CSS
+  // no elemento (não só se a classe foi passada ao React). Se
+  // `animationName` vier "none", a classe não está sendo aplicada de
+  // verdade (ou foi removida do CSS gerado) — se vier "status-flash", a
+  // animação existe e deveria estar rodando.
+  useEffect(() => {
+    if (flashingIds.size === 0) return;
+    for (const id of flashingIds) {
+      const el = document.querySelector(`[data-table-tile-id="${id}"]`);
+      if (!el) {
+        pushMesasDebugLog("DOM: elemento do tile não encontrado para verificar CSS", { tableId: id });
+        continue;
+      }
+      const computed = window.getComputedStyle(el);
+      pushMesasDebugLog("DOM: animação CSS computada no elemento", {
+        tableId: id,
+        animationName: computed.animationName,
+        animationDuration: computed.animationDuration,
+        className: el.className,
+      });
+    }
+  }, [flashingIds]);
 
   useEffect(() => {
     // LOG 1 (marco inicial) — canal sendo criado/assinado neste mount do
@@ -928,9 +973,26 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
               toneClass,
             });
 
+            // LOG 4 — confirma, a partir do próprio React, se a classe
+            // "animate-status-flash" foi incluída no className desta mesa
+            // neste render (antes de qualquer verificação de CSS no DOM,
+            // que é o LOG 6, separado).
+            if (isFlashing) {
+              pushMesasDebugLog("render: animate-status-flash incluído no className?", {
+                tableId: table.id,
+                isFlashing,
+                classNameFinal: cn(
+                  "group relative flex h-full flex-col gap-2 overflow-hidden rounded-2xl border p-2.5 shadow-card transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
+                  toneClass,
+                  isFlashing && "animate-status-flash",
+                ),
+              });
+            }
+
             return (
               <div
                 key={table.id}
+                data-table-tile-id={table.id}
                 className={cn(
                   "group relative flex h-full flex-col gap-2 overflow-hidden rounded-2xl border p-2.5 shadow-card transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
                   toneClass,
