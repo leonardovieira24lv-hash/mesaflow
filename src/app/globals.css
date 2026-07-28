@@ -151,6 +151,52 @@
      Table, CartSummaryBar...) funcionam nos dois temas sem classe
      condicional nenhuma. */
 
+  /* Dark Theme — Cardápio Público (Sprint "Dark Theme do Cardápio Público",
+     2026-07-28). Escopo deliberadamente restrito: esta classe só é aplicada
+     na `<div>` raiz de `<CardapioClienteView>` (a tela de listagem do
+     cardápio) — não no `:root` nem reaproveitando `.dark` (que é do Painel
+     Admin, com paleta preto+dourado). Carrinho/Checkout/Acompanhamento de
+     Pedido reaproveitam os mesmos componentes (`RestaurantHeader`,
+     `CategoryNav`, etc.) mas continuam de fora desta classe, então
+     permanecem no tema claro de sempre.
+
+     Sprint "Identidade Visual Premium do Cardápio Público" (2026-07-28,
+     seguinte, só paleta): `--primary` ganhou uma sobrescrita exclusiva
+     aqui — um verde jade mais profundo e dessaturado que o verde vibrante
+     do tema claro (`:root`, inalterado — Login/Cadastro/Recuperação e o
+     resto do app continuam com o verde de sempre). Continua restrito a
+     botão "+", preço e categoria ativa (as classes que os desenham já
+     consomem `--primary`/`shadow-glow`, então herdam a cor nova sem
+     precisar editar nenhum componente). Fundo/card/borda ganharam mais
+     distância de luminosidade entre si (mais contraste), textos
+     secundários ficaram um pouco mais claros (mais legíveis), e as sombras
+     dos cards ficaram um pouco mais profundas — tudo dentro da mesma
+     lógica de sombra-forte + `--elevation-highlight` de 1px já usada
+     desde a sprint do Dark Theme. */
+  .menu-dark {
+    --primary: 158 42% 33%;
+    --primary-foreground: 0 0% 100%;
+    --primary-deep: 160 46% 24%;
+    --ring: 158 42% 40%;
+
+    --background: 222 15% 7%;
+    --foreground: 210 20% 98%;
+
+    --surface: 222 13% 15%;
+    --surface-foreground: 210 20% 98%;
+
+    --muted: 222 12% 19%;
+    --muted-foreground: 215 12% 72%;
+    --foreground-subtle: 215 10% 60%;
+    --border: 222 10% 25%;
+
+    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.45), 0 2px 5px 0 rgb(0 0 0 / 0.35);
+    --shadow-card-hover: 0 14px 32px -6px rgb(0 0 0 / 0.6), 0 4px 12px -3px rgb(0 0 0 / 0.45);
+    --shadow-bar: 0 -4px 24px 0 rgb(0 0 0 / 0.5);
+    --shadow-sheet: 0 -16px 40px -8px rgb(0 0 0 / 0.6);
+    --elevation-highlight: inset 0 1px 0 0 rgb(255 255 255 / 0.05);
+  }
+
   * {
     @apply border-border;
   }

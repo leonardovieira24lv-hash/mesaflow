@@ -41,6 +41,17 @@ interface CardapioClienteViewProps {
  * espaçamento — mais respiro entre o título de cada categoria e o grid,
  * entre seções, e nas margens da página. Busca, categorias, grid e botão
  * adicionar continuam exatamente na mesma estrutura/ordem de antes.
+ *
+ * Sprint "Dark Theme do Cardápio Público" (2026-07-28, seguinte): a `<div>`
+ * raiz ganhou a classe `menu-dark` (`globals.css`), que só redefine
+ * variáveis de cor (fundo grafite, cards cinza-escuro, texto branco) —
+ * verde de marca herdado sem alteração, então botão "+"/preço/categoria
+ * ativa continuam a mesma cor de sempre. `RestaurantHeader`, `CategoryNav`,
+ * `MenuItemCard`, `ProductDetailModal` e `CartSummaryBar` não precisaram
+ * ser tocados: já usam essas variáveis, então herdam o tema escuro por
+ * estarem dentro desta `<div>`. Carrinho/Checkout/Acompanhamento de Pedido
+ * reaproveitam os mesmos componentes fora desta `<div>`, então continuam
+ * no tema claro — só o Cardápio Público mudou.
  */
 export function CardapioClienteView({
   slug,
@@ -73,7 +84,7 @@ export function CardapioClienteView({
 
   return (
     <CartProvider slug={slug} tableToken={tableToken}>
-      <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-24 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
+      <div className="menu-dark mx-auto flex min-h-screen max-w-xl flex-col bg-background pb-24 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
         <RestaurantHeader
           restaurantName={restaurantName}
           tableName={tableName}

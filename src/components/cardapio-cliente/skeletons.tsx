@@ -25,6 +25,13 @@ import { Skeleton } from "@/components/ui/skeleton";
  * cinza-sobre-branco, acompanhando o novo fundo neutro de
  * `restaurant-header.tsx` — evita um flash verde→branco entre o loading e
  * o conteúdo real.
+ *
+ * Sprint "Dark Theme do Cardápio Público" (2026-07-28, seguinte): só
+ * `MenuSkeleton` ganhou a classe `menu-dark` (mesma de
+ * `cardapio-cliente-view.tsx`) — evita um flash claro→escuro enquanto os
+ * dados carregam. `CartSkeleton`/`CheckoutSkeleton`/`OrderTrackingSkeleton`
+ * continuam sem a classe, porque as telas que eles representam continuam
+ * no tema claro.
  */
 function RestaurantHeaderSkeleton({ withSearch = false }: { withSearch?: boolean }) {
   return (
@@ -41,7 +48,7 @@ function RestaurantHeaderSkeleton({ withSearch = false }: { withSearch?: boolean
 /** Skeleton do Cardápio (`/{slug}/menu`) — espelha `RestaurantHeader` + `CategoryNav` + `MenuItemCard`. */
 export function MenuSkeleton() {
   return (
-    <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-24 sm:border-x sm:border-border sm:shadow-card">
+    <div className="menu-dark mx-auto flex min-h-screen max-w-xl flex-col bg-background pb-24 sm:border-x sm:border-border sm:shadow-card">
       <RestaurantHeaderSkeleton withSearch />
 
       <div className="flex gap-2 border-b border-border px-4 py-3">
