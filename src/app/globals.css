@@ -172,14 +172,25 @@
      secundários ficaram um pouco mais claros (mais legíveis), e as sombras
      dos cards ficaram um pouco mais profundas — tudo dentro da mesma
      lógica de sombra-forte + `--elevation-highlight` de 1px já usada
-     desde a sprint do Dark Theme. */
-  .menu-dark {
-    --primary: 158 42% 33%;
-    --primary-foreground: 0 0% 100%;
-    --primary-deep: 160 46% 24%;
-    --ring: 158 42% 40%;
+     desde a sprint do Dark Theme.
 
-    --background: 222 15% 7%;
+     Sprint "Redesign Completo do Cardápio Público" (2026-07-29, seguinte):
+     pedido explícito do dono para um verde "mais vivo e elegante" — o
+     inverso da direção da sprint anterior (que pediu especificamente mais
+     dessaturado/sóbrio). `--primary` ficou mais saturado e um pouco mais
+     claro (152 68% 42%, era 158 42% 33%), continua restrito aos mesmos
+     pontos de sempre. Fundo ficou um pouco mais escuro (`--background`
+     5%, era 7%) para aumentar o contraste contra os cards
+     (`--surface`, inalterado) — mesma lógica de sombra "quase invisível
+     num fundo já escuro" de antes, só que agora com ainda mais distância
+     de luminosidade entre fundo e card. */
+  .menu-dark {
+    --primary: 152 68% 42%;
+    --primary-foreground: 0 0% 100%;
+    --primary-deep: 152 62% 30%;
+    --ring: 152 68% 46%;
+
+    --background: 222 16% 5%;
     --foreground: 210 20% 98%;
 
     --surface: 222 13% 15%;
@@ -190,10 +201,10 @@
     --foreground-subtle: 215 10% 60%;
     --border: 222 10% 25%;
 
-    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.45), 0 2px 5px 0 rgb(0 0 0 / 0.35);
-    --shadow-card-hover: 0 14px 32px -6px rgb(0 0 0 / 0.6), 0 4px 12px -3px rgb(0 0 0 / 0.45);
-    --shadow-bar: 0 -4px 24px 0 rgb(0 0 0 / 0.5);
-    --shadow-sheet: 0 -16px 40px -8px rgb(0 0 0 / 0.6);
+    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.5), 0 2px 6px 0 rgb(0 0 0 / 0.4);
+    --shadow-card-hover: 0 14px 32px -6px rgb(0 0 0 / 0.65), 0 4px 12px -3px rgb(0 0 0 / 0.5);
+    --shadow-bar: 0 -4px 24px 0 rgb(0 0 0 / 0.55);
+    --shadow-sheet: 0 -16px 40px -8px rgb(0 0 0 / 0.65);
     --elevation-highlight: inset 0 1px 0 0 rgb(255 255 255 / 0.05);
   }
 

@@ -32,6 +32,10 @@ import { Skeleton } from "@/components/ui/skeleton";
  * dados carregam. `CartSkeleton`/`CheckoutSkeleton`/`OrderTrackingSkeleton`
  * continuam sem a classe, porque as telas que eles representam continuam
  * no tema claro.
+ *
+ * Sprint "Redesign Completo do Cardápio Público" (2026-07-29, seguinte): os
+ * placeholders de produto viraram linhas horizontais (foto quadrada +
+ * texto ao lado), espelhando o novo `MenuItemCard` em vez do grid antigo.
  */
 function RestaurantHeaderSkeleton({ withSearch = false }: { withSearch?: boolean }) {
   return (
@@ -60,14 +64,15 @@ export function MenuSkeleton() {
       <div className="flex flex-col gap-7 px-4 py-5">
         <div className="flex flex-col gap-3">
           <Skeleton className="h-4 w-28" />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-3.5">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex flex-col overflow-hidden rounded-2xl border border-border/70">
-                <Skeleton className="aspect-[4/5] w-full rounded-none" />
-                <div className="flex flex-col gap-1.5 px-3.5 pb-3.5 pt-4">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                  <Skeleton className="mt-1 h-4 w-1/3 rounded-md" />
+              <div key={i} className="flex items-stretch gap-4 rounded-2xl border border-border/70 p-3.5">
+                <Skeleton className="h-36 w-36 shrink-0 rounded-2xl" />
+                <div className="flex flex-1 flex-col justify-center gap-1.5 py-1">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                  <Skeleton className="mt-2 h-6 w-1/3 rounded-md" />
                 </div>
               </div>
             ))}

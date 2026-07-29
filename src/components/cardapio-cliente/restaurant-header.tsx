@@ -34,13 +34,18 @@ interface RestaurantHeaderProps {
  * por Carrinho/Checkout/Acompanhamento de Pedido, a mudança de cor também
  * aparece nessas telas — nenhuma delas teve estrutura ou lógica alterada,
  * só essa cor de fundo compartilhada.
+ *
+ * Sprint "Redesign Completo do Cardápio Público" (2026-07-29, seguinte):
+ * nome do restaurante ganhou mais peso tipográfico (`text-xl`, era
+ * `text-lg`) — parte da mesma sprint que redesenhou os cards de produto e
+ * a paleta; estrutura do cabeçalho em si não mudou.
  */
 export function RestaurantHeader({ restaurantName, tableName, searchTerm, onSearchChange }: RestaurantHeaderProps) {
   const hasSearch = onSearchChange !== undefined;
   return (
     <header className="relative flex flex-col gap-3 border-b border-border bg-surface px-4 pb-3.5 pt-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="truncate font-display text-lg font-bold tracking-tight text-foreground">
+        <h1 className="truncate font-display text-xl font-bold tracking-tight text-foreground">
           {restaurantName}
         </h1>
         {tableName && (

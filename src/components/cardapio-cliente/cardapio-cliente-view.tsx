@@ -52,6 +52,12 @@ interface CardapioClienteViewProps {
  * estarem dentro desta `<div>`. Carrinho/Checkout/Acompanhamento de Pedido
  * reaproveitam os mesmos componentes fora desta `<div>`, então continuam
  * no tema claro — só o Cardápio Público mudou.
+ *
+ * Sprint "Redesign Completo do Cardápio Público" (2026-07-29, seguinte): o
+ * grid de 2 colunas virou uma lista de coluna única (`flex flex-col`) —
+ * os novos cards são horizontais (foto quadrada + texto ao lado), então
+ * não fazem mais sentido lado a lado num grid apertado. Busca, categorias
+ * e o resto da estrutura/lógica continuam exatamente iguais.
  */
 export function CardapioClienteView({
   slug,
@@ -118,7 +124,7 @@ export function CardapioClienteView({
                   {category.name}
                 </h2>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-3.5">
                   {category.items.map((item) => (
                     <MenuItemCard key={item.id} item={item} onSelect={setSelectedItem} />
                   ))}
