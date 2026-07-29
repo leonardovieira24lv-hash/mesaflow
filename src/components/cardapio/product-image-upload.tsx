@@ -2,7 +2,7 @@
 
 import { useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
-import { ImageOff, Loader2, Upload } from "lucide-react";
+import { ImageOff, Loader2, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { uploadProductImage, ProductImageError } from "@/lib/storage/product-images";
@@ -16,14 +16,21 @@ interface ProductImageUploadProps {
 }
 
 /**
- * Campo "Foto" do formulário de produto (Sprint "Upload de Imagens dos
- * Produtos", 2026-07-28) — substitui o antigo campo de texto "URL da
- * imagem". Seleciona um arquivo do dispositivo (galeria no Android, seletor
- * de arquivos no desktop/iPhone — comportamento nativo do
- * `<input type="file">`, sem nada customizado por plataforma), envia para o
- * Supabase Storage (`@/lib/storage/product-images`) e chama `onChange` com
- * a URL pública assim que o upload termina — o restante do formulário
- * continua tratando isso como o mesmo `imageUrl` de sempre.
+ * Campo "Foto" do formulário de produto.
+ *
+ * Sprint "Upload de Imagens dos Produtos" (2026-07-28): substituiu o antigo
+ * campo de texto "URL da imagem" por um upload de verdade — seletor de
+ * arquivo nativo → Supabase Storage → URL pública preenchida
+ * automaticamente (`@/lib/storage/product-images`).
+ *
+ * Sprint "Refatoração da Experiência do Cardápio" (2026-07-28, seguinte):
+ * reformulação visual — preview grande e quadrada (1:1, `object-cover`,
+ * cantos arredondados) em vez do miniatura antiga, placeholder mais
+ * elegante sem foto, e um botão "Remover imagem" novo. Remover só chama
+ * `onChange("")` — a exclusão de verdade do arquivo no Storage já era
+ * feita pelo `product-form.tsx` após salvar com sucesso (mesma lógica que
+ * já tratava a troca de imagem), então "remover" não precisou de nenhuma
+ * lógica nova, só de um jeito de zerar o campo.
  */
 export function ProductImageUpload({ restaurantId, value, onChange, disabled }: ProductImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -52,23 +59,26 @@ export function ProductImageUpload({ restaurantId, value, onChange, disabled }: 
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-3">
-        <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-start gap-4">
+        <div className="relative aspect-square w-32 shrink-0 overflow-hidden rounded-2xl border border-border bg-muted">
           {value ? (
-            <Image src={value} alt="" fill sizes="80px" className="object-cover" />
+            <Image src={value} alt="" fill sizes="128px" className="object-cover" />
           ) : (
-            <ImageOff className="h-5 w-5 text-muted-foreground/50" strokeWidth={1.5} aria-hidden />
+            <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-muted to-muted/60">
+              <ImageOff className="h-6 w-6 text-muted-foreground/40" strokeWidth={1.5} aria-hidden />
+              <span className="text-[11px] text-muted-foreground/70">Sem foto</span>
+            </div>
           )}
 
           {isUploading && (
             <div className="absolute inset-0 flex items-center justify-center bg-surface/80 backdrop-blur-[1px]">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden />
             </div>
           )}
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2 pt-1">
           <Button
             type="button"
             variant="outline"
@@ -80,6 +90,21 @@ export function ProductImageUpload({ restaurantId, value, onChange, disabled }: 
             <Upload className="h-4 w-4" />
             {value ? "Trocar imagem" : "Selecionar imagem"}
           </Button>
+
+          {value && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onChange("")}
+              disabled={disabled || isUploading}
+              className="text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              Remover imagem
+            </Button>
+          )}
+
           <p className="text-xs text-muted-foreground">JPG, PNG ou WEBP · até 5 MB</p>
         </div>
       </div>

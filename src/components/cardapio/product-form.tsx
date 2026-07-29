@@ -43,13 +43,18 @@ interface ProductFormProps {
   restaurantId: string;
   /** Presente em modo de edição; ausente em criação. */
   item?: MenuItem;
+  /** Sprint "Refatoração da Experiência do Cardápio": pré-seleciona a categoria ao criar a partir do "+ Adicionar Produto" de uma seção específica. Ignorado em edição (usa `item.categoryId`). */
+  defaultCategoryId?: string;
   onSaved: (item: MenuItem) => void;
   onCancel: () => void;
 }
 
 /**
  * Formulário de Produto (contrato seções 6.2/6.4) — mesmo componente serve
- * para criar (modal, em `<ProductsList>`) e editar (página de detalhe),
+ * para criar (modal, em `<CardapioManager>`) e editar (modal ou página de
+ * detalhe standalone em `/cardapio/produtos/[id]`, que continua existindo
+ * como link direto — Sprint "Refatoração da Experiência do Cardápio",
+ * 2026-07-28),
  * trocando só o método/URL da chamada com base na presença de `item`.
  *
  * Sprint "Upload de Imagens dos Produtos" (2026-07-28): `image_url` deixou
@@ -61,11 +66,11 @@ interface ProductFormProps {
  * para não perder a imagem antiga caso o usuário cancele o formulário
  * depois de já ter trocado a foto.
  */
-export function ProductForm({ categories, restaurantId, item, onSaved, onCancel }: ProductFormProps) {
+export function ProductForm({ categories, restaurantId, item, defaultCategoryId, onSaved, onCancel }: ProductFormProps) {
   const isEditing = Boolean(item);
   const originalImageUrl = item?.imageUrl;
 
-  const [categoryId, setCategoryId] = useState(item?.categoryId ?? categories[0]?.id ?? "");
+  const [categoryId, setCategoryId] = useState(item?.categoryId ?? defaultCategoryId ?? categories[0]?.id ?? "");
   const [name, setName] = useState(item?.name ?? "");
   const [description, setDescription] = useState(item?.description ?? "");
   const [price, setPrice] = useState(item?.price !== undefined ? String(item.price) : "");
