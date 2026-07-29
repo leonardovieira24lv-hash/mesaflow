@@ -23,9 +23,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           claro original, sem precisar de nenhuma mudança neles. */}
       <div className="dark flex min-h-screen bg-background">
         <AdminSidebar />
-        <div className="flex flex-1 flex-col">
+        {/* `min-w-0` é a correção real do overflow horizontal no mobile: um
+            item flex tem `min-width: auto` por padrão, então sem isso ele
+            nunca encolhe abaixo da largura do seu conteúdo mais largo (ex.:
+            a tabela de "Últimos pedidos" no Dashboard) — a página inteira
+            cresce em vez de deixar esse conteúdo rolar internamente no seu
+            próprio `overflow-x-auto`. Sem essa propriedade em nenhum lugar,
+            não existe overflow-x mascarado — isso resolve a causa, não o
+            sintoma. */}
+        <div className="flex min-w-0 flex-1 flex-col">
           <AdminHeader userEmail={user.email} />
-          <main className="flex-1 bg-muted/30 p-4 md:p-6">{children}</main>
+          <main className="min-w-0 flex-1 bg-muted/30 p-4 md:p-6">{children}</main>
         </div>
       </div>
     </AdminShellProvider>

@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { Route } from "next";
-import { UtensilsCrossed, Package, LayoutGrid, QrCode, ArrowUpRight } from "lucide-react";
+import { UtensilsCrossed, LayoutGrid, QrCode, ArrowUpRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { ROUTES } from "@/constants/routes";
@@ -17,8 +17,7 @@ interface QuickAction {
 }
 
 const ACTIONS: QuickAction[] = [
-  { label: "Categorias", href: ROUTES.cardapioCategorias, icon: UtensilsCrossed },
-  { label: "Produtos", href: ROUTES.cardapioProdutos, icon: Package },
+  { label: "Cardápio", href: ROUTES.cardapioCategorias, icon: UtensilsCrossed },
   { label: "Mesas", href: ROUTES.mesas, icon: LayoutGrid },
   // QR Codes são gerenciados dentro da tela de Mesas (mesmo módulo, seção 7
   // do contrato) — sem tela própria ainda, por isso aponta para a mesma rota.
@@ -26,13 +25,18 @@ const ACTIONS: QuickAction[] = [
 ];
 
 /**
- * Atalhos para os módulos de negócio do painel. Categorias e Produtos já
- * levam às telas reais implementadas na Sprint 6; Mesas/QR Codes ainda
- * apontam para a página placeholder (módulo pendente, seção 7 do contrato).
+ * Atalhos para os módulos de negócio do painel.
+ *
+ * Sprint "Refatoração da Experiência do Cardápio" (2026-07-28): existia um
+ * atalho "Categorias" e outro "Produtos" — desde essa sprint as duas telas
+ * viraram uma só (`/cardapio/categorias`, com `/cardapio/produtos` como
+ * redirect pra lá), então os dois atalhos levavam exatamente ao mesmo
+ * lugar. Consolidados num único atalho "Cardápio" (Sprint "Correção de
+ * Responsividade do Dashboard", 2026-07-28, seguinte).
  */
 export function QuickActions() {
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
       {ACTIONS.map(({ label, href, icon: Icon }) => (
         <Link key={label} href={href} className="group">
           <Card interactive className="flex items-center gap-3 p-5">
