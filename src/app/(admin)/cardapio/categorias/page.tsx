@@ -20,6 +20,13 @@ export const metadata = { title: "Cardápio" };
  * paginação, que só fazia sentido na tabela antiga). Toda interação
  * seguinte (criar, editar, excluir, duplicar, reordenar) acontece no
  * `<CardapioManager>`.
+ *
+ * Sprint "Arquivamento — Visualizar e Restaurar" (2026-07-28, sobre a
+ * sprint "Exclusão Lógica de Produtos"): esta consulta voltou a trazer
+ * produtos arquivados junto — o filtro Ativos/Arquivados/Todos precisa dos
+ * dois conjuntos para alternar sem recarregar a página. A tela ainda abre
+ * no filtro "Ativos" por padrão (mesmo efeito visual de antes), mas agora
+ * o dado completo já está no cliente.
  */
 export default async function CardapioPage() {
   const { profile } = await requirePageSession();
@@ -33,7 +40,7 @@ export default async function CardapioPage() {
       .order("position", { ascending: true }),
     supabase
       .from("menu_items")
-      .select("id, category_id, name, description, price, image_url, is_available")
+      .select("id, category_id, name, description, price, image_url, is_available, is_archived")
       .eq("restaurant_id", profile.restaurantId)
       .order("name", { ascending: true }),
   ]);
@@ -52,6 +59,7 @@ export default async function CardapioPage() {
     price: i.price,
     imageUrl: i.image_url ?? undefined,
     isAvailable: i.is_available,
+    isArchived: i.is_archived,
   }));
 
   return (

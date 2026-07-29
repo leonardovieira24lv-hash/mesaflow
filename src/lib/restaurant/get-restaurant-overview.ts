@@ -36,6 +36,12 @@ export interface RestaurantOverview {
  *
  * Todas as contagens dependem das políticas de RLS de leitura adicionadas
  * em `supabase/migrations/0004_dashboard_reads.sql`.
+ *
+ * Sprint "Exclusão Lógica de Produtos" (2026-07-28): a contagem de
+ * `products` (e o `hasProducts` do checklist) passou a excluir produtos
+ * arquivados (`is_archived = true`) — eles saíram do catálogo ativo do
+ * dono, então não devem contar como produto cadastrado nem no Dashboard
+ * nem no checklist de onboarding.
  */
 export async function getRestaurantOverview(
   supabase: SupabaseClient<Database>,
@@ -51,7 +57,7 @@ export async function getRestaurantOverview(
       .from("menu_categories")
       .select("id", { count: "exact", head: true })
       .eq("restaurant_id", restaurantId),
-    supabase.from("menu_items").select("id", { count: "exact", head: true }).eq("restaurant_id", restaurantId),
+    supabase.from("menu_items").select("id", { count: "exact", head: true }).eq("restaurant_id", restaurantId).eq("is_archived", false),
     supabase.from("tables").select("id", { count: "exact", head: true }).eq("restaurant_id", restaurantId),
   ]);
 

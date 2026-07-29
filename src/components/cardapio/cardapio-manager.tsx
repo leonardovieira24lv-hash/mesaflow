@@ -10,7 +10,9 @@ import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "@/components/ui/toast";
 import { CategorySection } from "@/components/cardapio/category-section";
-import { ProductForm, itemFromDto } from "@/components/cardapio/product-form";
+import { ProductStatusFilter, type ProductStatusFilterValue } from "@/components/cardapio/product-status-filter";
+import { ProductForm } from "@/components/cardapio/product-form";
+import { menuItemFromDto, type MenuItemDto } from "@/types/menu-item-dto";
 import { createCategorySchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
 import type { ApiError } from "@/types/api";
@@ -54,6 +56,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
   const [categories, setCategories] = useState<MenuCategory[]>(initialCategories);
   const [items, setItems] = useState<MenuItem[]>(initialItems);
   const [openCategoryIds, setOpenCategoryIds] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<ProductStatusFilterValue>("active");
 
   // Reordenação de categorias (drag-and-drop) — mesma lógica de sempre.
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -74,9 +77,16 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
   const [deletingItem, setDeletingItem] = useState<MenuItem | null>(null);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
   const [duplicatingItemId, setDuplicatingItemId] = useState<string | null>(null);
+  const [restoringItemId, setRestoringItemId] = useState<string | null>(null);
 
   function itemsForCategory(categoryId: string) {
-    return items.filter((item) => item.categoryId === categoryId);
+    return items
+      .filter((item) => item.categoryId === categoryId)
+      .filter((item) => {
+        if (statusFilter === "active") return !item.isArchived;
+        if (statusFilter === "archived") return item.isArchived;
+        return true;
+      });
   }
 
   function setCategoryOpen(categoryId: string, open: boolean) {
@@ -302,7 +312,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
         return;
       }
 
-      setItems((prev) => [...prev, itemFromDto(body.data)]);
+      setItems((prev) => [...prev, menuItemFromDto(body.data as MenuItemDto)]);
       toast.success("Produto duplicado");
     } catch {
       toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
@@ -311,6 +321,15 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
     }
   }
 
+  /**
+   * Sprint "Arquivamento — Visualizar e Restaurar" (2026-07-28): o DELETE
+   * agora responde de dois jeitos possíveis (`src/app/api/v1/menu/items/[id]/route.ts`):
+   * `204` sem corpo (excluído de verdade) ou `200` com `{ archived: true }`
+   * (tinha histórico de pedidos, foi arquivado em vez de apagado). O
+   * feedback e a atualização de estado precisam ser diferentes nos dois
+   * casos — o segundo é sucesso, não erro, mesmo que o produto continue
+   * existindo.
+   */
   async function handleDeleteProduct() {
     if (!deletingItem) return;
     setIsDeletingItem(true);
@@ -325,8 +344,20 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
         return;
       }
 
-      setItems((prev) => prev.filter((i) => i.id !== deletingItem.id));
-      toast.success("Produto excluído");
+      const body = response.status === 204 ? null : await response.json().catch(() => null);
+      const wasArchived = Boolean(body?.data?.archived);
+
+      if (wasArchived) {
+        setItems((prev) => prev.map((i) => (i.id === deletingItem.id ? { ...i, isArchived: true } : i)));
+        toast.success(
+          "Produto arquivado",
+          "Este produto possui histórico de pedidos. Para preservar o histórico de vendas, ele foi arquivado automaticamente e removido do cardápio. Você poderá restaurá-lo futuramente.",
+        );
+      } else {
+        setItems((prev) => prev.filter((i) => i.id !== deletingItem.id));
+        toast.success("Produto excluído");
+      }
+
       setDeletingItem(null);
       setIsDeletingItem(false);
     } catch {
@@ -335,9 +366,36 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
     }
   }
 
+  /** "Restaurar" reaproveita o mesmo `PATCH` de edição parcial já usado pelo toggle de disponibilidade — só envia `is_archived: false`. */
+  async function handleRestoreProduct(item: MenuItem) {
+    setRestoringItemId(item.id);
+    try {
+      const response = await fetch(`/api/v1/menu/items/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_archived: false }),
+      });
+      const body = await response.json();
+
+      if (!response.ok) {
+        const apiError = body as ApiError;
+        toast.error("Não foi possível restaurar", apiError.error?.message);
+        return;
+      }
+
+      setItems((prev) => prev.map((i) => (i.id === item.id ? menuItemFromDto(body.data as MenuItemDto) : i)));
+      toast.success("Produto restaurado");
+    } catch {
+      toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
+    } finally {
+      setRestoringItemId(null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <ProductStatusFilter value={statusFilter} onChange={setStatusFilter} />
         <Button onClick={openCreateCategoryModal}>
           <Plus className="h-4 w-4" />
           Nova categoria
@@ -363,6 +421,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
               key={category.id}
               category={category}
               items={itemsForCategory(category.id)}
+              statusFilter={statusFilter}
               open={openCategoryIds.has(category.id)}
               onOpenChange={(open) => setCategoryOpen(category.id, open)}
               onEditCategory={() => openEditCategoryModal(category)}
@@ -371,8 +430,10 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
               onEditProduct={openEditProductModal}
               onDuplicateProduct={handleDuplicateProduct}
               onDeleteProduct={setDeletingItem}
+              onRestoreProduct={handleRestoreProduct}
               onToggleAvailability={handleToggleAvailability}
               duplicatingItemId={duplicatingItemId}
+              restoringItemId={restoringItemId}
               onDragStart={handleCategoryDragStart(index)}
               onDragOver={handleCategoryDragOver(index)}
               onDragEnd={handleCategoryDragEnd}
@@ -442,7 +503,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
         open={Boolean(deletingItem)}
         onOpenChange={(open) => !open && setDeletingItem(null)}
         title="Excluir produto"
-        description={`Tem certeza que deseja excluir "${deletingItem?.name}"? Produtos já usados em pedidos não podem ser excluídos.`}
+        description={`Tem certeza que deseja excluir "${deletingItem?.name}"? Se ele já tiver pedidos no histórico, será arquivado em vez de apagado (dá para restaurar depois).`}
         variant="destructive"
         confirmLabel="Excluir"
         onConfirm={handleDeleteProduct}

@@ -14,28 +14,7 @@ import { deleteProductImage } from "@/lib/storage/product-images";
 import { createMenuItemSchema, updateMenuItemSchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
 import type { ApiError } from "@/types/api";
-
-interface ItemDto {
-  id: string;
-  category_id: string;
-  name: string;
-  description?: string;
-  price: number;
-  image_url?: string;
-  is_available: boolean;
-}
-
-export function itemFromDto(dto: ItemDto): MenuItem {
-  return {
-    id: dto.id,
-    categoryId: dto.category_id,
-    name: dto.name,
-    description: dto.description,
-    price: dto.price,
-    imageUrl: dto.image_url,
-    isAvailable: dto.is_available,
-  };
-}
+import { menuItemFromDto, type MenuItemDto } from "@/types/menu-item-dto";
 
 interface ProductFormProps {
   categories: MenuCategory[];
@@ -123,7 +102,7 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
         return;
       }
 
-      const savedItem = itemFromDto(body.data as ItemDto);
+      const savedItem = menuItemFromDto(body.data as MenuItemDto);
 
       // Remove a imagem antiga do Storage só depois do salvamento confirmado
       // — evita apagar uma imagem que ainda está em uso caso algo falhe

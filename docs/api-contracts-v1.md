@@ -436,7 +436,7 @@ Todos os endpoints abaixo usam o prefixo `/api/v1/public/{slug}/...`, onde `{slu
 
 - **Método/URL:** `DELETE /api/v1/menu/items/{id}`
 - **Autenticação:** obrigatória.
-- **Validações:** produto não pode ser excluído se já existir em `order_items` de algum pedido histórico (preserva integridade do histórico) — nesse caso, a orientação é desativar (`is_available = false`) em vez de excluir, retornando `409` com mensagem explicando a alternativa.
+- **Validações:** produto já usado em algum `order_items` histórico não é apagado fisicamente (preserva a relação pedido↔produto para estatísticas — FK `on delete restrict` mantida de propósito). Em vez disso, é arquivado (`is_archived = true`): some do cardápio público e não pode ser adicionado a novos pedidos, mas o registro e o histórico continuam intactos. Produto sem nenhum uso em pedidos é excluído fisicamente, como antes. Do ponto de vista de quem chama o endpoint, o resultado visível é o mesmo nos dois casos (`204`, produto não aparece mais nas listagens ativas) — a diferença é só o que acontece por baixo. *(Sprint "Exclusão Lógica de Produtos", 2026-07-28 — antes deste ponto, produto com histórico simplesmente não podia ser excluído, retornando `409`.)*
 - **Resposta de sucesso:** `204 No Content`.
 - **Possíveis erros:** `404 NOT_FOUND`, `409 CONFLICT`.
 - **Tabelas afetadas:** `menu_items` (exclusão).

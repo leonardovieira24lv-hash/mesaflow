@@ -35,6 +35,13 @@ interface MenuItemRow {
  * indisponíveis devem aparecer desabilitados", quem decide a apresentação é
  * a UI (Fase 3), não o backend.
  *
+ * Sprint "Exclusão Lógica de Produtos" (2026-07-28): produtos arquivados
+ * (`is_archived = true` — excluídos pelo dono, mas com histórico de
+ * pedidos preservado) são filtrados aqui, ao contrário de indisponíveis —
+ * a diferença é proposital: indisponível é temporário e o cliente deve ver
+ * (desabilitado); arquivado é definitivo e não deve aparecer de jeito
+ * nenhum.
+ *
  * Extraído de dentro do Route Handler (`api/v1/public/[slug]/menu/route.ts`)
  * nesta fase para que a Página do Cardápio (Server Component, mesmo padrão
  * já usado em todo o painel administrativo — ex.:
@@ -57,6 +64,7 @@ export async function getPublicMenu(
       .from("menu_items")
       .select("id, category_id, name, description, price, image_url, is_available")
       .eq("restaurant_id", restaurantId)
+      .eq("is_archived", false)
       .order("name", { ascending: true }),
   ]);
 

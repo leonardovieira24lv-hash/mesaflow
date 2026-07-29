@@ -15,7 +15,7 @@ export default async function ProdutoDetalhePage({ params }: { params: Promise<{
   const [itemResult, categoriesResult] = await Promise.all([
     supabase
       .from("menu_items")
-      .select("id, category_id, name, description, price, image_url, is_available")
+      .select("id, category_id, name, description, price, image_url, is_available, is_archived")
       .eq("id", id)
       .eq("restaurant_id", profile.restaurantId)
       .maybeSingle(),
@@ -40,6 +40,7 @@ export default async function ProdutoDetalhePage({ params }: { params: Promise<{
     price: itemResult.data.price,
     imageUrl: itemResult.data.image_url ?? undefined,
     isAvailable: itemResult.data.is_available,
+    isArchived: itemResult.data.is_archived,
   };
 
   const categories: MenuCategory[] = (categoriesResult.data ?? []).map((c) => ({

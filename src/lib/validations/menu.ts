@@ -59,6 +59,10 @@ export const updateMenuItemSchema = z.object({
   price: priceSchema.optional(),
   image_url: z.string().trim().url("Informe uma URL de imagem válida.").optional().or(z.literal("")),
   is_available: z.boolean().optional(),
+  // Sprint "Arquivamento — Visualizar e Restaurar" (2026-07-28): permite a
+  // ação "Restaurar" (envia `is_archived: false`) reaproveitando este mesmo
+  // endpoint de edição parcial, em vez de criar uma rota nova só para isso.
+  is_archived: z.boolean().optional(),
 });
 export type UpdateMenuItemInput = z.infer<typeof updateMenuItemSchema>;
 

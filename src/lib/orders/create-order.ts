@@ -27,6 +27,7 @@ interface MenuItemRow {
   name: string;
   price: number;
   is_available: boolean;
+  is_archived: boolean;
 }
 
 /**
@@ -88,7 +89,7 @@ export async function createPublicOrder({
 
   const { data: menuItems, error: menuItemsError } = await admin
     .from("menu_items")
-    .select("id, name, price, is_available")
+    .select("id, name, price, is_available, is_archived")
     .eq("restaurant_id", restaurantId)
     .in("id", menuItemIds);
 
@@ -102,17 +103,27 @@ export async function createPublicOrder({
   // restaurante e estar `is_available = true` agora — qualquer item ausente
   // ou indisponível vira `422 STALE_PRICE_OR_AVAILABILITY`, com `details`
   // listando exatamente quais (mesmo já previsto na tela de Carrinho).
+  //
+  // Sprint "Exclusão Lógica de Produtos" (2026-07-28): produto arquivado
+  // (excluído pelo dono) trata-se aqui como "não existe mais" — mesmo
+  // texto de erro de um item ausente, já que do ponto de vista do cliente
+  // é exatamente isso: não está mais no cardápio, arquivado ou apagado de
+  // verdade dá na mesma.
   const staleDetails = input.items
     .filter((item) => {
       const menuItem = menuItemById.get(item.menu_item_id);
-      return !menuItem || !menuItem.is_available;
+      return !menuItem || menuItem.is_archived || !menuItem.is_available;
     })
-    .map((item) => ({
-      field: item.menu_item_id,
-      issue: menuItemById.has(item.menu_item_id)
-        ? "Este item ficou indisponível."
-        : "Este item não existe mais no cardápio.",
-    }));
+    .map((item) => {
+      const menuItem = menuItemById.get(item.menu_item_id);
+      return {
+        field: item.menu_item_id,
+        issue:
+          menuItem && !menuItem.is_archived && !menuItem.is_available
+            ? "Este item ficou indisponível."
+            : "Este item não existe mais no cardápio.",
+      };
+    });
 
   if (staleDetails.length > 0) {
     throw new AppError(

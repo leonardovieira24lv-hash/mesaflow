@@ -4,6 +4,7 @@ import { apiSuccess, apiCreated } from "@/lib/api/response";
 import { AppError, handleRouteError } from "@/lib/api/errors";
 import { parseOrThrow } from "@/lib/api/validation";
 import { createMenuItemSchema, listMenuItemsQuerySchema } from "@/lib/validations/menu";
+import type { MenuItemDto } from "@/types/menu-item-dto";
 
 function toItemDto(row: {
   id: string;
@@ -13,7 +14,8 @@ function toItemDto(row: {
   price: number;
   image_url: string | null;
   is_available: boolean;
-}) {
+  is_archived: boolean;
+}): MenuItemDto {
   return {
     id: row.id,
     category_id: row.category_id,
@@ -22,6 +24,7 @@ function toItemDto(row: {
     price: row.price,
     image_url: row.image_url ?? undefined,
     is_available: row.is_available,
+    is_archived: row.is_archived,
   };
 }
 
@@ -40,7 +43,7 @@ export async function GET(request: Request) {
 
     let queryBuilder = supabase
       .from("menu_items")
-      .select("id, category_id, name, description, price, image_url, is_available", { count: "exact" })
+      .select("id, category_id, name, description, price, image_url, is_available, is_archived", { count: "exact" })
       .eq("restaurant_id", profile.restaurantId);
 
     if (query.category_id) {
@@ -109,7 +112,7 @@ export async function POST(request: Request) {
         image_url: input.image_url || null,
         is_available: input.is_available ?? true,
       })
-      .select("id, category_id, name, description, price, image_url, is_available")
+      .select("id, category_id, name, description, price, image_url, is_available, is_archived")
       .single();
 
     if (insertError) {

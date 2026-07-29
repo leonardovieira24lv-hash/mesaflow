@@ -46,6 +46,8 @@ export interface MenuItem {
   price: number;
   imageUrl?: string;
   isAvailable: boolean;
+  /** Sprint "Exclusão Lógica de Produtos": produto arquivado (tinha histórico de pedidos ao ser "excluído") — some do cardápio público e de novos pedidos, mas o registro e o histórico continuam intactos. */
+  isArchived: boolean;
 }
 
 export type OrderStatus = "pending" | "preparing" | "ready" | "delivered" | "cancelled";

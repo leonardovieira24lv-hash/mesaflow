@@ -28,6 +28,7 @@ export function ProductDetail({ item, categories, restaurantId }: ProductDetailP
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  /** Mesmo tratamento de `<CardapioManager>`: o DELETE pode arquivar em vez de excluir de verdade quando o produto tem histórico de pedidos (`src/app/api/v1/menu/items/[id]/route.ts`) — isso é sucesso, não erro. */
   async function handleDelete() {
     setIsDeleting(true);
     try {
@@ -40,7 +41,18 @@ export function ProductDetail({ item, categories, restaurantId }: ProductDetailP
         return;
       }
 
-      toast.success("Produto excluído");
+      const body = response.status === 204 ? null : await response.json().catch(() => null);
+      const wasArchived = Boolean(body?.data?.archived);
+
+      if (wasArchived) {
+        toast.success(
+          "Produto arquivado",
+          "Este produto possui histórico de pedidos. Para preservar o histórico de vendas, ele foi arquivado automaticamente e removido do cardápio. Você poderá restaurá-lo futuramente.",
+        );
+      } else {
+        toast.success("Produto excluído");
+      }
+
       router.push(ROUTES.cardapioProdutos);
     } catch {
       toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
@@ -71,7 +83,7 @@ export function ProductDetail({ item, categories, restaurantId }: ProductDetailP
         open={confirmingDelete}
         onOpenChange={setConfirmingDelete}
         title="Excluir produto"
-        description={`Tem certeza que deseja excluir "${item.name}"? Produtos já usados em pedidos não podem ser excluídos.`}
+        description={`Tem certeza que deseja excluir "${item.name}"? Se ele já tiver pedidos no histórico, será arquivado em vez de apagado (dá para restaurar depois).`}
         variant="destructive"
         confirmLabel="Excluir"
         onConfirm={handleDelete}
