@@ -60,6 +60,7 @@ export default async function ProdutosPage() {
 
       <ProductsList
         categories={categories}
+        restaurantId={profile.restaurantId}
         initialItems={items}
         initialMeta={{ page: 1, per_page: PER_PAGE, total, total_pages: Math.max(1, Math.ceil(total / PER_PAGE)) }}
       />

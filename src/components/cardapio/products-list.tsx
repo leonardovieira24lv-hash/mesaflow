@@ -32,6 +32,8 @@ interface ItemDto {
 
 interface ProductsListProps {
   categories: MenuCategory[];
+  /** Repassado para `<ProductForm>` — necessário para montar o caminho do upload de imagem. */
+  restaurantId: string;
   initialItems: MenuItem[];
   initialMeta: ApiPaginationMeta;
 }
@@ -44,7 +46,7 @@ const ALL_CATEGORIES = "all";
  * disponibilidade (mesmo endpoint de edição, payload parcial — seção 6.4) e
  * exclusão com tratamento do caso de produto já usado em pedidos (409).
  */
-export function ProductsList({ categories, initialItems, initialMeta }: ProductsListProps) {
+export function ProductsList({ categories, restaurantId, initialItems, initialMeta }: ProductsListProps) {
   const [items, setItems] = useState<MenuItem[]>(initialItems);
   const [meta, setMeta] = useState<ApiPaginationMeta>(initialMeta);
   const [categoryFilter, setCategoryFilter] = useState<string>(ALL_CATEGORIES);
@@ -284,6 +286,7 @@ export function ProductsList({ categories, initialItems, initialMeta }: Products
         <div className="pb-6">
           <ProductForm
             categories={categories}
+            restaurantId={restaurantId}
             item={editingItem ?? undefined}
             onSaved={handleSaved}
             onCancel={() => setModalOpen(false)}

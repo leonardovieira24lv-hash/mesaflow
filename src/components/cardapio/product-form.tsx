@@ -9,6 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
+import { ProductImageUpload } from "@/components/cardapio/product-image-upload";
+import { deleteProductImage } from "@/lib/storage/product-images";
 import { createMenuItemSchema, updateMenuItemSchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
 import type { ApiError } from "@/types/api";
@@ -37,6 +39,8 @@ export function itemFromDto(dto: ItemDto): MenuItem {
 
 interface ProductFormProps {
   categories: MenuCategory[];
+  /** Necessário para montar o caminho do upload (`{restaurantId}/products/...`) — o RLS do bucket exige esse prefixo. */
+  restaurantId: string;
   /** Presente em modo de edição; ausente em criação. */
   item?: MenuItem;
   onSaved: (item: MenuItem) => void;
@@ -48,12 +52,18 @@ interface ProductFormProps {
  * para criar (modal, em `<ProductsList>`) e editar (página de detalhe),
  * trocando só o método/URL da chamada com base na presença de `item`.
  *
- * `image_url` aqui é um campo de texto simples: o contrato já define o
- * campo como "resultado de upload prévio no Supabase Storage" — o upload em
- * si é um fluxo separado (fora do escopo desta sprint de CRUD de Cardápio).
+ * Sprint "Upload de Imagens dos Produtos" (2026-07-28): `image_url` deixou
+ * de ser um campo de texto — agora é preenchido por `<ProductImageUpload>`,
+ * que já faz o upload de verdade e devolve a URL pública. O contrato da API
+ * não mudou em nada (`image_url` continua uma string comum no payload). Ao
+ * salvar uma edição com sucesso e a imagem tiver mudado, a imagem antiga é
+ * removida do Storage *depois* da confirmação de salvamento — nunca antes,
+ * para não perder a imagem antiga caso o usuário cancele o formulário
+ * depois de já ter trocado a foto.
  */
-export function ProductForm({ categories, item, onSaved, onCancel }: ProductFormProps) {
+export function ProductForm({ categories, restaurantId, item, onSaved, onCancel }: ProductFormProps) {
   const isEditing = Boolean(item);
+  const originalImageUrl = item?.imageUrl;
 
   const [categoryId, setCategoryId] = useState(item?.categoryId ?? categories[0]?.id ?? "");
   const [name, setName] = useState(item?.name ?? "");
@@ -108,7 +118,17 @@ export function ProductForm({ categories, item, onSaved, onCancel }: ProductForm
         return;
       }
 
-      onSaved(itemFromDto(body.data as ItemDto));
+      const savedItem = itemFromDto(body.data as ItemDto);
+
+      // Remove a imagem antiga do Storage só depois do salvamento confirmado
+      // — evita apagar uma imagem que ainda está em uso caso algo falhe
+      // antes disso. Silencioso: uma falha aqui não deve impedir o produto
+      // de ser salvo (o pior caso é um arquivo órfão, não um dado perdido).
+      if (originalImageUrl && originalImageUrl !== savedItem.imageUrl) {
+        void deleteProductImage(originalImageUrl);
+      }
+
+      onSaved(savedItem);
       setIsSubmitting(false);
     } catch {
       setFormError("Não foi possível conectar. Verifique sua internet e tente novamente.");
@@ -164,14 +184,16 @@ export function ProductForm({ categories, item, onSaved, onCancel }: ProductForm
         />
       </FormField>
 
-      <FormField label="URL da imagem" error={errors.image_url} hint="Opcional — link de uma imagem já hospedada">
-        <Input
+      <div className="flex flex-col gap-1.5">
+        <Label>Foto do produto</Label>
+        <ProductImageUpload
+          restaurantId={restaurantId}
           value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          placeholder="https://..."
+          onChange={setImageUrl}
           disabled={isSubmitting}
         />
-      </FormField>
+        {errors.image_url && <p className="text-xs font-medium text-destructive">{errors.image_url}</p>}
+      </div>
 
       <div className="flex items-center gap-3">
         <Switch id="is-available" checked={isAvailable} onChange={(e) => setIsAvailable(e.target.checked)} />
