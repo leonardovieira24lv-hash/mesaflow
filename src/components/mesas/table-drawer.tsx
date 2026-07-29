@@ -8,6 +8,7 @@ import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Alert } from "@/components/ui/alert";
 import { toast } from "@/components/ui/toast";
+import { CloseBillModal } from "@/components/mesas/close-bill-modal";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatRelativeTimeShort } from "@/lib/format";
 import { ROUTES } from "@/constants/routes";
@@ -21,6 +22,9 @@ import {
 import type { OrderListRow } from "@/components/pedidos/orders-list";
 import type { Table as TableEntity } from "@/types/domain";
 import type { ApiSuccess } from "@/types/api";
+import type { PAYMENT_METHOD_VALUES } from "@/lib/validations/tables";
+
+type PaymentMethod = (typeof PAYMENT_METHOD_VALUES)[number];
 
 interface OrderDetail {
   id: string;
@@ -62,14 +66,23 @@ interface TableDrawerProps {
  *   antes só existia na tela de Pedidos, obrigando o atendente a sair de
  *   Mesas para avançar um pedido em preparo.
  * - "Fechar conta" / "Finalizar atendimento" (item 3 do checklist: mesmo
- *   botão, rótulo muda conforme o estágio) — não existe um endpoint de
- *   "fechar comanda" único; isto compõe dois passos reais (marcar cada
- *   pedido aberto como `delivered` + liberar a mesa) e só fica disponível
- *   quando todo pedido aberto já está `ready` (aí o rótulo vira "Finalizar
+ *   botão, rótulo muda conforme o estágio) — só fica disponível quando todo
+ *   pedido aberto já está `ready` (aí o rótulo vira "Finalizar
  *   atendimento", a etapa final do fluxo) — pular direto de
  *   `pending`/`preparing` para `delivered` violaria a máquina de estados
  *   real (`lib/orders/order-status-transitions-map.ts`), então o botão
  *   avisa em vez de tentar e falhar.
+ *
+ *   Sprint "Fechamento de Conta com Registro de Venda" (2026-07-29): este
+ *   botão não fecha mais a mesa direto — abre `<CloseBillModal>` (resumo da
+ *   comanda + escolha da forma de pagamento). Só na confirmação de lá é que
+ *   `handleConfirmPayment` roda de verdade: (1) o mesmo laço de sempre
+ *   marcando cada pedido aberto como `delivered`
+ *   (`PATCH /api/v1/orders/{id}/status`, endpoint inalterado), (2)
+ *   `PATCH /api/v1/tables/{id}/close-bill` (rota nova) — fecha a
+ *   `order_session` da mesa com a forma de pagamento e só então libera a
+ *   mesa. "Cancelar" no modal simplesmente fecha ele, sem chamar nada — a
+ *   mesa continua exatamente como estava.
  * - "Solicitar impressão" — `window.print()` sobre uma view formatada
  *   (`#print-comanda-drawer`, ver `globals.css`). Não existe impressora térmica
  *   integrada; isto imprime pelo navegador, real e funcional, não decorativo.
@@ -110,6 +123,8 @@ export function TableDrawer({
   const isClosingBillRef = useRef(false);
   const isReleasingRef = useRef(false);
   const [confirmingRelease, setConfirmingRelease] = useState(false);
+  const [closeBillModalOpen, setCloseBillModalOpen] = useState(false);
+  const [closeBillError, setCloseBillError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -304,12 +319,22 @@ export function TableDrawer({
    *     caminho de sucesso), então o próximo clique já parte de um estado
    *     atualizado, sem esperar o Realtime.
    */
-  async function handleCloseBill() {
+  /**
+   * Sprint "Fechamento de Conta com Registro de Venda" (2026-07-29): antes
+   * chamado direto pelo botão "Fechar conta"/"Finalizar atendimento", agora
+   * só roda a partir da confirmação em `<CloseBillModal>`, já com a forma
+   * de pagamento escolhida. Passo 1 (marcar cada pedido aberto como
+   * `delivered`) é exatamente o mesmo laço de sempre — nenhuma mudança
+   * nele. Passo 2 muda: em vez de `PATCH tables/{id}` direto, chama
+   * `PATCH tables/{id}/close-bill` (rota nova), que fecha a `order_session`
+   * com a forma de pagamento e só então libera a mesa.
+   */
+  async function handleConfirmPayment(paymentMethod: PaymentMethod) {
     if (isClosingBillRef.current) return;
     isClosingBillRef.current = true;
 
     setIsClosingBill(true);
-    setError(null);
+    setCloseBillError(null);
 
     const pendingOrders = openOrders.filter((o) => o.status !== "delivered" && o.status !== "cancelled");
     let closedCount = 0;
@@ -336,26 +361,27 @@ export function TableDrawer({
         closedCount += 1;
       }
 
-      const tableResponse = await fetch(`/api/v1/tables/${table.id}`, {
+      const closeBillResponse = await fetch(`/api/v1/tables/${table.id}/close-bill`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "livre" }),
+        body: JSON.stringify({ payment_method: paymentMethod }),
       });
-      const tableBody = await tableResponse.json();
-      if (!tableResponse.ok) {
+      const closeBillBody = await closeBillResponse.json();
+      if (!closeBillResponse.ok) {
         onOrdersChanged();
         throw new Error(
-          tableBody?.error?.message ??
-            "Todos os pedidos foram fechados, mas não foi possível liberar a mesa. Tente liberar manualmente.",
+          closeBillBody?.error?.message ??
+            "Todos os pedidos foram fechados, mas não foi possível registrar o pagamento e liberar a mesa. Tente novamente.",
         );
       }
 
-      toast.success("Atendimento finalizado", `${table.name} foi liberada.`);
+      toast.success("Pagamento registrado", `${table.name} foi liberada.`);
       onOrdersChanged();
       onTableUpdated({ id: table.id, name: table.name, status: "livre", qrToken: table.qrToken });
+      setCloseBillModalOpen(false);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível fechar a conta.");
+      setCloseBillError(err instanceof Error ? err.message : "Não foi possível fechar a conta.");
     } finally {
       setIsClosingBill(false);
       isClosingBillRef.current = false;
@@ -384,9 +410,9 @@ export function TableDrawer({
    * mas porque a mesa nunca foi "encerrada" de verdade no banco.
    *
    * Correção: liberar a mesa agora cancela primeiro qualquer pedido ainda
-   * aberto (mesmo laço sequencial já usado em `handleCloseBill`, só que para
-   * "cancelled" em vez de "delivered" — cancelar é uma transição válida a
-   * partir de qualquer status não-terminal, `lib/orders/status-transitions.ts`
+   * aberto (mesmo laço sequencial já usado em `handleConfirmPayment`, só que
+   * para "cancelled" em vez de "delivered" — cancelar é uma transição válida
+   * a partir de qualquer status não-terminal, `lib/orders/status-transitions.ts`
    * não mudou). Preserva o comportamento existente de "liberar mesmo assim"
    * (a confirmação continua avisando e pedindo confirmação), só deixa de
    * abandonar dado no banco ao fazer isso.
@@ -722,16 +748,16 @@ export function TableDrawer({
 
           <Button
             type="button"
-            onClick={handleCloseBill}
-            isLoading={isClosingBill}
+            onClick={() => setCloseBillModalOpen(true)}
             disabled={!allReady}
             title={!allReady ? "Só é possível finalizar quando todos os pedidos estiverem prontos" : undefined}
           >
             {/* Item 3 do checklist do fluxo operacional das mesas: mesmo
-                botão/ação de sempre (marca tudo como entregue + libera a
-                mesa, `handleCloseBill` acima) — só o rótulo muda para
-                comunicar "esta é a etapa final" assim que a mesa realmente
-                chega no estado "Pronto para servir". */}
+                botão de sempre — só o rótulo muda para comunicar "esta é a
+                etapa final" assim que a mesa realmente chega no estado
+                "Pronto para servir". Sprint "Fechamento de Conta com
+                Registro de Venda": agora abre o modal de fechamento em vez
+                de fechar direto. */}
             {allReady && <CheckCircle2 className="h-4 w-4" />}
             {allReady ? "Finalizar atendimento" : "Fechar conta"}
           </Button>
@@ -764,6 +790,21 @@ export function TableDrawer({
         confirmLabel="Liberar"
         onConfirm={handleReleaseTable}
         isConfirming={isReleasing}
+      />
+
+      <CloseBillModal
+        open={closeBillModalOpen}
+        table={table}
+        openOrders={openOrders}
+        details={details}
+        openedAt={openedAt}
+        onCancel={() => {
+          setCloseBillModalOpen(false);
+          setCloseBillError(null);
+        }}
+        onConfirm={handleConfirmPayment}
+        isSubmitting={isClosingBill}
+        error={closeBillError}
       />
     </dialog>
   );

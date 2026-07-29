@@ -26,3 +26,19 @@ export const updateTableSchema = z.object({
   }).optional(),
 });
 export type UpdateTableInput = z.infer<typeof updateTableSchema>;
+
+// Espelha `order_sessions.payment_method` (migration 0017). Só estas 4
+// formas nesta sprint — pagamento misto (dividir entre duas formas) fica
+// para uma sprint futura, por pedido explícito do dono.
+export const PAYMENT_METHOD_VALUES = ["pix", "credit_card", "debit_card", "cash"] as const;
+
+// Sprint "Fechamento de Conta com Registro de Venda": corpo de
+// `PATCH /api/v1/tables/{id}/close-bill` — a única informação que o
+// atendente decide neste passo é a forma de pagamento.
+export const closeBillSchema = z.object({
+  payment_method: z.enum(PAYMENT_METHOD_VALUES, {
+    required_error: "Selecione a forma de pagamento.",
+    invalid_type_error: "Forma de pagamento inválida.",
+  }),
+});
+export type CloseBillInput = z.infer<typeof closeBillSchema>;

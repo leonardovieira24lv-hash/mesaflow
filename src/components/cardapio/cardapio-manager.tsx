@@ -455,7 +455,14 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
               onChange={(e) => setCategoryName(e.target.value)}
               placeholder="Ex.: Lanches"
               disabled={isSavingCategory}
-              autoFocus
+              // Bug real encontrado (2026-07-29): o `autoFocus` do React
+              // disputava com o próprio `<dialog>.showModal()`, que já foca
+              // sozinho o primeiro elemento focável do modal assim que abre
+              // — essa disputa de timing era a causa do campo "surdo" no
+              // Android (foco e teclado abrem, mas a digitação não chega a
+              // atualizar o valor controlado). Removido: o input continua
+              // recebendo foco automaticamente pelo comportamento nativo do
+              // `<dialog>`, sem o conflito.
             />
           </FormField>
 
@@ -488,7 +495,17 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
         title={editingItem ? "Editar produto" : "Novo produto"}
       >
         <div className="pb-6">
+          {/* Bug real encontrado (2026-07-29): <ProductForm> nunca desmonta
+              (fica sempre dentro do <Modal>, que existe permanentemente no
+              DOM). Sem `key`, o `useState(categoryId inicial)` só roda uma
+              vez — reabrir o modal depois, para criar em outra categoria ou
+              editar outro produto, nunca reinicializava esse estado. O
+              `key` abaixo força um remount a cada abertura para um
+              produto/categoria diferente, garantindo que os valores
+              iniciais (categoria pré-selecionada incluída) fiquem sempre
+              corretos. */}
           <ProductForm
+            key={editingItem?.id ?? `new-${productModalCategoryId ?? "none"}`}
             categories={categories}
             restaurantId={restaurantId}
             item={editingItem ?? undefined}
