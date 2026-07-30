@@ -47,11 +47,42 @@ const config: Config = {
           border: "hsl(var(--chrome-border))",
           active: "hsl(var(--chrome-active))",
         },
+
+        // Design System 2.0 (Sprint 1, 2026-07-30) — namespace próprio
+        // (`ds2-*`) para não colidir com nenhum token em uso hoje. Só
+        // resolve para algo visível dentro de `.ds2-dark`
+        // (`app/globals.css`) — fora dali, essas classes não têm efeito
+        // em nenhuma tela existente.
+        ds2: {
+          background: "hsl(var(--ds2-background))",
+          foreground: "hsl(var(--ds2-foreground))",
+          "foreground-muted": "hsl(var(--ds2-foreground-muted))",
+          "foreground-subtle": "hsl(var(--ds2-foreground-subtle))",
+          surface: "hsl(var(--ds2-surface))",
+          "surface-hover": "hsl(var(--ds2-surface-hover))",
+          border: "hsl(var(--ds2-border))",
+          "border-strong": "hsl(var(--ds2-border-strong))",
+          primary: {
+            DEFAULT: "hsl(var(--ds2-primary))",
+            foreground: "hsl(var(--ds2-primary-foreground))",
+            hover: "hsl(var(--ds2-primary-hover))",
+            active: "hsl(var(--ds2-primary-active))",
+          },
+          success: { DEFAULT: "hsl(var(--ds2-success))", foreground: "hsl(var(--ds2-success-foreground))" },
+          warning: { DEFAULT: "hsl(var(--ds2-warning))", foreground: "hsl(var(--ds2-warning-foreground))" },
+          danger: { DEFAULT: "hsl(var(--ds2-danger))", foreground: "hsl(var(--ds2-danger-foreground))" },
+          info: { DEFAULT: "hsl(var(--ds2-info))", foreground: "hsl(var(--ds2-info-foreground))" },
+          ring: "hsl(var(--ds2-ring))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        "ds2-sm": "var(--ds2-radius-sm)",
+        "ds2-md": "var(--ds2-radius-md)",
+        "ds2-lg": "var(--ds2-radius-lg)",
+        "ds2-full": "var(--ds2-radius-full)",
       },
       fontFamily: {
         display: ["var(--font-display)", "ui-serif", "serif"],
@@ -126,6 +157,18 @@ const config: Config = {
         sheet: "var(--shadow-sheet)",
         hero: "0 12px 32px -12px hsl(var(--primary) / 0.45)",
         elevation: "var(--elevation-highlight)",
+        "ds2-sm": "var(--ds2-shadow-sm)",
+        "ds2-md": "var(--ds2-shadow-md)",
+        "ds2-lg": "var(--ds2-shadow-lg)",
+        "ds2-elevation": "var(--ds2-elevation-highlight)",
+      },
+      transitionDuration: {
+        "ds2-fast": "var(--ds2-duration-fast)",
+        "ds2-base": "var(--ds2-duration-base)",
+        "ds2-slow": "var(--ds2-duration-slow)",
+      },
+      transitionTimingFunction: {
+        ds2: "var(--ds2-ease)",
       },
     },
   },

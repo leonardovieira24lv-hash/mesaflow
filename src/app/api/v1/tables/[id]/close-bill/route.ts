@@ -1,26 +1,27 @@
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSession } from "@/lib/api/auth";
 import { apiSuccess } from "@/lib/api/response";
 import { AppError, handleRouteError } from "@/lib/api/errors";
 import { parseOrThrow } from "@/lib/api/validation";
 import { closeBillSchema } from "@/lib/validations/tables";
-import { TERMINAL_ORDER_STATUSES } from "@/lib/orders/status-transitions";
-import type { OrderStatus } from "@/types/domain";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// Forma da linha que a consulta abaixo devolve — `status` é `OrderStatus`
-// (não o `string` genérico que a checagem `Database = any` inferiria
-// sozinha), o mesmo padrão já usado em `ActiveOrderSummary`
-// (`lib/orders/active-order.ts`) e `MenuItemRow` (`lib/orders/create-order.ts`)
-// para tipar corretamente o retorno de consultas ao Supabase enquanto os
-// tipos gerados de verdade não existem neste ambiente de dev.
-interface SessionOrderRow {
-  id: string;
-  status: OrderStatus;
+// Forma da linha que `close_table_bill` devolve — espelha exatamente a
+// cláusula `returns table (...)` da função em
+// `0019_atomic_close_table_bill.sql`. Sem os tipos gerados de verdade do
+// Supabase (`Database` ainda é um placeholder `any` neste ambiente de dev,
+// `src/types/database.types.ts`), `.rpc()` não tem como descobrir sozinho
+// o formato de retorno de uma função — por isso a chamada abaixo usa
+// `.returns<CloseTableBillResult[]>()`, a própria API do supabase-js pra
+// declarar o tipo esperado de uma consulta sem precisar de `any`/cast.
+interface CloseTableBillResult {
+  table_id: string;
+  table_name: string;
+  table_status: string;
+  table_qr_token: string;
 }
 
 /**
@@ -42,11 +43,20 @@ interface SessionOrderRow {
  * consulta em `order_sessions` (+ soma de `orders.total_amount` por
  * `order_session_id`), sem precisar de mais nada agora.
  *
- * Checagem defensiva própria (além do `allReady` que já trava o botão na
- * UI): se sobrar qualquer pedido não-terminal vinculado a esta sessão no
- * momento exato da chamada, rejeita com 409 em vez de registrar uma venda
- * com comanda ainda em aberto — cobre a mesma janela de corrida que outras
- * rotas deste módulo já tratam (ex.: `create-order.ts`).
+ * Sprint "Correção — Fechamento de Conta Não-Atômico" (2026-07-30,
+ * seguinte): fechar a sessão e liberar a mesa eram duas escritas
+ * separadas (duas transações independentes) — se a segunda falhasse (a
+ * trigger `trg_enforce_no_pending_orders_on_table_release`,
+ * `0011_enforce_no_pending_orders_on_table_release.sql`, é a suspeita
+ * concreta), a comanda ficava fechada pra sempre e a mesa presa em
+ * "ocupada", sem nenhuma tentativa seguinte conseguir corrigir sozinha —
+ * a próxima chamada só encontrava "nenhuma comanda aberta", porque de
+ * fato não tinha mais. Agora as duas escritas (+ as mesmas validações de
+ * sempre: sessão existe, nenhum pedido da sessão ainda não-terminal)
+ * vivem dentro de `close_table_bill` (`0019_atomic_close_table_bill.sql`),
+ * uma função `security definer` chamada via `.rpc()` — uma única
+ * transação, ou tudo acontece ou nada acontece. Contrato da rota
+ * (payload, respostas, mensagens de erro) não mudou.
  */
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
@@ -55,80 +65,40 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const body = await request.json();
     const { payment_method } = parseOrThrow(closeBillSchema, body);
 
-    const supabase = await createClient();
     const admin = createAdminClient();
 
-    const { data: session, error: sessionError } = await supabase
-      .from("order_sessions")
-      .select("id")
-      .eq("table_id", id)
-      .eq("restaurant_id", profile.restaurantId)
-      .is("closed_at", null)
+    const { data, error } = await admin
+      .rpc("close_table_bill", {
+        p_restaurant_id: profile.restaurantId,
+        p_table_id: id,
+        p_payment_method: payment_method,
+      })
+      .returns<CloseTableBillResult[]>()
       .maybeSingle();
 
-    if (sessionError) {
-      throw new AppError("INTERNAL_ERROR", "Não foi possível verificar a comanda desta mesa.");
+    if (error) {
+      // Mesmas duas validações de sempre, agora levantadas de dentro da
+      // função (códigos de erro customizados definidos nela).
+      if (error.code === "P0001") {
+        throw new AppError("NOT_FOUND", "Esta mesa não tem uma comanda aberta para fechar.");
+      }
+      if (error.code === "P0002") {
+        throw new AppError(
+          "CONFLICT",
+          "Ainda há pedidos em aberto nesta mesa. Finalize-os antes de fechar a conta.",
+        );
+      }
+      throw new AppError("INTERNAL_ERROR", "Não foi possível fechar a conta. Tente novamente.");
     }
-    if (!session) {
-      throw new AppError("NOT_FOUND", "Esta mesa não tem uma comanda aberta para fechar.");
-    }
-
-    const {
-      data: sessionOrders,
-      error: ordersError,
-    }: { data: SessionOrderRow[] | null; error: unknown } = await supabase
-      .from("orders")
-      .select("id, status")
-      .eq("order_session_id", session.id);
-
-    if (ordersError) {
-      throw new AppError("INTERNAL_ERROR", "Não foi possível verificar os pedidos desta mesa.");
-    }
-
-    const stillOpen = (sessionOrders ?? []).some((order) => !TERMINAL_ORDER_STATUSES.includes(order.status));
-    if (stillOpen) {
-      throw new AppError(
-        "CONFLICT",
-        "Ainda há pedidos em aberto nesta mesa. Finalize-os antes de fechar a conta.",
-      );
-    }
-
-    const { error: closeSessionError } = await admin
-      .from("order_sessions")
-      .update({ closed_at: new Date().toISOString(), payment_method })
-      .eq("id", session.id)
-      .eq("restaurant_id", profile.restaurantId);
-
-    if (closeSessionError) {
-      throw new AppError("INTERNAL_ERROR", "Não foi possível registrar o pagamento. Tente novamente.");
-    }
-
-    const { data: releasedTable, error: releaseError } = await admin
-      .from("tables")
-      .update({ status: "livre" })
-      .eq("id", id)
-      .eq("restaurant_id", profile.restaurantId)
-      .select("id, name, status, qr_token")
-      .maybeSingle();
-
-    if (releaseError) {
-      // O pagamento já foi registrado com sucesso no passo anterior — não
-      // desfazemos isso; só avisamos que a liberação da mesa precisa ser
-      // manual (mesmo texto de fallback já usado em `handleCloseBill`).
-      throw new AppError(
-        "INTERNAL_ERROR",
-        "Pagamento registrado, mas não foi possível liberar a mesa. Libere manualmente.",
-      );
-    }
-    if (!releasedTable) {
+    if (!data) {
       throw new AppError("NOT_FOUND", "Mesa não encontrada.");
     }
 
     return apiSuccess({
-      id: releasedTable.id,
-      name: releasedTable.name,
-      status: releasedTable.status,
-      qr_token: releasedTable.qr_token,
+      id: data.table_id,
+      name: data.table_name,
+      status: data.table_status,
+      qr_token: data.table_qr_token,
     });
   } catch (err) {
     return handleRouteError(err);

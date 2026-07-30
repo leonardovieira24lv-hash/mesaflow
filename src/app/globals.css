@@ -208,9 +208,80 @@
     --elevation-highlight: inset 0 1px 0 0 rgb(255 255 255 / 0.05);
   }
 
+  /* ────────────────────────────────────────────────────────────────────
+     MesaFlow Design System 2.0 — Sprint 1 (fundação), 2026-07-30.
+     Escopo deliberadamente isolado: `.ds2-dark` não é aplicada em
+     NENHUMA tela hoje (nem Dashboard, nem Login, nem Cardápio, nem
+     Mesas, nem Caixa) — só na vitrine interna `/design-system`. É a base
+     que sprints futuras vão adotar tela por tela; esta sprint só
+     constrói e documenta os tokens, não redesenha nada.
+
+     Identidade: grafite quase preto + verde como ÚNICA cor de marca —
+     sem dourado/amarelo (isso pertence só ao `.dark` do Painel Admin
+     atual, que esta sprint não toca). Escala de neutros com um degrau a
+     mais que `.dark`/`.menu-dark` (background/surface/surface-hover)
+     para dar mais hierarquia de profundidade a cards aninhados. */
+  .ds2-dark {
+    --ds2-background: 0 0% 5%;
+    --ds2-surface: 0 0% 10%;
+    --ds2-surface-hover: 0 0% 13%;
+    --ds2-border: 0 0% 18%;
+    --ds2-border-strong: 0 0% 26%;
+
+    --ds2-foreground: 0 0% 98%;
+    --ds2-foreground-muted: 0 0% 68%;
+    --ds2-foreground-subtle: 0 0% 46%;
+
+    --ds2-primary: 152 65% 45%;
+    --ds2-primary-foreground: 0 0% 100%;
+    --ds2-primary-hover: 152 65% 40%;
+    --ds2-primary-active: 152 65% 35%;
+
+    --ds2-success: 152 60% 45%;
+    --ds2-success-foreground: 0 0% 100%;
+    --ds2-warning: 38 92% 55%;
+    --ds2-warning-foreground: 0 0% 8%;
+    --ds2-danger: 0 72% 56%;
+    --ds2-danger-foreground: 0 0% 100%;
+    --ds2-info: 210 80% 60%;
+    --ds2-info-foreground: 0 0% 100%;
+
+    --ds2-ring: 152 65% 50%;
+
+    /* Raio — 3 degraus nomeados (controles pequenos / cards / superfícies
+       grandes), em vez do único `--radius` genérico do sistema atual. */
+    --ds2-radius-sm: 0.5rem;
+    --ds2-radius-md: 0.75rem;
+    --ds2-radius-lg: 1rem;
+    --ds2-radius-full: 9999px;
+
+    /* Borda — 1px é o padrão; "strong" existe para separadores que
+       precisam de mais presença (ex.: divisor entre seções de um card),
+       nunca para simular foco/erro (isso é sempre cor, não espessura). */
+    --ds2-border-width: 1px;
+    --ds2-border-width-strong: 1.5px;
+
+    --ds2-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.45);
+    --ds2-shadow-md: 0 8px 20px -6px rgb(0 0 0 / 0.55), 0 2px 8px -2px rgb(0 0 0 / 0.4);
+    --ds2-shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.65);
+    --ds2-elevation-highlight: inset 0 1px 0 0 rgb(255 255 255 / 0.045);
+
+    /* Transições — 3 durações nomeadas, uma curva só (nunca "linear",
+       nunca "ease" puro) para todo hover/focus/disabled do sistema. */
+    --ds2-duration-fast: 120ms;
+    --ds2-duration-base: 180ms;
+    --ds2-duration-slow: 280ms;
+    --ds2-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+    background-color: hsl(var(--ds2-background));
+    color: hsl(var(--ds2-foreground));
+  }
+
   * {
     @apply border-border;
   }
+
+
 
   body {
     @apply bg-background font-sans text-foreground;

@@ -83,6 +83,19 @@ interface TableDrawerProps {
  *   `order_session` da mesa com a forma de pagamento e só então libera a
  *   mesa. "Cancelar" no modal simplesmente fecha ele, sem chamar nada — a
  *   mesa continua exatamente como estava.
+ *
+ *   Sprint "Correção — Fechamento de Conta Não-Atômico" (2026-07-30,
+ *   seguinte): duas correções. (1) `close-bill` agora faz as duas escritas
+ *   (fechar sessão + liberar mesa) numa única transação no banco (RPC
+ *   `close_table_bill`, `0019_atomic_close_table_bill.sql`) — antes, se a
+ *   segunda falhasse, a comanda ficava fechada mas a mesa presa em
+ *   "ocupada" pra sempre. (2) `<CloseBillModal>` não recebe mais
+ *   `openOrders`/`details`/`openedAt` como props — busca tudo sozinho, na
+ *   hora, direto da API, em vez de depender do estado que este componente
+ *   carrega uma vez e mantém "vivo" só via Realtime (canal já registrado
+ *   como instável). `openOrders`/`details` continuam existindo aqui só
+ *   para o resto do Drawer (lista de pedidos, laço de marcar como
+ *   entregue) — não foram removidos, só pararam de alimentar o modal.
  * - "Solicitar impressão" — `window.print()` sobre uma view formatada
  *   (`#print-comanda-drawer`, ver `globals.css`). Não existe impressora térmica
  *   integrada; isto imprime pelo navegador, real e funcional, não decorativo.
@@ -795,9 +808,6 @@ export function TableDrawer({
       <CloseBillModal
         open={closeBillModalOpen}
         table={table}
-        openOrders={openOrders}
-        details={details}
-        openedAt={openedAt}
         onCancel={() => {
           setCloseBillModalOpen(false);
           setCloseBillError(null);
