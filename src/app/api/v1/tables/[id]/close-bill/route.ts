@@ -71,15 +71,16 @@ interface CloseTableBillResult {
  * interface. O código de erro `P0002` deixou de existir (nada mais rejeita
  * por "pedido em aberto" — o próprio fechamento resolve isso).
  *
- * ⚠️ DIAGNÓSTICO TEMPORÁRIO (2026-07-30): depois da migration 0020, o erro
- * mudou de mensagem ("Não foi possível fechar a conta. Tente novamente."
- * em vez de "sem comanda aberta") — causa real ainda não identificada.
- * Esta rota está, temporariamente, (1) logando payload recebido + retorno
- * bruto da RPC (`code`/`message`/`details`/`hint`) via `console.error`, e
- * (2) devolvendo o erro completo do Postgres na resposta em vez da
- * mensagem genérica, pra dar pra ver direto no app sem acesso a log de
- * servidor. Tudo marcado com "DIAGNÓSTICO TEMPORÁRIO"/`[DEBUG]` — reverter
- * assim que a causa real for encontrada.
+ * Sprint "Correção — SQLSTATE 42702" (2026-07-30, seguinte): depois da
+ * migration 0020, `close_table_bill` passou a falhar com
+ * "column reference 'table_id' is ambiguous" — os nomes da cláusula
+ * `returns table (table_id, ...)` viram variáveis automáticas no escopo
+ * da função em PL/pgSQL, colidindo com a coluna `order_sessions.table_id`
+ * referenciada sem alias. Corrigido em `0021_fix_ambiguous_column_close_table_bill.sql`
+ * (todas as tabelas/colunas da função qualificadas com alias). A
+ * instrumentação temporária usada para achar essa causa (log de
+ * payload/RPC + erro completo do Postgres na resposta) foi revertida
+ * junto — voltou a devolver só a mensagem genérica de sempre.
  */
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
@@ -87,14 +88,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const { profile } = await requireSession();
     const body = await request.json();
     const { payment_method } = parseOrThrow(closeBillSchema, body);
-
-    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-    // Payload recebido, antes de qualquer chamada ao banco.
-    console.error("[close-bill][DEBUG] payload recebido", {
-      table_id: id,
-      restaurant_id: profile.restaurantId,
-      payment_method,
-    });
 
     const admin = createAdminClient();
 
@@ -107,25 +100,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       .returns<CloseTableBillResult[]>()
       .maybeSingle();
 
-    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-    // Resultado bruto da RPC — `error` do postgrest-js já inclui
-    // `code` (SQLSTATE, quando a origem é o Postgres), `message`,
-    // `details` e `hint` quando existirem. `new Error().stack` captura o
-    // ponto exato desta chamada no código (a exceção do banco em si não
-    // tem stack trace de JS, só o `code`/`message`/`details`/`hint`).
-    console.error("[close-bill][DEBUG] resultado da RPC", {
-      data,
-      error: error
-        ? {
-            code: error.code,
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-          }
-        : null,
-      stack: new Error("[close-bill][DEBUG] stack no ponto da chamada RPC").stack,
-    });
-
     if (error) {
       // A única validação que ainda pode recusar o fechamento: a sessão
       // aberta não existe (levantada de dentro da função, código de erro
@@ -134,14 +108,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       if (error.code === "P0001") {
         throw new AppError("NOT_FOUND", "Esta mesa não tem uma comanda aberta para fechar.");
       }
-      // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-      // Em vez da mensagem genérica, devolve o erro completo do Postgres
-      // pra investigação — REVERTER para "Não foi possível fechar a
-      // conta. Tente novamente." assim que a causa real for encontrada.
-      throw new AppError(
-        "INTERNAL_ERROR",
-        `[DEBUG] SQLSTATE=${error.code ?? "?"} | ${error.message}${error.details ? ` | details: ${error.details}` : ""}${error.hint ? ` | hint: ${error.hint}` : ""}`,
-      );
+      throw new AppError("INTERNAL_ERROR", "Não foi possível fechar a conta. Tente novamente.");
     }
     if (!data) {
       throw new AppError("NOT_FOUND", "Mesa não encontrada.");
@@ -154,12 +121,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       qr_token: data.table_qr_token,
     });
   } catch (err) {
-    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-    console.error("[close-bill][DEBUG] exceção capturada no catch externo", {
-      err,
-      message: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : undefined,
-    });
     return handleRouteError(err);
   }
 }
