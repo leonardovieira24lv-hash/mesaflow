@@ -27,6 +27,7 @@ export const ROUTES = {
     `/cardapio/produtos/${id}` as Route,
 
   mesas: "/mesas",
+  caixa: "/caixa",
   configuracoes: "/configuracoes",
 
   // Área do cliente (pública, sem login)

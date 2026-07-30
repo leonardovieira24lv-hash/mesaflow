@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ClipboardList, UtensilsCrossed, LayoutGrid, Settings, X } from "lucide-react";
+import { LayoutDashboard, ClipboardList, UtensilsCrossed, LayoutGrid, Wallet, Settings, X } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 import { useAdminShell } from "@/components/layout/admin-shell-context";
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: ROUTES.pedidos, label: "Pedidos", icon: ClipboardList },
   { href: ROUTES.cardapioCategorias, label: "Cardápio", icon: UtensilsCrossed },
   { href: ROUTES.mesas, label: "Mesas", icon: LayoutGrid },
+  { href: ROUTES.caixa, label: "Caixa", icon: Wallet },
   { href: ROUTES.configuracoes, label: "Configurações", icon: Settings },
 ] as const;
 

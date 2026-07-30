@@ -1,0 +1,270 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { Banknote, ClipboardList, LayoutGrid, Receipt, Search } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Pagination } from "@/components/ui/pagination";
+import { Spinner } from "@/components/ui/spinner";
+import { Alert } from "@/components/ui/alert";
+import { formatCurrency, formatDurationBetween } from "@/lib/format";
+import { CASHIER_PERIOD_VALUES, type CashierPeriod } from "@/lib/validations/cashier";
+import { PAYMENT_METHOD_LABELS, type CashierListResult, type ClosedSessionRow } from "@/lib/cashier/queries";
+import { CaixaSessionDetailModal } from "@/components/caixa/caixa-session-detail-modal";
+import type { ApiError, ApiSuccess } from "@/types/api";
+
+const PERIOD_LABELS: Record<CashierPeriod, string> = {
+  today: "Hoje",
+  yesterday: "Ontem",
+  "7d": "Últimos 7 dias",
+  "30d": "Últimos 30 dias",
+  custom: "Período personalizado",
+};
+
+interface CaixaManagerProps {
+  initialData: CashierListResult;
+  initialPeriod: CashierPeriod;
+}
+
+/**
+ * Painel de Caixa (Sprint "Painel de Caixa", 2026-07-30) — histórico
+ * permanente de comandas finalizadas, sem nenhuma ação de escrita nesta
+ * tela (somente leitura: nada aqui altera mesa/pedido/cardápio). Cards de
+ * resumo + tabela vêm sempre do mesmo `GET /api/v1/cashier`, então nunca
+ * divergem entre si.
+ *
+ * Estrutura pensada para as funcionalidades futuras já anunciadas
+ * (fechamento de caixa, relatórios, exportação PDF/Excel, dashboard
+ * financeiro) sem implementá-las agora: `getCashierData`
+ * (`lib/cashier/queries.ts`) já devolve exatamente o recorte de dados que
+ * qualquer uma delas vai precisar — um botão de exportar, quando existir,
+ * chama a mesma função/rota, só trocando o formato da resposta.
+ */
+export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) {
+  const [period, setPeriod] = useState<CashierPeriod>(initialPeriod);
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  const [data, setData] = useState<CashierListResult>(initialData);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  // Evita que uma requisição mais lenta (ex.: filtro trocado duas vezes
+  // rápido) sobrescreva o estado com uma resposta desatualizada — só a
+  // resposta da requisição mais recente é aplicada.
+  const latestRequestId = useRef(0);
+
+  const fetchData = useCallback(async () => {
+    if (period === "custom" && (!customStart || !customEnd)) return;
+
+    const requestId = ++latestRequestId.current;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({ period, page: String(page), per_page: "20" });
+      if (period === "custom") {
+        params.set("start_date", customStart);
+        params.set("end_date", customEnd);
+      }
+      if (search.trim()) params.set("search", search.trim());
+
+      const response = await fetch(`/api/v1/cashier?${params.toString()}`);
+      const body = (await response.json()) as ApiSuccess<CashierListResult> | ApiError;
+      if (requestId !== latestRequestId.current) return;
+
+      if (!response.ok) {
+        setError("error" in body ? (body.error?.message ?? "Não foi possível carregar o caixa.") : "Não foi possível carregar o caixa.");
+        return;
+      }
+
+      setData((body as ApiSuccess<CashierListResult>).data);
+    } catch {
+      if (requestId === latestRequestId.current) {
+        setError("Não foi possível conectar. Verifique sua internet e tente novamente.");
+      }
+    } finally {
+      if (requestId === latestRequestId.current) setIsLoading(false);
+    }
+  }, [period, customStart, customEnd, search, page]);
+
+  // Refaz a busca sempre que filtro/página mudam — exceto na primeira
+  // renderização, que já usa `initialData` vindo do servidor.
+  const [isFirstRender, setIsFirstRender] = useState(true);
+  useEffect(() => {
+    if (isFirstRender) {
+      setIsFirstRender(false);
+      return;
+    }
+    void fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchData já depende de tudo que importa; só não deve rodar no primeiro render
+  }, [period, customStart, customEnd, page]);
+
+  // Busca por texto tem debounce próprio — não dispara a cada tecla.
+  useEffect(() => {
+    if (isFirstRender) return;
+    const timeout = setTimeout(() => {
+      setPage(1);
+      void fetchData();
+    }, 350);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só o texto de busca deve disparar este debounce
+  }, [search]);
+
+  function handlePeriodChange(next: CashierPeriod) {
+    setPeriod(next);
+    setPage(1);
+  }
+
+  const { summary, sessions, meta } = data;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <SummaryCard icon={Banknote} label="Faturamento do período" value={formatCurrency(summary.revenue)} />
+        <SummaryCard icon={Receipt} label="Comandas fechadas" value={String(summary.closedSessionsCount)} />
+        <SummaryCard icon={ClipboardList} label="Ticket médio" value={formatCurrency(summary.averageTicket)} />
+        <SummaryCard icon={LayoutGrid} label="Mesas atendidas" value={String(summary.tablesServedCount)} />
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={period}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => handlePeriodChange(e.target.value as CashierPeriod)}
+            className="h-9 w-auto min-w-[9rem]"
+          >
+            {CASHIER_PERIOD_VALUES.map((value) => (
+              <option key={value} value={value}>
+                {PERIOD_LABELS[value]}
+              </option>
+            ))}
+          </Select>
+
+          {period === "custom" && (
+            <>
+              <Input
+                type="date"
+                value={customStart}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setCustomStart(e.target.value)}
+                className="h-9 w-auto"
+                aria-label="Data inicial"
+              />
+              <Input
+                type="date"
+                value={customEnd}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setCustomEnd(e.target.value)}
+                className="h-9 w-auto"
+                aria-label="Data final"
+              />
+            </>
+          )}
+        </div>
+
+        <Input
+          value={search}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+          placeholder="Buscar por mesa ou nº da comanda"
+          leadingIcon={<Search className="h-4 w-4" />}
+          className="sm:w-72"
+        />
+      </div>
+
+      {error && <Alert variant="destructive">{error}</Alert>}
+
+      <Card className="relative overflow-hidden">
+        <CardContent className="p-0">
+          {isLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface/70 backdrop-blur-[1px]">
+              <Spinner className="h-6 w-6" />
+            </div>
+          )}
+
+          {sessions.length === 0 ? (
+            <EmptyState
+              icon={Receipt}
+              title="Nenhuma venda encontrada"
+              description="Nenhuma comanda finalizada no período/busca selecionados."
+              className="border-0"
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Mesa</TableHead>
+                  <TableHead>Comanda</TableHead>
+                  <TableHead>Abertura</TableHead>
+                  <TableHead>Fechamento</TableHead>
+                  <TableHead>Permanência</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Pagamento</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sessions.map((session: ClosedSessionRow) => (
+                  <TableRow
+                    key={session.id}
+                    onClick={() => setSelectedSessionId(session.id)}
+                    className="cursor-pointer"
+                  >
+                    <TableCell className="font-medium text-foreground">{session.tableName}</TableCell>
+                    <TableCell className="font-numeric text-muted-foreground">
+                      #{session.id.slice(0, 8).toUpperCase()}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(session.openedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(session.closedAt).toLocaleString("pt-BR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </TableCell>
+                    <TableCell>{formatDurationBetween(session.openedAt, session.closedAt)}</TableCell>
+                    <TableCell className="font-numeric font-semibold text-foreground">
+                      {formatCurrency(session.totalAmount)}
+                    </TableCell>
+                    <TableCell>
+                      {session.paymentMethod ? PAYMENT_METHOD_LABELS[session.paymentMethod] : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="success">Finalizada</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} />
+
+      <CaixaSessionDetailModal sessionId={selectedSessionId} onClose={() => setSelectedSessionId(null)} />
+    </div>
+  );
+}
+
+function SummaryCard({ icon: Icon, label, value }: { icon: typeof Banknote; label: string; value: string }) {
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3 p-6">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+            <Icon className="h-4 w-4 text-primary" aria-hidden />
+          </div>
+          <span className="text-sm font-medium text-muted-foreground">{label}</span>
+        </div>
+        <span className="font-numeric text-2xl font-bold tabular-nums tracking-tight">{value}</span>
+      </CardContent>
+    </Card>
+  );
+}

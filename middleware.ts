@@ -42,6 +42,7 @@ const ADMIN_ROUTE_PREFIXES = [
   "/pedidos",
   "/cardapio",
   "/mesas",
+  "/caixa",
   "/configuracoes",
   // Sprint Final (RC1) — correção de confiabilidade: nenhuma das duas
   // rotas abaixo era protegida, apesar de as duas exigirem sessão para

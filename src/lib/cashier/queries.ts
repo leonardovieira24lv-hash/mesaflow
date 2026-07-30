@@ -1,0 +1,274 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { AppError } from "@/lib/api/errors";
+import { PAYMENT_METHOD_VALUES } from "@/lib/validations/tables";
+import type { CashierPeriod } from "@/lib/validations/cashier";
+import type { Database } from "@/types/database.types";
+
+export type PaymentMethod = (typeof PAYMENT_METHOD_VALUES)[number];
+
+/**
+ * Rótulos de exibição da forma de pagamento — específicos da tela de
+ * Caixa. Não reaproveita nada de `close-bill-modal.tsx` de propósito: essa
+ * tela é uma funcionalidade já estável (Sprint "Fechamento de Conta com
+ * Registro de Venda") e esta sprint não deve alterá-la; duplicar um mapa
+ * de 4 linhas é um custo bem menor do que mexer em código estável só para
+ * compartilhar uma constante pequena.
+ */
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  pix: "PIX",
+  credit_card: "Cartão de Crédito",
+  debit_card: "Cartão de Débito",
+  cash: "Dinheiro",
+};
+
+export interface ClosedSessionRow {
+  id: string;
+  tableId: string;
+  tableName: string;
+  openedAt: string;
+  closedAt: string;
+  paymentMethod: PaymentMethod | null;
+  totalAmount: number;
+  itemCount: number;
+}
+
+export interface CashierSummary {
+  revenue: number;
+  closedSessionsCount: number;
+  averageTicket: number;
+  tablesServedCount: number;
+}
+
+export interface CashierListResult {
+  summary: CashierSummary;
+  sessions: ClosedSessionRow[];
+  meta: { page: number; perPage: number; total: number; totalPages: number };
+}
+
+export interface CashierSessionDetail {
+  id: string;
+  tableName: string;
+  openedAt: string;
+  closedAt: string;
+  paymentMethod: PaymentMethod | null;
+  totalAmount: number;
+  items: { name: string; quantity: number; unitPrice: number; lineTotal: number }[];
+}
+
+/**
+ * Converte `period` (+ `start`/`end` quando "custom") num intervalo
+ * `[from, to]` em ISO — mesma limitação já aceita no resto do projeto
+ * (nenhum tratamento de fuso horário específico do restaurante existe
+ * ainda; usa o relógio do servidor, igual a `formatRelativeTimeShort` e
+ * companhia). "Hoje"/"Ontem" usam meia-noite UTC como início do dia.
+ */
+export function resolveCashierDateRange(
+  period: CashierPeriod,
+  startDate?: string,
+  endDate?: string,
+): { from: string; to: string } {
+  const now = new Date();
+  const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+  switch (period) {
+    case "today":
+      return { from: startOfToday.toISOString(), to: now.toISOString() };
+    case "yesterday": {
+      const startOfYesterday = new Date(startOfToday);
+      startOfYesterday.setUTCDate(startOfYesterday.getUTCDate() - 1);
+      return { from: startOfYesterday.toISOString(), to: startOfToday.toISOString() };
+    }
+    case "7d": {
+      const from = new Date(now);
+      from.setUTCDate(from.getUTCDate() - 7);
+      return { from: from.toISOString(), to: now.toISOString() };
+    }
+    case "30d": {
+      const from = new Date(now);
+      from.setUTCDate(from.getUTCDate() - 30);
+      return { from: from.toISOString(), to: now.toISOString() };
+    }
+    case "custom": {
+      // `.refine()` do schema já garante que os dois vêm preenchidos antes
+      // daqui — `end_date` é tratado como o FIM daquele dia (23:59:59),
+      // não a meia-noite dele, senão o próprio dia final ficaria de fora.
+      const from = new Date(startDate!);
+      const to = new Date(endDate!);
+      to.setUTCHours(23, 59, 59, 999);
+      return { from: from.toISOString(), to: to.toISOString() };
+    }
+    default: {
+      // Checagem de exaustividade em tempo de compilação: se
+      // `CASHIER_PERIOD_VALUES` ganhar um valor novo sem um `case`
+      // correspondente aqui, esta linha para de compilar (em vez de cair
+      // num `default` silencioso em runtime) — também é o que deixa o
+      // `switch` provadamente exaustivo para o TypeScript, sem precisar de
+      // `as Point`/`!` no retorno da função.
+      const exhaustiveCheck: never = period;
+      throw new Error(`Período de caixa não tratado: ${exhaustiveCheck}`);
+    }
+  }
+}
+
+interface SessionQueryRow {
+  id: string;
+  table_id: string;
+  opened_at: string;
+  closed_at: string;
+  payment_method: PaymentMethod | null;
+  tables: { name: string } | null;
+  orders: { total_amount: number; order_items: { quantity: number }[] }[];
+}
+
+/**
+ * Busca as comandas fechadas do restaurante num intervalo, já com o
+ * resumo (faturamento/contagem/ticket médio/mesas atendidas) calculado
+ * sobre o MESMO conjunto filtrado — nunca duas consultas que poderiam
+ * divergir uma da outra.
+ *
+ * A filtragem por `search` (mesa ou "número da comanda" — este último não
+ * é uma coluna real, é um recorte do próprio `id` exibido na tela,
+ * `id.slice(0,8)`) acontece em memória, depois da consulta ao banco —
+ * deliberado: não existe uma coluna real de "número da comanda" pra
+ * filtrar no SQL, e o volume de comandas fechadas num período (mesmo 30
+ * dias, num restaurante pequeno/médio) é pequeno o suficiente pra isso não
+ * pesar. O filtro por período, esse sim, é feito no banco (`closed_at`,
+ * com o índice da migration 0018) — é o filtro que realmente precisa de
+ * um índice, porque pode cobrir muito mais linhas.
+ *
+ * Preparado para uso futuro por relatórios/exportação PDF/Excel/dashboard
+ * financeiro: quem precisar do mesmo recorte de dados chama esta função
+ * direto, em vez de duplicar a consulta.
+ */
+export async function getCashierData(
+  supabase: SupabaseClient<Database>,
+  restaurantId: string,
+  options: { from: string; to: string; search?: string; page: number; perPage: number },
+): Promise<CashierListResult> {
+  const { data, error } = await supabase
+    .from("order_sessions")
+    .select(
+      "id, table_id, opened_at, closed_at, payment_method, tables(name), orders(total_amount, order_items(quantity))",
+    )
+    .eq("restaurant_id", restaurantId)
+    .not("closed_at", "is", null)
+    .gte("closed_at", options.from)
+    .lte("closed_at", options.to)
+    .order("closed_at", { ascending: false });
+
+  if (error) {
+    throw new AppError("INTERNAL_ERROR", "Não foi possível carregar as vendas do caixa.");
+  }
+
+  // Ver nota em `RecentOrder`/`getRecentOrders` (`lib/dashboard/queries.ts`):
+  // o parsing estrutural do postgrest-js infere relações embutidas como
+  // array mesmo quando a query real devolve um objeto único
+  // (`tables`, many-to-one) — o cast aqui só corrige o tipo pro que a
+  // consulta realmente devolve, não muda nenhum dado.
+  const rows = (data ?? []) as unknown as SessionQueryRow[];
+
+  const allSessions: ClosedSessionRow[] = rows.map((row) => {
+    const totalAmount = row.orders.reduce((sum, order) => sum + order.total_amount, 0);
+    const itemCount = row.orders.reduce(
+      (sum, order) => sum + order.order_items.reduce((itemSum, item) => itemSum + item.quantity, 0),
+      0,
+    );
+
+    return {
+      id: row.id,
+      tableId: row.table_id,
+      tableName: row.tables?.name ?? "—",
+      openedAt: row.opened_at,
+      closedAt: row.closed_at,
+      paymentMethod: row.payment_method,
+      totalAmount,
+      itemCount,
+    };
+  });
+
+  const normalizedSearch = options.search?.trim().toLocaleLowerCase("pt-BR");
+  const filtered = normalizedSearch
+    ? allSessions.filter(
+        (session) =>
+          session.tableName.toLocaleLowerCase("pt-BR").includes(normalizedSearch) ||
+          session.id.slice(0, 8).toLocaleLowerCase("pt-BR").includes(normalizedSearch),
+      )
+    : allSessions;
+
+  const revenue = filtered.reduce((sum, session) => sum + session.totalAmount, 0);
+  const closedSessionsCount = filtered.length;
+  const tablesServedCount = new Set(filtered.map((session) => session.tableId)).size;
+  const averageTicket = closedSessionsCount > 0 ? revenue / closedSessionsCount : 0;
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / options.perPage));
+  const start = (options.page - 1) * options.perPage;
+  const pageSessions = filtered.slice(start, start + options.perPage);
+
+  return {
+    summary: { revenue, closedSessionsCount, averageTicket, tablesServedCount },
+    sessions: pageSessions,
+    meta: { page: options.page, perPage: options.perPage, total, totalPages },
+  };
+}
+
+interface SessionDetailQueryRow {
+  id: string;
+  opened_at: string;
+  closed_at: string;
+  payment_method: PaymentMethod | null;
+  tables: { name: string } | null;
+  orders: { total_amount: number; order_items: { name: string; quantity: number; price: number }[] }[];
+}
+
+/** Detalhe de uma comanda fechada, para o modal "ao tocar em uma venda". */
+export async function getCashierSessionDetail(
+  supabase: SupabaseClient<Database>,
+  restaurantId: string,
+  sessionId: string,
+): Promise<CashierSessionDetail | null> {
+  const { data, error } = await supabase
+    .from("order_sessions")
+    .select(
+      "id, opened_at, closed_at, payment_method, tables(name), orders(total_amount, order_items(name, quantity, price))",
+    )
+    .eq("id", sessionId)
+    .eq("restaurant_id", restaurantId)
+    .not("closed_at", "is", null)
+    .maybeSingle();
+
+  if (error) {
+    throw new AppError("INTERNAL_ERROR", "Não foi possível carregar os detalhes desta venda.");
+  }
+  if (!data) return null;
+
+  const row = data as unknown as SessionDetailQueryRow;
+
+  // Consolida itens iguais (mesmo nome+preço) vindos de pedidos diferentes
+  // da mesma comanda numa linha só — mesmo critério já usado em
+  // `close-bill-modal.tsx` pro resumo de fechamento.
+  const linesByKey = new Map<string, { name: string; quantity: number; unitPrice: number }>();
+  for (const order of row.orders) {
+    for (const item of order.order_items) {
+      const key = `${item.name}__${item.price}`;
+      const existing = linesByKey.get(key);
+      if (existing) existing.quantity += item.quantity;
+      else linesByKey.set(key, { name: item.name, quantity: item.quantity, unitPrice: item.price });
+    }
+  }
+
+  const items = Array.from(linesByKey.values()).map((line) => ({
+    ...line,
+    lineTotal: line.unitPrice * line.quantity,
+  }));
+
+  return {
+    id: row.id,
+    tableName: row.tables?.name ?? "—",
+    openedAt: row.opened_at,
+    closedAt: row.closed_at,
+    paymentMethod: row.payment_method,
+    totalAmount: row.orders.reduce((sum, order) => sum + order.total_amount, 0),
+    items,
+  };
+}
