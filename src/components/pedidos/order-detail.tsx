@@ -37,11 +37,18 @@ const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   minute: "2-digit",
 });
 
+// Sprint "Simplificação do Fluxo de Status" (2026-07-30): `preparing` agora
+// vai direto pra `delivered` (ver `order-status-transitions-map.ts`) — o
+// rótulo de `ready` continua aqui só porque `Record<OrderStatus, string>`
+// exige todas as chaves; na prática, nenhuma transição leva mais até
+// `ready`, então este botão nunca aparece pra um pedido novo (só apareceria
+// para um pedido legado que já estivesse parado em `ready` antes desta
+// mudança, decidindo ele mesmo ir para `delivered`/`cancelled`).
 const STATUS_ACTION_LABELS: Record<OrderStatus, string> = {
   pending: "Marcar como pendente",
   preparing: "Iniciar preparo",
   ready: "Marcar como pronto",
-  delivered: "Marcar como entregue",
+  delivered: "Marcar como finalizado",
   cancelled: "Cancelar pedido",
 };
 

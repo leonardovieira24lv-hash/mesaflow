@@ -42,15 +42,18 @@ const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   minute: "2-digit",
 });
 
-// Contrato 8.1 não define uma ordem própria para os filtros — segue a mesma
-// ordem da máquina de estados (pending → preparing → ready → delivered),
-// com "cancelled" por último por ser o desvio da linha principal.
+// Sprint "Simplificação do Fluxo de Status" (2026-07-30): "Prontos"
+// removido — nenhum pedido novo chega mais em `ready` (ver
+// `order-status-transitions-map.ts`). Se restar algum pedido legado nesse
+// status, ele continua existindo no banco e aparece com o rótulo/cor de
+// "Em preparo" (`AdminOrderStatusBadge`), só não tem mais um filtro
+// dedicado — não vale a pena manter um filtro pra um estado que a
+// interface inteira já esconde.
 const STATUS_FILTERS: { value: OrderStatus | "all"; label: string }[] = [
   { value: "all", label: "Todos" },
-  { value: "pending", label: "Pendentes" },
-  { value: "preparing", label: "Preparando" },
-  { value: "ready", label: "Prontos" },
-  { value: "delivered", label: "Entregues" },
+  { value: "pending", label: "Pedido realizado" },
+  { value: "preparing", label: "Em preparo" },
+  { value: "delivered", label: "Finalizados" },
   { value: "cancelled", label: "Cancelados" },
 ];
 

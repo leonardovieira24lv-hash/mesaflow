@@ -95,7 +95,7 @@ interface TableDrawerProps {
  *   carrega uma vez e mantém "vivo" só via Realtime (canal já registrado
  *   como instável). `openOrders`/`details` continuam existindo aqui só
  *   para o resto do Drawer (lista de pedidos exibida no corpo do Drawer,
- *   `allReady` do botão) — não foram removidos, só pararam de alimentar
+ *   `allDelivered` do botão) — não foram removidos, só pararam de alimentar
  *   o modal.
  *
  *   Sprint "Refatoração — Backend Assume Marcação de Entregue" (2026-07-30,
@@ -135,10 +135,11 @@ export function TableDrawer({
   // reflete no próximo render, então um duplo toque rápido podia escapar do
   // `disabled` do botão antes dele atualizar de verdade.
   const isSendingToKitchenRef = useRef(false);
-  // Item 2 do checklist do fluxo operacional das mesas — mesmo raciocínio do
-  // lock acima, mas para a transição preparing→ready ("Pedido pronto"), que
-  // antes só existia na tela de Pedidos.
-  const isMarkingReadyRef = useRef(false);
+  // Sprint "Simplificação do Fluxo de Status" (2026-07-30, era
+  // isMarkingReadyRef/"Pedido pronto" — preparing→ready deixou de existir,
+  // esta ação agora vai direto preparing→delivered): mesmo raciocínio do
+  // lock acima.
+  const isMarkingDeliveredRef = useRef(false);
   // "Chamar garçom" / "Solicitar conta" — mesmo raciocínio de lock, para
   // não deixar um duplo toque em "Atendido"/"Conta entregue" disparar duas
   // requisições para o mesmo evento.
@@ -236,16 +237,17 @@ export function TableDrawer({
   }
 
   /**
-   * Item 2 do checklist do fluxo operacional das mesas — a ação
-   * `preparing → ready` ("Pedido pronto") não existia em nenhum lugar do
-   * módulo de Mesas, só na tela de Pedidos. Mesma estrutura exata de
-   * `handleSendToKitchen` acima (mesmo endpoint, mesmo tratamento de
-   * conflito, mesmo `onOrdersChanged()` no sucesso e no erro) — só muda o
-   * status de destino e as mensagens.
+   * Sprint "Simplificação do Fluxo de Status" (2026-07-30): antes,
+   * `handleMarkReady` fazia a transição `preparing → ready` ("Pedido
+   * pronto"). O MesaFlow não é delivery — o garçom leva o pedido até a
+   * mesa, então "pronto" e "entregue" viram um único momento pro cliente
+   * ("Finalizado"). Mesma estrutura exata de antes (mesmo endpoint, mesmo
+   * tratamento de conflito, mesmo `onOrdersChanged()`), só o status de
+   * destino e as mensagens mudaram — agora vai direto `preparing → delivered`.
    */
-  async function handleMarkReady(orderId: string) {
-    if (isMarkingReadyRef.current) return;
-    isMarkingReadyRef.current = true;
+  async function handleMarkDelivered(orderId: string) {
+    if (isMarkingDeliveredRef.current) return;
+    isMarkingDeliveredRef.current = true;
 
     setUpdatingOrderId(orderId);
     setError(null);
@@ -253,7 +255,7 @@ export function TableDrawer({
       const response = await fetch(`/api/v1/orders/${orderId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "ready" }),
+        body: JSON.stringify({ status: "delivered" }),
       });
       const body = await response.json();
       if (!response.ok) {
@@ -261,18 +263,18 @@ export function TableDrawer({
         setError(
           isConflict
             ? "Este pedido já tinha sido atualizado — a lista foi atualizada com o status mais recente."
-            : (body?.error?.message ?? "Não foi possível marcar como pronto."),
+            : (body?.error?.message ?? "Não foi possível marcar como finalizado."),
         );
         onOrdersChanged();
         return;
       }
-      toast.success("Pedido pronto para servir");
+      toast.success("Pedido finalizado");
       onOrdersChanged();
     } catch {
       setError("Não foi possível conectar. Verifique sua internet e tente novamente.");
     } finally {
       setUpdatingOrderId(null);
-      isMarkingReadyRef.current = false;
+      isMarkingDeliveredRef.current = false;
     }
   }
 
@@ -322,7 +324,11 @@ export function TableDrawer({
   const waiterCallAlert = alerts.find((a) => a.type === "waiter_call");
   const billRequestAlert = alerts.find((a) => a.type === "bill_request");
 
-  const allReady = openOrders.length > 0 && openOrders.every((o) => o.status === "ready");
+  // Sprint "Simplificação do Fluxo de Status" (2026-07-30, era `allReady`
+  // checando "ready"): preparing agora vai direto pra delivered, então "os
+  // pedidos já estão prontos pra fechar a conta" passa a significar "todos
+  // já foram finalizados".
+  const allDelivered = openOrders.length > 0 && openOrders.every((o) => o.status === "delivered");
 
   /**
    * Sprint "Fechamento de Conta com Registro de Venda" (2026-07-29): antes
@@ -673,18 +679,18 @@ export function TableDrawer({
                       </Button>
                     )}
 
-                    {/* Item 2 do checklist do fluxo operacional das mesas. */}
+                    {/* Sprint "Simplificação do Fluxo de Status" (2026-07-30): vai direto preparing→delivered. */}
                     {order.status === "preparing" && (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handleMarkReady(order.id)}
+                        onClick={() => handleMarkDelivered(order.id)}
                         isLoading={updatingOrderId === order.id}
                         className="w-full justify-center"
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        Pedido pronto
+                        Finalizar pedido
                       </Button>
                     )}
                   </div>
@@ -737,21 +743,21 @@ export function TableDrawer({
           <Button
             type="button"
             onClick={() => setCloseBillModalOpen(true)}
-            disabled={!allReady}
-            title={!allReady ? "Só é possível finalizar quando todos os pedidos estiverem prontos" : undefined}
+            disabled={!allDelivered}
+            title={!allDelivered ? "Só é possível finalizar quando todos os pedidos estiverem finalizados" : undefined}
           >
             {/* Item 3 do checklist do fluxo operacional das mesas: mesmo
                 botão de sempre — só o rótulo muda para comunicar "esta é a
-                etapa final" assim que a mesa realmente chega no estado
-                "Pronto para servir". Sprint "Fechamento de Conta com
-                Registro de Venda": agora abre o modal de fechamento em vez
-                de fechar direto. */}
-            {allReady && <CheckCircle2 className="h-4 w-4" />}
-            {allReady ? "Finalizar atendimento" : "Fechar conta"}
+                etapa final" assim que todos os pedidos já estiverem
+                finalizados. Sprint "Fechamento de Conta com Registro de
+                Venda": agora abre o modal de fechamento em vez de fechar
+                direto. */}
+            {allDelivered && <CheckCircle2 className="h-4 w-4" />}
+            {allDelivered ? "Finalizar atendimento" : "Fechar conta"}
           </Button>
-          {!allReady && openOrders.length > 0 && (
+          {!allDelivered && openOrders.length > 0 && (
             <p className="text-center text-xs text-muted-foreground">
-              Ainda há pedido{openOrders.length > 1 ? "s" : ""} em preparo — finalizar libera quando tudo estiver pronto.
+              Ainda há pedido{openOrders.length > 1 ? "s" : ""} em preparo — finalizar libera quando tudo estiver finalizado.
             </p>
           )}
 

@@ -22,7 +22,7 @@ export type TableCardTone =
   | "awaiting_order" // ocupada, ainda sem nenhum pedido
   | "new_order" // tem pedido "pending" (chegou, ninguém olhou ainda)
   | "preparing" // tem pedido "preparing", nenhum "pending"
-  | "ready" // todos os pedidos em aberto já estão "ready"
+  | "ready" // nada mais pendente na cozinha — falta só fechar a conta
   | "waiter_call" // reservado — sem backend ainda, ver docs/table-events-roadmap.md
   | "bill_requested"; // reservado — sem backend ainda, ver docs/table-events-roadmap.md
 
@@ -50,11 +50,18 @@ export interface TableOperationalData {
   /**
    * Existe pelo menos um pedido em aberto com status "preparing". Novo
    * campo (item 1 do checklist) — antes só `hasPendingOrder` existia, o que
-   * tornava impossível distinguir "preparando" de "pronto". Como
-   * `fetchOperations()` só busca pedidos `pending`/`preparing`/`ready`, um
-   * pedido que não é `pending` nem `preparing` só pode ser `ready` — por
-   * isso não existe um `hasReadyOrder` explícito, é o caso restante por
-   * eliminação em `deriveTableCardState`.
+   * tornava impossível distinguir "preparando" de "pronto".
+   *
+   * Sprint "Correção — Pedido Finalizado Sumindo da Mesa" (2026-07-30):
+   * `fetchOperations()` agora busca `pending`/`preparing`/`ready`/`delivered`
+   * (antes só os 3 primeiros). Um pedido que não é `pending` nem
+   * `preparing` pode ser `ready` (legado, raro) OU `delivered` (o caso
+   * comum agora: pedido finalizado manualmente, aguardando a conta
+   * fechar) — os dois casos restantes por eliminação em
+   * `deriveTableCardState` continuam tratados como um só estado, de
+   * propósito: nos dois, não sobra nada para a cozinha fazer, só falta
+   * fechar a conta. Não foi criado um `hasDeliveredOrder` separado por não
+   * haver, hoje, nenhuma regra de negócio que precise distinguir os dois.
    */
   hasPreparingOrder: boolean;
 }
@@ -64,7 +71,7 @@ export interface TableCardState {
   label: string;
   /**
    * Sinaliza que o tile representa algo que pede atenção imediata (pedido
-   * novo, garçom chamado, conta pedida, pedido pronto para servir). Não
+   * novo, garçom chamado, conta pedida, comanda pronta para fechar). Não
    * dispara mais uma pulsação contínua — o flash de transição em
    * `TablesManager`/`TableDrawer` já acontece para qualquer mudança de tom,
    * urgente ou não. Campo mantido disponível para uso futuro (ex.: destaque
@@ -81,7 +88,7 @@ export interface TableCardState {
  *
  * Prioridade: conta solicitada > garçom chamado > manutenção > livre >
  * (dentro de "ocupada", do mais urgente pro mais resolvido) novo pedido >
- * preparando > pronto para servir > aguardando pedido. Os dois primeiros
+ * preparando > pronto para fechar > aguardando pedido. Os dois primeiros
  * nunca disparam hoje (`alerts` sempre chega `[]` — sem backend, ver
  * acima), mas a ordem já está certa para quando existirem.
  *
@@ -123,10 +130,15 @@ export function deriveTableCardState(
     return { tone: "preparing", label: "Preparando", pulse: false };
   }
 
-  // Só sobra "ready" por eliminação: `data` existe (há pedido em aberto),
-  // não é pending nem preparing — `fetchOperations()` só traz essas 3
-  // possibilidades, então o que resta é "ready".
-  return { tone: "ready", label: "Pronto para servir", pulse: true };
+  // Só sobra "ready" por eliminação: `data` existe (há comanda aberta),
+  // não é pending nem preparing. Antes da Sprint "Correção — Pedido
+  // Finalizado Sumindo da Mesa" isso só podia ser um pedido "ready"
+  // legado. Hoje `fetchOperations()` também traz pedidos "delivered", que
+  // caem aqui do mesmo jeito — e é o caso comum agora (pedido finalizado
+  // manualmente, aguardando fechar a conta). Rótulo trocado de "Pronto
+  // para servir" para não instruir o operador a servir algo que, no caso
+  // comum, já foi servido.
+  return { tone: "ready", label: "Pronto para fechar", pulse: true };
 }
 
 /**
@@ -147,7 +159,9 @@ export function deriveTableCardState(
  * - `preparing`: azul — mesmo matiz do badge `AdminOrderStatusBadge` para
  *   pedido "Preparando" (`ui/badge.tsx`), para o operador nunca ver cores
  *   diferentes para o mesmo status em telas diferentes.
- * - `ready`: verde — mesma lógica, espelha o badge "Pronto".
+ * - `ready`: verde — sinaliza "nada pendente na cozinha, falta fechar a
+ *   conta" (cobre tanto pedido `ready` legado quanto o caso comum hoje,
+ *   comanda com tudo `delivered`); mesmo tom usado no badge "Pronto".
  * - `waiter_call`/`bill_requested`: violeta/vermelho, cores próprias (sem
  *   backend ainda, mas já reservadas e sem colidir com as de progresso do
  *   pedido acima).

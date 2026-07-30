@@ -45,11 +45,20 @@ export function Badge({ className, variant = "default", dot, children, ...props 
   );
 }
 
+// Sprint "Simplificação do Fluxo de Status" (2026-07-30): MesaFlow não é
+// delivery, o garçom leva o pedido até a mesa — "Pronto"/"Entregue" viram
+// um único "Finalizado". `ready` continua precisando de uma entrada aqui
+// (o `Record` cobre todo `OrderStatus`), mas nenhum pedido novo chega
+// nesse status (ver `order-status-transitions-map.ts`) — a entrada existe
+// só para não quebrar a tipagem caso um pedido antigo, parado em `ready`
+// antes desta mudança, ainda apareça em algum lugar; ela usa o mesmo
+// rótulo/cor de `preparing` de propósito, para nunca aparecer como um 4º
+// estado visível na interface.
 const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; variant: Variant }> = {
-  pending: { label: "Pendente", variant: "muted" },
-  preparing: { label: "Preparando", variant: "warning" },
-  ready: { label: "Pronto", variant: "success" },
-  delivered: { label: "Entregue", variant: "info" },
+  pending: { label: "Pedido realizado", variant: "muted" },
+  preparing: { label: "Em preparo", variant: "warning" },
+  ready: { label: "Em preparo", variant: "warning" },
+  delivered: { label: "Finalizado", variant: "info" },
   cancelled: { label: "Cancelado", variant: "destructive" },
 };
 
@@ -78,10 +87,10 @@ export function OrderStatusBadge({ status, className }: { status: OrderStatus; c
  * cliente, que está fora do escopo desta sprint (só o painel admin).
  */
 const ADMIN_ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; variant: Variant }> = {
-  pending: { label: "Pendente", variant: "muted" },
-  preparing: { label: "Preparando", variant: "info" },
-  ready: { label: "Pronto", variant: "success" },
-  delivered: { label: "Entregue", variant: "muted" },
+  pending: { label: "Pedido realizado", variant: "muted" },
+  preparing: { label: "Em preparo", variant: "info" },
+  ready: { label: "Em preparo", variant: "info" },
+  delivered: { label: "Finalizado", variant: "muted" },
   cancelled: { label: "Cancelado", variant: "destructive" },
 };
 

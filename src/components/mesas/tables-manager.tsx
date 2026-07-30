@@ -193,7 +193,23 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
     // sair, para isolar "foi chamada mas travou no fetch" de "nunca foi chamada".
     pushMesasDebugLog("fetchOperations: chamada iniciada", { trigger });
     try {
-      const response = await fetch("/api/v1/orders?status=pending,preparing,ready&per_page=100");
+      // Sprint "Correção — Pedido Finalizado Sumindo da Mesa" (2026-07-30,
+      // seguinte à Simplificação do Fluxo de Status): `delivered` entrou
+      // aqui porque agora um pedido pode ficar `delivered` bem antes da
+      // conta fechar (botão "Finalizar pedido", por pedido, manual) — antes
+      // dessa mudança, `delivered` só existia por uma fração de segundo,
+      // marcado pelo próprio `close_table_bill` no instante de fechar a
+      // conta, então nunca precisou aparecer aqui como "pedido em aberto".
+      // Sem esse status, um pedido finalizado sumia desta lista assim que
+      // trocava de status — o card da mesa perdia o valor da comanda e
+      // podia regredir para "Aguardando pedido", e `allDelivered` (que
+      // decide se o botão de fechar conta habilita, em `table-drawer.tsx`)
+      // nunca ficava verdadeiro, porque `openOrders` (que vem desta mesma
+      // consulta) nunca conseguia conter um pedido `delivered`. `cancelled`
+      // continua de fora de propósito — pedido cancelado não é comanda
+      // aberta. `ready` continua por segurança (pedido legado que ainda
+      // não foi resolvido desde antes da Simplificação).
+      const response = await fetch("/api/v1/orders?status=pending,preparing,ready,delivered&per_page=100");
       const body = await response.json();
       if (!response.ok) {
         pushMesasDebugLog("fetchOperations: resposta não-ok", { status: response.status, body });
