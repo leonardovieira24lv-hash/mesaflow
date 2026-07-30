@@ -114,8 +114,11 @@ interface OpenSessionOrderRow {
  * `order.id` e a contagem de itens; e, se a 2ª consulta não devolver
  * nenhum pedido, uma 3ª consulta extra (só pedidos por `table_id`, sem
  * filtro de sessão) pra comparar `order_session_id` real desses pedidos
- * contra o `session.id` esperado. Reverter assim que a causa for
- * encontrada.
+ * contra o `session.id` esperado. Também loga o objeto bruto e completo
+ * (via `JSON.stringify`) do primeiro pedido retornado, antes de qualquer
+ * `.map()`/transformação — pra distinguir "dado não veio do banco" de
+ * "dado veio, mas se perde na transformação". Reverter assim que a causa
+ * for encontrada.
  */
 export async function GET(_request: Request, { params }: RouteParams) {
   try {
@@ -172,6 +175,17 @@ export async function GET(_request: Request, { params }: RouteParams) {
         item_count: o.order_items?.length ?? 0,
       })),
     });
+
+    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
+    // Objeto COMPLETO do primeiro pedido, exatamente como veio do
+    // Supabase — antes de qualquer `.map()`/transformação. Se
+    // `order_items` já vier vazio ou ausente aqui, o problema é na
+    // consulta/join; se vier preenchido aqui mas some depois, o problema
+    // é na transformação (`.map()` mais abaixo ou no componente).
+    console.error(
+      "[close-bill][GET][DEBUG] objeto bruto do primeiro pedido (JSON.stringify completo)",
+      JSON.stringify(orders?.[0] ?? null, null, 2),
+    );
 
     // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
     // Se a consulta por order_session_id não trouxe nada, busca TODOS os
