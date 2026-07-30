@@ -118,7 +118,9 @@ interface OpenSessionOrderRow {
  * (via `JSON.stringify`) do primeiro pedido retornado, antes de qualquer
  * `.map()`/transformação — pra distinguir "dado não veio do banco" de
  * "dado veio, mas se perde na transformação". Reverter assim que a causa
- * for encontrada.
+ * for encontrada. Também roda a MESMA consulta com o cliente admin
+ * (service role, ignora RLS) só pra comparar a contagem de itens — se
+ * vier maior que a do cliente normal, confirma que é RLS.
  */
 export async function GET(_request: Request, { params }: RouteParams) {
   try {
@@ -186,6 +188,30 @@ export async function GET(_request: Request, { params }: RouteParams) {
       "[close-bill][GET][DEBUG] objeto bruto do primeiro pedido (JSON.stringify completo)",
       JSON.stringify(orders?.[0] ?? null, null, 2),
     );
+
+    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
+    // Teste de RLS: exatamente a mesma consulta, com o cliente admin
+    // (service role, ignora RLS por completo). Se a contagem aqui vier
+    // maior que a de cima (mesmo cliente normal), a política de SELECT em
+    // `order_items` é a causa confirmada; se vier igual (inclusive igual a
+    // zero), RLS está descartado.
+    const adminForDiagnostics = createAdminClient();
+    const { data: ordersViaAdmin, error: ordersViaAdminError } = await adminForDiagnostics
+      .from("orders")
+      .select("id, status, order_items(name, quantity, price)")
+      .eq("order_session_id", session.id);
+
+    console.error("[close-bill][GET][DEBUG] TESTE DE RLS — mesma consulta com cliente admin (ignora RLS)", {
+      session_id: session.id,
+      count_cliente_normal: orders?.length ?? 0,
+      item_count_cliente_normal: (orders ?? []).reduce((sum, o) => sum + (o.order_items?.length ?? 0), 0),
+      count_cliente_admin: ordersViaAdmin?.length ?? 0,
+      item_count_cliente_admin: (ordersViaAdmin ?? []).reduce(
+        (sum: number, o: OpenSessionOrderRow) => sum + (o.order_items?.length ?? 0),
+        0,
+      ),
+      error_cliente_admin: ordersViaAdminError ? ordersViaAdminError.message : null,
+    });
 
     // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
     // Se a consulta por order_session_id não trouxe nada, busca TODOS os
