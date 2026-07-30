@@ -4,24 +4,26 @@ import { createClient } from "@/lib/supabase/client";
  * Upload de imagem de produto (Sprint "Upload de Imagens dos Produtos",
  * 2026-07-28). Bucket e políticas em `supabase/migrations/0013_product_images_storage.sql`.
  *
- * Fluxo: valida o arquivo → redimensiona/comprime no navegador via Canvas
- * (sem nenhuma biblioteca nova) → envia direto para o Supabase Storage
- * usando o cliente do navegador já autenticado (`@/lib/supabase/client`) —
- * o RLS do bucket garante o isolamento por restaurante, então não existe
- * (nem precisa existir) uma API Route própria para este upload.
+ * Sprint "Editor de Enquadramento da Foto do Produto" (2026-07-29): o
+ * redimensionamento/compressão que antes acontecia aqui (`optimizeImage`,
+ * a partir do arquivo bruto) passou a acontecer dentro do próprio editor de
+ * recorte (`components/cardapio/image-crop-editor.tsx`) — o Canvas de lá já
+ * exporta a imagem no tamanho/qualidade final, então este arquivo só
+ * precisa validar o arquivo bruto (antes de abrir o editor) e enviar o
+ * resultado já pronto pro Storage. Nenhuma biblioteca nova em nenhum dos
+ * dois lugares — só Canvas 2D nativo.
  */
 
 export const PRODUCT_IMAGES_BUCKET = "restaurant-media";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-const MAX_DIMENSION = 1600;
-const JPEG_QUALITY = 0.85;
 
 /** Erro com mensagem já pronta para mostrar ao usuário (nunca detalhe técnico). */
 export class ProductImageError extends Error {}
 
-function validateFile(file: File): void {
+/** Validação do arquivo bruto, logo após a seleção — antes de abrir o editor de recorte. */
+export function validateProductImageFile(file: File): void {
   if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
     throw new ProductImageError("Formato não aceito. Envie uma imagem JPG, JPEG, PNG ou WEBP.");
   }
@@ -30,54 +32,24 @@ function validateFile(file: File): void {
   }
 }
 
-/**
- * Redimensiona (maior lado até `MAX_DIMENSION`) e recomprime como JPEG
- * (`JPEG_QUALITY`) — sempre recodifica, mesmo PNG/WEBP de entrada: fotos de
- * prato não precisam de transparência, e um único formato de saída mantém
- * o `contentType`/extensão do Storage simples e previsíveis. Se o
- * navegador não suportar Canvas 2D (praticamente nunca), usa o arquivo
- * original como fallback em vez de travar o upload.
- */
-async function optimizeImage(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
-  const width = Math.round(bitmap.width * scale);
-  const height = Math.round(bitmap.height * scale);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return file;
-
-  ctx.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
-
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY));
-  return blob ?? file;
-}
-
 function buildPath(restaurantId: string): string {
   return `${restaurantId}/products/${crypto.randomUUID()}.jpg`;
 }
 
-/** Faz upload da imagem já validada/otimizada e devolve a URL pública salva em `menu_items.image_url`. */
-export async function uploadProductImage(restaurantId: string, file: File): Promise<string> {
-  validateFile(file);
-
-  let optimized: Blob;
-  try {
-    optimized = await optimizeImage(file);
-  } catch {
-    throw new ProductImageError("Não foi possível processar essa imagem. Tente outro arquivo.");
-  }
-
+/**
+ * Envia a imagem já recortada/enquadrada pelo editor (Blob JPEG, já no
+ * tamanho e qualidade finais) e devolve a URL pública salva em
+ * `menu_items.image_url`. Sem validação de tipo/tamanho aqui — isso já
+ * aconteceu em `validateProductImageFile`, sobre o arquivo original, antes
+ * do editor abrir.
+ */
+export async function uploadCroppedProductImage(restaurantId: string, blob: Blob): Promise<string> {
   const path = buildPath(restaurantId);
   const supabase = createClient();
 
   const { error } = await supabase.storage
     .from(PRODUCT_IMAGES_BUCKET)
-    .upload(path, optimized, { contentType: "image/jpeg", upsert: false });
+    .upload(path, blob, { contentType: "image/jpeg", upsert: false });
 
   if (error) {
     throw new ProductImageError("Não foi possível enviar a imagem. Verifique sua internet e tente novamente.");

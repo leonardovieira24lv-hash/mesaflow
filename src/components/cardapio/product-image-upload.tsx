@@ -5,7 +5,8 @@ import Image from "next/image";
 import { ImageOff, Loader2, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
-import { uploadProductImage, ProductImageError } from "@/lib/storage/product-images";
+import { ImageCropEditor } from "@/components/cardapio/image-crop-editor";
+import { uploadCroppedProductImage, validateProductImageFile, ProductImageError } from "@/lib/storage/product-images";
 
 interface ProductImageUploadProps {
   /** Usado para montar o caminho do arquivo (`{restaurantId}/products/...`) — o RLS do bucket exige esse prefixo. */
@@ -31,24 +32,46 @@ interface ProductImageUploadProps {
  * feita pelo `product-form.tsx` após salvar com sucesso (mesma lógica que
  * já tratava a troca de imagem), então "remover" não precisou de nenhuma
  * lógica nova, só de um jeito de zerar o campo.
+ *
+ * Sprint "Editor de Enquadramento da Foto do Produto" (2026-07-29,
+ * seguinte): entre selecionar o arquivo e o upload, agora abre
+ * `<ImageCropEditor>` — o usuário ajusta o que vai aparecer no card antes
+ * de qualquer coisa ser enviada. Fluxo: seleciona → valida o arquivo bruto
+ * (`validateProductImageFile`, mesma checagem de tipo/tamanho de sempre) →
+ * abre o editor → só ao clicar "Salvar" no editor é que o recorte final
+ * (já um Blob JPEG) sobe pro Storage (`uploadCroppedProductImage`).
+ * Cancelar no editor não sobe nada — mesmo efeito de nunca ter selecionado
+ * o arquivo.
  */
 export function ProductImageUpload({ restaurantId, value, onChange, disabled }: ProductImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
-  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     // Limpa o valor do input imediatamente — sem isso, selecionar o mesmo
-    // arquivo de novo (ex.: depois de um erro) não dispara `onChange`.
+    // arquivo de novo (ex.: depois de cancelar o editor) não dispara `onChange`.
     event.target.value = "";
     if (!file) return;
 
     setError(null);
-    setIsUploading(true);
     try {
-      const url = await uploadProductImage(restaurantId, file);
+      validateProductImageFile(file);
+      setPendingFile(file);
+    } catch (err) {
+      setError(err instanceof ProductImageError ? err.message : "Não foi possível abrir essa imagem.");
+    }
+  }
+
+  async function handleCropSave(blob: Blob) {
+    setIsUploading(true);
+    setError(null);
+    try {
+      const url = await uploadCroppedProductImage(restaurantId, blob);
       onChange(url);
+      setPendingFile(null);
     } catch (err) {
       setError(
         err instanceof ProductImageError ? err.message : "Não foi possível enviar a imagem. Tente novamente.",
@@ -119,6 +142,14 @@ export function ProductImageUpload({ restaurantId, value, onChange, disabled }: 
       />
 
       {error && <Alert variant="destructive">{error}</Alert>}
+
+      <ImageCropEditor
+        open={pendingFile !== null}
+        file={pendingFile}
+        onCancel={() => setPendingFile(null)}
+        onSave={handleCropSave}
+        isSaving={isUploading}
+      />
     </div>
   );
 }
