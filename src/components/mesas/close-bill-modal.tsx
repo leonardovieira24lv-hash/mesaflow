@@ -21,16 +21,12 @@ const PAYMENT_METHOD_OPTIONS: { value: PaymentMethod; label: string; icon: typeo
   { value: "cash", label: "Dinheiro", icon: Banknote },
 ];
 
-// Formas locais dos dois endpoints que este modal consulta — só os campos
-// realmente usados aqui, não os DTOs inteiros de `orders-list.tsx`.
-interface OrderSummaryRow {
-  id: string;
-  table: { id: string };
-  created_at: string;
-}
-interface OrderDetailRow {
-  id: string;
-  items: { name: string; quantity: number; price: number }[];
+// Forma da resposta de `GET /api/v1/tables/{id}/close-bill` — só os campos
+// realmente usados aqui.
+interface OpenSessionResponse {
+  session_id: string;
+  opened_at: string;
+  orders: { id: string; status: string; items: { name: string; quantity: number; price: number }[] }[];
 }
 
 interface CloseBillModalProps {
@@ -50,7 +46,7 @@ interface ConsolidatedLine {
   unitPrice: number;
 }
 
-function consolidate(orders: OrderDetailRow[]): ConsolidatedLine[] {
+function consolidate(orders: OpenSessionResponse["orders"]): ConsolidatedLine[] {
   const byKey = new Map<string, ConsolidatedLine>();
   for (const order of orders) {
     for (const item of order.items) {
@@ -74,17 +70,29 @@ function consolidate(orders: OrderDetailRow[]): ConsolidatedLine[] {
  * via Realtime (canal já registrado como instável). Uma comanda fechada há
  * pouco tempo por outro cliente/aba, ou pedida entre a última atualização
  * do painel e a abertura deste modal, aparecia com R$ 0,00 e nenhum
- * produto — dado desatualizado numa tela financeira. Agora o modal não
- * recebe mais `openOrders`/`details` nenhum: ao abrir, busca sozinho, na
- * hora, direto da API (`GET /api/v1/orders` + `GET /api/v1/orders/{id}`
- * por pedido encontrado) — os mesmos dois endpoints estáveis de sempre,
- * só chamados no momento certo em vez de reaproveitar estado antigo.
+ * produto — dado desatualizado numa tela financeira. Modal passou a buscar
+ * sozinho ao abrir, em vez de depender de props.
+ *
+ * Sprint "Correção — Fonte Única de Verdade no Carregamento do Modal"
+ * (2026-07-30, seguinte): a busca acima ainda filtrava por
+ * `status=pending,preparing,ready` (`GET /api/v1/orders`) — diverge de
+ * como `close_table_bill` decide o que pertence à comanda (pela
+ * `order_session` aberta, não pelo status do pedido). Um pedido já
+ * `delivered` (ex.: garçom marcou "entregue" na tela de Pedidos bem antes
+ * de "Fechar conta" ser clicado — um fluxo normal do dia a dia) ficava de
+ * fora da consulta, mesmo sendo parte legítima da comanda — daí a tela
+ * aparecer vazia mesmo com a comanda tendo produtos de verdade. Agora usa
+ * `GET /api/v1/tables/{id}/close-bill` (rota nova, só leitura, mesmo
+ * arquivo da rota de fechamento): localiza a `order_session` aberta da
+ * mesa exatamente como `close_table_bill` faz, e devolve todos os pedidos
+ * vinculados a ela, de qualquer status — a mesma fonte de verdade dos
+ * dois lados do fluxo.
  */
 export function CloseBillModal({ open, table, onCancel, onConfirm, isSubmitting, error }: CloseBillModalProps) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [orders, setOrders] = useState<OrderDetailRow[]>([]);
+  const [orders, setOrders] = useState<OpenSessionResponse["orders"]>([]);
   const [openedAt, setOpenedAt] = useState<string | null>(null);
   const now = useMemo(() => new Date().toISOString(), [open]);
 
@@ -96,42 +104,29 @@ export function CloseBillModal({ open, table, onCancel, onConfirm, isSubmitting,
     setLoadError(null);
     setSelectedMethod(null);
 
-    async function loadOpenOrdersForTable() {
-      // 1) Lista de pedidos ainda ativos do restaurante inteiro (mesmo
-      //    endpoint que a tela de Pedidos e o Painel de Mesas já usam) —
-      //    filtra pra esta mesa no cliente, já que o endpoint não tem
-      //    `?table_id=` (não é necessário criar um novo endpoint só pra
-      //    isso: o volume de pedidos ativos por restaurante é pequeno).
-      const listResponse = await fetch("/api/v1/orders?status=pending,preparing,ready&per_page=100");
-      const listBody = (await listResponse.json()) as ApiSuccess<OrderSummaryRow[]> | { error?: { message?: string } };
-      if (!listResponse.ok) {
-        throw new Error("error" in listBody ? (listBody.error?.message ?? "Não foi possível carregar a comanda.") : "Não foi possível carregar a comanda.");
+    async function loadOpenSessionForTable() {
+      // Mesma fonte de verdade que `close_table_bill` usa pra decidir o
+      // que pertence à comanda: a `order_session` aberta da mesa — não o
+      // status dos pedidos (um pedido pode legitimamente já estar
+      // `delivered`, ex.: garçom já marcou "entregue" na tela de Pedidos,
+      // bem antes de "Fechar conta" ser clicado, e ainda assim ser parte
+      // da comanda sendo fechada agora).
+      const response = await fetch(`/api/v1/tables/${table.id}/close-bill`);
+      const body = (await response.json()) as ApiSuccess<OpenSessionResponse> | { error?: { message?: string } };
+      if (!response.ok) {
+        throw new Error(
+          "error" in body ? (body.error?.message ?? "Não foi possível carregar a comanda.") : "Não foi possível carregar a comanda.",
+        );
       }
-
-      const summaries = (listBody as ApiSuccess<OrderSummaryRow[]>).data.filter((o) => o.table.id === table.id);
-
-      // 2) Detalhe (com itens) de cada um — mesmo endpoint que o Drawer já
-      //    usava antes, só que a lista de partida agora é sempre fresca.
-      const details = await Promise.all(
-        summaries.map((summary) =>
-          fetch(`/api/v1/orders/${summary.id}`)
-            .then((r) => r.json())
-            .then((body: ApiSuccess<OrderDetailRow>) => body.data),
-        ),
-      );
 
       if (cancelled) return;
 
-      setOrders(details);
-      setOpenedAt(
-        summaries.reduce<string | null>(
-          (min, o) => (min === null || o.created_at < min ? o.created_at : min),
-          null,
-        ),
-      );
+      const { opened_at, orders: sessionOrders } = (body as ApiSuccess<OpenSessionResponse>).data;
+      setOrders(sessionOrders);
+      setOpenedAt(opened_at);
     }
 
-    loadOpenOrdersForTable()
+    loadOpenSessionForTable()
       .catch(() => {
         if (!cancelled) setLoadError("Não foi possível carregar os dados da comanda. Tente novamente.");
       })
