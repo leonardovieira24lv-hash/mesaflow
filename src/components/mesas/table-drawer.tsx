@@ -94,8 +94,21 @@ interface TableDrawerProps {
  *   hora, direto da API, em vez de depender do estado que este componente
  *   carrega uma vez e mantém "vivo" só via Realtime (canal já registrado
  *   como instável). `openOrders`/`details` continuam existindo aqui só
- *   para o resto do Drawer (lista de pedidos, laço de marcar como
- *   entregue) — não foram removidos, só pararam de alimentar o modal.
+ *   para o resto do Drawer (lista de pedidos exibida no corpo do Drawer,
+ *   `allReady` do botão) — não foram removidos, só pararam de alimentar
+ *   o modal.
+ *
+ *   Sprint "Refatoração — Backend Assume Marcação de Entregue" (2026-07-30,
+ *   seguinte): `handleConfirmPayment` ainda decidia quais pedidos marcar
+ *   como `delivered` a partir de `openOrders` antes de chamar o
+ *   fechamento — a mesma dependência de estado cacheado que a correção
+ *   anterior só tinha removido do `<CloseBillModal>`, não da ação de
+ *   confirmar. Removido: o frontend só pede o fechamento
+ *   (`PATCH tables/{id}/close-bill`, sem nenhum PATCH de pedido antes) —
+ *   `close_table_bill` (`0020_close_table_bill_marks_delivered.sql`) busca
+ *   os pedidos reais da sessão no banco e marca como `delivered` o que
+ *   ainda não estiver terminal, na mesma transação que fecha a sessão e
+ *   libera a mesa.
  * - "Solicitar impressão" — `window.print()` sobre uma view formatada
  *   (`#print-comanda-drawer`, ver `globals.css`). Não existe impressora térmica
  *   integrada; isto imprime pelo navegador, real e funcional, não decorativo.
@@ -312,35 +325,24 @@ export function TableDrawer({
   const allReady = openOrders.length > 0 && openOrders.every((o) => o.status === "ready");
 
   /**
-   * Sprint Pós-Auditoria (RC1.1) — item 3: antes, o laço de PATCH sequencial
-   * lançava no primeiro erro e esquecia o que já tinha dado certo. Se o
-   * atendente tentasse de novo antes do Realtime atualizar `openOrders`
-   * (prop vinda do pai), o pedido que JÁ estava `delivered` era reenviado —
-   * e a máquina de estados rejeita `delivered → delivered`, um erro confuso
-   * que não deixa claro que parte do trabalho já tinha sido feita.
-   *
-   * Duas mudanças, nenhuma delas toca a máquina de estados
-   * (`lib/orders/status-transitions.ts` continua exatamente igual):
-   *
-   *  1. Filtra `openOrders` para só tentar pedidos que ainda não estão num
-   *     estado terminal — um retry nunca mais reenvia um pedido que já foi
-   *     fechado com sucesso, mesmo que `openOrders` ainda esteja
-   *     desatualizado no momento do clique.
-   *  2. Se algo falhar no meio do caminho, a mensagem de erro conta
-   *     exatamente quantos pedidos já foram fechados e quantos ainda
-   *     faltam — e `onOrdersChanged()` é chamado imediatamente (não só no
-   *     caminho de sucesso), então o próximo clique já parte de um estado
-   *     atualizado, sem esperar o Realtime.
-   */
-  /**
    * Sprint "Fechamento de Conta com Registro de Venda" (2026-07-29): antes
    * chamado direto pelo botão "Fechar conta"/"Finalizar atendimento", agora
    * só roda a partir da confirmação em `<CloseBillModal>`, já com a forma
-   * de pagamento escolhida. Passo 1 (marcar cada pedido aberto como
-   * `delivered`) é exatamente o mesmo laço de sempre — nenhuma mudança
-   * nele. Passo 2 muda: em vez de `PATCH tables/{id}` direto, chama
-   * `PATCH tables/{id}/close-bill` (rota nova), que fecha a `order_session`
-   * com a forma de pagamento e só então libera a mesa.
+   * de pagamento escolhida.
+   *
+   * Sprint "Refatoração — Backend Assume Marcação de Entregue" (2026-07-30,
+   * seguinte): esta função chegou a ter um laço que marcava cada pedido de
+   * `openOrders` como `delivered` antes de chamar o fechamento — removido.
+   * `openOrders` é estado de interface (cacheado em `tables-manager.tsx`,
+   * atualizado só por Realtime), e uma escrita no banco não pode depender
+   * dele: se estivesse desatualizado, o laço deixava de tocar o pedido
+   * real, e o fechamento falhava sem motivo aparente pro atendente. Agora
+   * esta função só *pede* o fechamento — `PATCH tables/{id}/close-bill`
+   * (que chama `close_table_bill`, `0020_close_table_bill_marks_delivered.sql`)
+   * busca os pedidos reais da sessão direto no banco e marca como
+   * `delivered` o que ainda não estiver num status terminal, na mesma
+   * transação que fecha a sessão e libera a mesa. Nenhuma decisão de quais
+   * registros mudam depende mais de `openOrders`.
    */
   async function handleConfirmPayment(paymentMethod: PaymentMethod) {
     if (isClosingBillRef.current) return;
@@ -349,31 +351,7 @@ export function TableDrawer({
     setIsClosingBill(true);
     setCloseBillError(null);
 
-    const pendingOrders = openOrders.filter((o) => o.status !== "delivered" && o.status !== "cancelled");
-    let closedCount = 0;
-
     try {
-      for (const order of pendingOrders) {
-        const response = await fetch(`/api/v1/orders/${order.id}/status`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "delivered" }),
-        });
-
-        if (!response.ok) {
-          const body = await response.json().catch(() => null);
-          const remaining = pendingOrders.length - closedCount;
-          onOrdersChanged();
-          throw new Error(
-            closedCount > 0
-              ? `${closedCount} de ${pendingOrders.length} pedidos foram fechados. ${remaining === 1 ? "Falta 1" : `Faltam ${remaining}`} — ${body?.error?.message ?? "tente novamente"}.`
-              : (body?.error?.message ?? "Não foi possível fechar os pedidos. Tente novamente."),
-          );
-        }
-
-        closedCount += 1;
-      }
-
       const closeBillResponse = await fetch(`/api/v1/tables/${table.id}/close-bill`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -381,11 +359,7 @@ export function TableDrawer({
       });
       const closeBillBody = await closeBillResponse.json();
       if (!closeBillResponse.ok) {
-        onOrdersChanged();
-        throw new Error(
-          closeBillBody?.error?.message ??
-            "Todos os pedidos foram fechados, mas não foi possível registrar o pagamento e liberar a mesa. Tente novamente.",
-        );
+        throw new Error(closeBillBody?.error?.message ?? "Não foi possível fechar a conta. Tente novamente.");
       }
 
       toast.success("Pagamento registrado", `${table.name} foi liberada.`);
@@ -394,6 +368,7 @@ export function TableDrawer({
       setCloseBillModalOpen(false);
       onClose();
     } catch (err) {
+      onOrdersChanged();
       setCloseBillError(err instanceof Error ? err.message : "Não foi possível fechar a conta.");
     } finally {
       setIsClosingBill(false);

@@ -51,12 +51,25 @@ interface CloseTableBillResult {
  * concreta), a comanda ficava fechada pra sempre e a mesa presa em
  * "ocupada", sem nenhuma tentativa seguinte conseguir corrigir sozinha —
  * a próxima chamada só encontrava "nenhuma comanda aberta", porque de
- * fato não tinha mais. Agora as duas escritas (+ as mesmas validações de
- * sempre: sessão existe, nenhum pedido da sessão ainda não-terminal)
- * vivem dentro de `close_table_bill` (`0019_atomic_close_table_bill.sql`),
- * uma função `security definer` chamada via `.rpc()` — uma única
- * transação, ou tudo acontece ou nada acontece. Contrato da rota
- * (payload, respostas, mensagens de erro) não mudou.
+ * fato não tinha mais. As duas escritas passaram a viver dentro de
+ * `close_table_bill`, uma função `security definer` chamada via `.rpc()`
+ * — uma única transação, ou tudo acontece ou nada acontece.
+ *
+ * Sprint "Refatoração — Backend Assume Marcação de Entregue" (2026-07-30,
+ * seguinte): a versão anterior de `close_table_bill` ainda *recusava* o
+ * fechamento se sobrasse pedido não-terminal na sessão (`P0002`) —
+ * empurrando pro chamador a responsabilidade de já ter marcado tudo como
+ * `delivered` antes de chamar aqui. Só que quem fazia essa marcação
+ * (`handleConfirmPayment`, `table-drawer.tsx`) decidia quais pedidos
+ * marcar a partir de `openOrders`, estado de interface que podia estar
+ * desatualizado — daí o fechamento continuar falhando mesmo depois da
+ * correção de atomicidade. Agora `close_table_bill`
+ * (`0020_close_table_bill_marks_delivered.sql`) busca os pedidos reais da
+ * sessão direto no banco e marca como `delivered` qualquer um ainda
+ * não-terminal, na mesma transação — o frontend só pede o fechamento,
+ * nenhuma decisão de quais registros mudam depende mais de cache de
+ * interface. O código de erro `P0002` deixou de existir (nada mais rejeita
+ * por "pedido em aberto" — o próprio fechamento resolve isso).
  */
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
@@ -77,16 +90,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       .maybeSingle();
 
     if (error) {
-      // Mesmas duas validações de sempre, agora levantadas de dentro da
-      // função (códigos de erro customizados definidos nela).
+      // A única validação que ainda pode recusar o fechamento: a sessão
+      // aberta não existe (levantada de dentro da função, código de erro
+      // customizado). Não existe mais rejeição por "pedido em aberto" — a
+      // própria função marca os pendentes como entregues antes de fechar.
       if (error.code === "P0001") {
         throw new AppError("NOT_FOUND", "Esta mesa não tem uma comanda aberta para fechar.");
-      }
-      if (error.code === "P0002") {
-        throw new AppError(
-          "CONFLICT",
-          "Ainda há pedidos em aberto nesta mesa. Finalize-os antes de fechar a conta.",
-        );
       }
       throw new AppError("INTERNAL_ERROR", "Não foi possível fechar a conta. Tente novamente.");
     }
