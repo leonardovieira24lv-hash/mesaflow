@@ -167,10 +167,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   const [qrTable, setQrTable] = useState<TableEntity | null>(null);
   const [drawerTable, setDrawerTable] = useState<TableEntity | null>(null);
 
-  // Sprint 2 de Correção: id da mesa que está sendo aberta agora (PATCH em
-  // andamento) — evita um duplo clique disparar duas requisições.
-  const [openingTableId, setOpeningTableId] = useState<string | null>(null);
-
   // Estado puramente visual (busca + filtro de status na grade). Não é
   // consumido por nenhuma API/hook — só decide o que é renderizado.
   const [searchQuery, setSearchQuery] = useState("");
@@ -620,44 +616,20 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   }
 
   /**
-   * Sprint 2 de Correção — bug da auditoria: "Abrir mesa" só abria o
-   * Drawer, sem executar a ação que o rótulo promete. Agora, para uma mesa
-   * `livre`, marca de fato `status: "ocupada"` (`PATCH /api/v1/tables/{id}`,
-   * mesmo endpoint já usado pelo modal de edição) antes de abrir o Drawer —
-   * a atualização local (`setTables`) reflete na grade imediatamente, e a
-   * assinatura Realtime acima propaga para qualquer outro painel aberto.
-   * Para uma mesa que já não está livre, mantém o comportamento de sempre
-   * (só abre o Drawer para consulta/gestão).
+   * Sprint "Correção — Abrir Mesa Não Deve Mudar Status" (2026-07-30):
+   * antes, esta função marcava `status: "ocupada"` (`PATCH /api/v1/tables/{id}`)
+   * sempre que a mesa clicada estivesse `livre`, antes de abrir o Drawer —
+   * decisão de uma sprint anterior ("Sprint 2 de Correção"), que o dono
+   * decidiu reverter: abrir/visualizar uma mesa nunca deve alterar o estado
+   * dela. Agora esta função só abre o Drawer, sempre, sem nenhuma escrita —
+   * a mesa só passa a `"ocupada"` quando o primeiro pedido real chega
+   * (`createPublicOrder`, `src/lib/orders/create-order.ts`, inalterado), e
+   * só volta a `"livre"` ao fechar a conta (`close_table_bill`, também
+   * inalterado) ou via "Liberar mesa" (`handleReleaseTable`, também
+   * inalterado).
    */
-  async function handleOpenTable(table: TableEntity) {
-    if (table.status !== "livre") {
-      setDrawerTable(table);
-      return;
-    }
-
-    setOpeningTableId(table.id);
-    try {
-      const response = await fetch(`/api/v1/tables/${table.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "ocupada" }),
-      });
-      const body = await response.json();
-
-      if (!response.ok) {
-        const apiError = body as ApiError;
-        toast.error("Não foi possível abrir a mesa", apiError?.error?.message ?? "Tente novamente.");
-        return;
-      }
-
-      const opened = fromDto(body.data as TableDto);
-      setTables((prev) => prev.map((t) => (t.id === opened.id ? opened : t)));
-      setDrawerTable(opened);
-    } catch {
-      toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
-    } finally {
-      setOpeningTableId(null);
-    }
+  function handleOpenTable(table: TableEntity) {
+    setDrawerTable(table);
   }
 
   function openCreateModal() {
@@ -1002,7 +974,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
 
             const dotClass = isFilled ? "bg-white/70" : TABLE_CARD_TONE_DOT_CLASSES[state.tone];
             const ordersCount = data?.orders.length ?? 0;
-            const actionLabel = table.status === "livre" ? "Abrir mesa" : "Ver mesa";
+            // Sprint "Correção — Abrir Mesa Não Deve Mudar Status"
+            // (2026-07-30): rótulo único — o clique sempre só abre o
+            // Drawer agora, para qualquer status; manter "Abrir mesa" só
+            // pra mesas livres passaria a impressão errada de que algo
+            // muda ao clicar.
+            const actionLabel = "Ver mesa";
             const toneClass = TABLE_CARD_TONE_CLASSES[state.tone];
             // LOG 6 — classe de cor efetivamente aplicada ao card no render.
             pushMesasDebugLog("render do card da mesa", {
@@ -1173,10 +1150,9 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                   type="button"
                   variant="ghost"
                   size="sm"
-                  isLoading={openingTableId === table.id}
                   onClick={(e) => {
                     e.stopPropagation();
-                    void handleOpenTable(table);
+                    handleOpenTable(table);
                   }}
                   className={cn(
                     "z-10 mt-auto h-7 w-full justify-center border text-xs font-semibold",
