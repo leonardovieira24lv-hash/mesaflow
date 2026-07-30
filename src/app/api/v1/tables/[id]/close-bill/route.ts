@@ -105,6 +105,17 @@ interface OpenSessionOrderRow {
  * a `order_session` aberta da mesa e devolve TODOS os pedidos vinculados a
  * ela, de qualquer status — a mesma fonte de verdade dos dois lados.
  * Somente leitura, nenhuma escrita — `PATCH` abaixo continua idêntico.
+ *
+ * ⚠️ DIAGNÓSTICO TEMPORÁRIO (2026-07-30, seguinte): mesmo depois da rota
+ * acima existir, o modal continuou reportando comanda vazia. Este `GET`
+ * está, temporariamente, logando (`console.error`, tag `[DEBUG]`): o
+ * `session.id` encontrado logo após a 1ª consulta; para cada pedido
+ * devolvido pela 2ª consulta (`order_session_id = session.id`), o
+ * `order.id` e a contagem de itens; e, se a 2ª consulta não devolver
+ * nenhum pedido, uma 3ª consulta extra (só pedidos por `table_id`, sem
+ * filtro de sessão) pra comparar `order_session_id` real desses pedidos
+ * contra o `session.id` esperado. Reverter assim que a causa for
+ * encontrada.
  */
 export async function GET(_request: Request, { params }: RouteParams) {
   try {
@@ -130,6 +141,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
       throw new AppError("NOT_FOUND", "Esta mesa não tem uma comanda aberta para fechar.");
     }
 
+    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
+    console.error("[close-bill][GET][DEBUG] session.id encontrado", {
+      table_id: id,
+      session_id: session.id,
+      opened_at: session.opened_at,
+    });
+
     // Todos os pedidos da sessão, sem filtro de status — um pedido já
     // `delivered` continua fazendo parte da comanda que está sendo fechada.
     const {
@@ -142,6 +160,36 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     if (ordersError) {
       throw new AppError("INTERNAL_ERROR", "Não foi possível carregar os pedidos desta comanda.");
+    }
+
+    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
+    console.error("[close-bill][GET][DEBUG] pedidos retornados pela consulta por order_session_id", {
+      session_id: session.id,
+      count: orders?.length ?? 0,
+      orders: (orders ?? []).map((o) => ({
+        order_id: o.id,
+        order_session_id: session.id, // a própria condição do WHERE — incluído aqui só pra facilitar comparação visual na mesma linha
+        item_count: o.order_items?.length ?? 0,
+      })),
+    });
+
+    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
+    // Se a consulta por order_session_id não trouxe nada, busca TODOS os
+    // pedidos da mesa (sem filtro de sessão) pra comparar: o que essa
+    // segunda consulta mostrar em `order_session_id` é o valor real que os
+    // pedidos têm — pode ser outra sessão, ou `null`.
+    if (!orders || orders.length === 0) {
+      const { data: allTableOrders, error: allTableOrdersError } = await supabase
+        .from("orders")
+        .select("id, order_session_id, table_id, status")
+        .eq("table_id", id);
+
+      console.error("[close-bill][GET][DEBUG] nenhum pedido encontrado por order_session_id — comparação com todos os pedidos da mesa", {
+        table_id: id,
+        session_id_esperado: session.id,
+        error: allTableOrdersError ? allTableOrdersError.message : null,
+        orders: allTableOrders,
+      });
     }
 
     return apiSuccess({
