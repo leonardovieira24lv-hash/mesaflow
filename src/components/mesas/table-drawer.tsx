@@ -17,6 +17,7 @@ import {
   TABLE_CARD_FILLED_TONES,
   TABLE_CARD_TONE_DOT_CLASSES,
   TABLE_CARD_TONE_CLASSES,
+  TABLE_CARD_TONE_DARK_TEXT,
   type TableCardAlert,
 } from "@/lib/mesas/derive-table-card-state";
 import type { OrderListRow } from "@/components/pedidos/orders-list";
@@ -473,6 +474,10 @@ export function TableDrawer({
     alerts,
   );
   const isFilled = TABLE_CARD_FILLED_TONES.includes(cardState.tone);
+  // Sprint UI-02 (2026-07-31): ver `TABLE_CARD_TONE_DARK_TEXT` em
+  // `derive-table-card-state.ts` — `new_order` tem fundo claro
+  // (`ds2-warning`), precisa de texto escuro em vez do branco genérico.
+  const isDarkOnLight = TABLE_CARD_TONE_DARK_TEXT.includes(cardState.tone);
 
   return (
     <dialog
@@ -503,13 +508,21 @@ export function TableDrawer({
               <span
                 className={cn(
                   "inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide",
-                  isFilled ? "bg-white/20 text-white" : "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
+                  isFilled
+                    ? isDarkOnLight
+                      ? "bg-ds2-warning-foreground/15 text-ds2-warning-foreground"
+                      : "bg-white/20 text-white"
+                    : "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
                 )}
               >
                 <span
                   className={cn(
                     "h-1.5 w-1.5 shrink-0 rounded-full",
-                    isFilled ? "bg-white/70" : TABLE_CARD_TONE_DOT_CLASSES[cardState.tone],
+                    isFilled
+                      ? isDarkOnLight
+                        ? "bg-ds2-warning-foreground/70"
+                        : "bg-white/70"
+                      : TABLE_CARD_TONE_DOT_CLASSES[cardState.tone],
                   )}
                   aria-hidden
                 />
@@ -567,7 +580,12 @@ export function TableDrawer({
               size="icon"
               onClick={onClose}
               aria-label="Fechar"
-              className={cn(isFilled && "text-white hover:bg-white/15 hover:text-white")}
+              className={cn(
+                isFilled &&
+                  (isDarkOnLight
+                    ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
+                    : "text-white hover:bg-white/15 hover:text-white"),
+              )}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -575,14 +593,21 @@ export function TableDrawer({
 
           <div className="flex items-end justify-between gap-2">
             <div className="flex flex-col gap-0.5">
-              <span className={cn("text-xs", isFilled ? "text-white/80" : "text-muted-foreground")}>Valor atual</span>
+              <span
+                className={cn(
+                  "text-xs",
+                  isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/80" : "text-white/80") : "text-muted-foreground",
+                )}
+              >
+                Valor atual
+              </span>
               <span className="font-numeric text-2xl font-bold leading-tight tabular-nums">{formatCurrency(subtotal)}</span>
             </div>
             {openedAt && (
               <span
                 className={cn(
                   "inline-flex items-center gap-1 text-xs",
-                  isFilled ? "text-white/80" : "text-muted-foreground",
+                  isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/80" : "text-white/80") : "text-muted-foreground",
                 )}
               >
                 <Clock3 className="h-3.5 w-3.5 shrink-0" aria-hidden />

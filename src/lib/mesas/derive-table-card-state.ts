@@ -234,15 +234,13 @@ export const TABLE_CARD_TONE_CLASSES: Record<TableCardTone, string> = {
  * contorno, não preenchimento, então continua usando as cores neutras de
  * texto.
  *
- * ATENÇÃO (risco documentado na Sprint UI-01): `new_order` usa
- * `ds2-warning-foreground` ESCURO (fundo claro), diferente dos outros três
- * (fundo escuro, texto claro). Quem renderiza (`TablesManager`/
- * `TableDrawer`) hoje assume "tom preenchido = texto branco" de forma
- * genérica para os textos secundários — isso fica incorreto
- * especificamente para `new_order` assim que a Etapa 2 ativar `.ds2-dark`
- * de verdade. Não corrigido nesta etapa (fora do escopo definido: só
- * tokens/`derive-table-card-state`/animações) — sinalizado para revisão
- * antes ou durante a Etapa 2.
+ * RESOLVIDO na Sprint UI-02: `new_order` usa `ds2-warning-foreground`
+ * ESCURO (fundo claro), diferente dos outros três (fundo escuro, texto
+ * claro). Antes desta sprint, `TablesManager`/`TableDrawer` assumiam "tom
+ * preenchido = texto branco" de forma genérica para os textos secundários
+ * — incorreto para `new_order`. Ver `TABLE_CARD_TONE_DARK_TEXT` abaixo,
+ * que os dois arquivos agora consultam para escolher a variante certa de
+ * texto por tom.
  */
 export const TABLE_CARD_FILLED_TONES: readonly TableCardTone[] = ["new_order", "preparing", "ready", "bill_requested"];
 
@@ -255,3 +253,17 @@ export const TABLE_CARD_TONE_DOT_CLASSES: Record<TableCardTone, string> = {
   ready: "bg-ds2-success",
   bill_requested: "bg-ds2-danger",
 };
+
+/**
+ * Sprint UI-02 (Ativação DS2 no Painel de Mesas, 2026-07-31): resolve a
+ * raiz do risco sinalizado na Etapa 1 — os textos/ícones secundários de um
+ * tile preenchido (`TABLE_CARD_FILLED_TONES`) assumiam texto branco de
+ * forma genérica (`isFilled ? "text-white..." : ...`). Isso é verdade para
+ * `preparing`/`ready`/`bill_requested` (fundo escuro, `ds2-*-foreground` é
+ * branco mesmo) mas é o oposto para `new_order`: `ds2-warning` é um fundo
+ * CLARO, `ds2-warning-foreground` é escuro (`0 0% 8%`). Esta lista existe
+ * pra `TablesManager`/`TableDrawer` saberem qual dos dois casos aplicar —
+ * é a distinção real entre os tons, não um caso especial temporário. Se um
+ * tom novo de fundo claro for adicionado no futuro, ele entra aqui.
+ */
+export const TABLE_CARD_TONE_DARK_TEXT: readonly TableCardTone[] = ["new_order"];

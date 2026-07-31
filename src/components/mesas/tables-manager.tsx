@@ -44,6 +44,7 @@ import {
   TABLE_CARD_TONE_CLASSES,
   TABLE_CARD_FILLED_TONES,
   TABLE_CARD_TONE_DOT_CLASSES,
+  TABLE_CARD_TONE_DARK_TEXT,
   type TableCardTone,
   type TableCardAlert,
 } from "@/lib/mesas/derive-table-card-state";
@@ -887,7 +888,24 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   ];
 
   return (
-    <div className="flex flex-col gap-5">
+    /**
+     * Sprint UI-02 (Ativação DS2 no Painel de Mesas, 2026-07-31): escopo
+     * de `.ds2-dark` aplicado aqui, dentro do próprio componente — não em
+     * `(admin)/mesas/page.tsx` nem em `(admin)/layout.tsx` (que continuam
+     * intocados, compartilhados por todas as outras telas admin).
+     *
+     * `-m-4 md:-m-6` cancela exatamente o `p-4 md:p-6` do `<main>` em
+     * `(admin)/layout.tsx` — sem editar aquele arquivo. O `<main>` também
+     * tem `bg-muted/30`; sem isso, sobraria uma faixa cinza-clara (o
+     * padding dele) ao redor do conteúdo grafite-escuro da DS2. Com a
+     * margem negativa, este wrapper "vaza" até a borda de `<main>`, e o
+     * `bg-ds2-background` + `p-4 md:p-6` (nossos, substituindo o padding
+     * cancelado) cobrem essa faixa por dentro. Sidebar/Header (`.dark`,
+     * fora deste componente) continuam na paleta atual — essa costura
+     * entre os dois temas é esperada nesta etapa, não um bug.
+     */
+    <div className="ds2-dark -m-4 bg-ds2-background p-4 md:-m-6 md:p-6">
+      <div className="flex flex-col gap-5">
       {showQrDebugBox && (
         <div className="flex flex-col gap-1.5 rounded-xl border-2 border-dashed border-destructive bg-destructive/5 p-3 font-mono text-[11px] leading-relaxed text-foreground">
           <p className="font-sans text-xs font-bold uppercase tracking-wide text-destructive">
@@ -1042,9 +1060,18 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
               label: state.label,
             });
             const isFilled = TABLE_CARD_FILLED_TONES.includes(state.tone);
+            // Sprint UI-02 (2026-07-31): ver `TABLE_CARD_TONE_DARK_TEXT` —
+            // `new_order` tem fundo claro (`ds2-warning`), então precisa de
+            // texto/ícone ESCURO em vez do branco genérico usado pelos
+            // outros tons preenchidos.
+            const isDarkOnLight = TABLE_CARD_TONE_DARK_TEXT.includes(state.tone);
             const isFlashing = flashingIds.has(table.id);
 
-            const dotClass = isFilled ? "bg-white/70" : TABLE_CARD_TONE_DOT_CLASSES[state.tone];
+            const dotClass = isFilled
+              ? isDarkOnLight
+                ? "bg-ds2-warning-foreground/70"
+                : "bg-white/70"
+              : TABLE_CARD_TONE_DOT_CLASSES[state.tone];
             const ordersCount = data?.orders.length ?? 0;
             // Sprint "Destaque de Pedido Não Processado" (2026-07-31):
             // contagem só pra exibição do badge ("1 NOVO"/"2 NOVOS") — não
@@ -1099,7 +1126,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                   aria-hidden
                   className={cn(
                     "pointer-events-none absolute -bottom-2 -right-2 h-11 w-11",
-                    isFilled ? "text-white/15" : "text-muted-foreground/10",
+                    isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/15" : "text-white/15") : "text-muted-foreground/10",
                   )}
                 />
 
@@ -1114,7 +1141,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     aria-label={`Ver QR Code de ${table.name}`}
                     className={cn(
                       "h-8 w-8 opacity-70 hover:opacity-100",
-                      isFilled ? "text-white hover:bg-white/15 hover:text-white" : "text-muted-foreground",
+                      isFilled
+                        ? isDarkOnLight
+                          ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
+                          : "text-white hover:bg-white/15 hover:text-white"
+                        : "text-muted-foreground",
                     )}
                   >
                     <QrCode className="h-3.5 w-3.5" />
@@ -1129,7 +1160,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     aria-label={`Editar ${table.name}`}
                     className={cn(
                       "h-8 w-8 opacity-70 hover:opacity-100",
-                      isFilled ? "text-white hover:bg-white/15 hover:text-white" : "text-muted-foreground",
+                      isFilled
+                        ? isDarkOnLight
+                          ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
+                          : "text-white hover:bg-white/15 hover:text-white"
+                        : "text-muted-foreground",
                     )}
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -1144,7 +1179,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     aria-label={`Excluir ${table.name}`}
                     className={cn(
                       "h-8 w-8 opacity-70 hover:opacity-100",
-                      isFilled ? "text-white hover:bg-white/15 hover:text-white" : "text-destructive",
+                      isFilled
+                        ? isDarkOnLight
+                          ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
+                          : "text-white hover:bg-white/15 hover:text-white"
+                        : "text-destructive",
                     )}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -1155,7 +1194,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 <span
                   className={cn(
                     "z-10 pr-14 font-numeric text-2xl font-bold leading-none tabular-nums",
-                    isFilled ? "text-white" : "text-foreground",
+                    isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-foreground",
                   )}
                 >
                   {table.name}
@@ -1165,7 +1204,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 <span
                   className={cn(
                     "z-10 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                    isFilled ? "bg-white/20 text-white" : "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
+                    isFilled
+                      ? isDarkOnLight
+                        ? "bg-ds2-warning-foreground/15 text-ds2-warning-foreground"
+                        : "bg-white/20 text-white"
+                      : "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
                   )}
                 >
                   <span className={cn("h-1 w-1 shrink-0 rounded-full", dotClass)} aria-hidden />
@@ -1230,7 +1273,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     <span
                       className={cn(
                         "font-numeric text-lg font-bold leading-tight tabular-nums",
-                        isFilled ? "text-white" : "text-foreground",
+                        isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-foreground",
                       )}
                     >
                       {formatCurrency(data.totalAmount)}
@@ -1239,7 +1282,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                       <span
                         className={cn(
                           "inline-flex items-center gap-1 text-[10px]",
-                          isFilled ? "text-white/70" : "text-muted-foreground",
+                          isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/70" : "text-white/70") : "text-muted-foreground",
                         )}
                       >
                         <Clock3 className="h-2.5 w-2.5 shrink-0" aria-hidden />
@@ -1248,7 +1291,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     )}
                   </div>
                 ) : (
-                  <span className={cn("z-10 text-[11px]", isFilled ? "text-white/70" : "text-muted-foreground")}>
+                  <span
+                    className={cn(
+                      "z-10 text-[11px]",
+                      isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/70" : "text-white/70") : "text-muted-foreground",
+                    )}
+                  >
                     Sem pedidos em aberto
                   </span>
                 )}
@@ -1258,7 +1306,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                   <div
                     className={cn(
                       "z-10 flex items-center gap-2.5 text-[10px]",
-                      isFilled ? "text-white/80" : "text-muted-foreground",
+                      isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/80" : "text-white/80") : "text-muted-foreground",
                     )}
                   >
                     {ordersCount > 0 && (
@@ -1288,7 +1336,9 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                   className={cn(
                     "z-10 mt-auto h-7 w-full justify-center border text-xs font-semibold",
                     isFilled
-                      ? "border-white/25 bg-white/10 text-white hover:bg-white/20"
+                      ? isDarkOnLight
+                        ? "border-ds2-warning-foreground/25 bg-ds2-warning-foreground/10 text-ds2-warning-foreground hover:bg-ds2-warning-foreground/20"
+                        : "border-white/25 bg-white/10 text-white hover:bg-white/20"
                       : "border-border bg-surface hover:bg-muted",
                   )}
                 >
@@ -1377,6 +1427,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           }}
         />
       )}
+      </div>
     </div>
   );
 }
