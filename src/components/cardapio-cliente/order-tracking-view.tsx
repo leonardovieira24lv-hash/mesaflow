@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import { RestaurantHeader } from "@/components/cardapio-cliente/restaurant-header";
 import { OrderStatusBadge } from "@/components/ui/badge";
 import { OrderStatusTimeline } from "@/components/cardapio-cliente/order-status-timeline";
+import { ButtonLink } from "@/components/ui/button-link";
+import { ROUTES } from "@/constants/routes";
+import { withMesaQuery } from "@/lib/cliente-url";
 import type { PublicOrderStatus } from "@/lib/orders/get-public-order-status";
 import type { ApiSuccess } from "@/types/api";
 import type { OrderStatus } from "@/types/domain";
@@ -13,6 +17,15 @@ interface OrderTrackingViewProps {
   orderId: string;
   restaurantName: string;
   initialOrder: PublicOrderStatus;
+  /**
+   * Sprint "Continuar Comprando" (2026-07-31): `token` da mesa, só quando
+   * a `order_session` dela ainda está aberta (`getOrderTableContext`,
+   * resolvido no Server Component) — controla se o botão de volta ao
+   * cardápio aparece. `null` cobre tanto "sem mesa associada" quanto
+   * "sessão já fechada" (conta paga, mesa liberada); nesses casos a tela
+   * de acompanhamento continua igual a antes, sem o botão.
+   */
+  tableToken: string | null;
 }
 
 const POLL_INTERVAL_MS = 5_000;
@@ -40,7 +53,7 @@ const TERMINAL_STATUSES: OrderStatus[] = ["delivered", "cancelled"];
  * canal autorizado, não `postgres_changes` bruto) fica registrada como
  * pendência para a próxima Sprint.
  */
-export function OrderTrackingView({ slug, orderId, restaurantName, initialOrder }: OrderTrackingViewProps) {
+export function OrderTrackingView({ slug, orderId, restaurantName, initialOrder, tableToken }: OrderTrackingViewProps) {
   const [order, setOrder] = useState<PublicOrderStatus>(initialOrder);
   const isTerminal = TERMINAL_STATUSES.includes(order.status);
 
@@ -78,6 +91,13 @@ export function OrderTrackingView({ slug, orderId, restaurantName, initialOrder 
           <span className="text-sm font-medium text-foreground">Status atual</span>
           <OrderStatusBadge status={order.status} />
         </div>
+
+        {tableToken && (
+          <ButtonLink href={withMesaQuery(ROUTES.clienteMenu(slug), tableToken)} className="w-full justify-center">
+            <Plus className="h-4 w-4" />
+            Continuar comprando
+          </ButtonLink>
+        )}
 
         <OrderStatusTimeline status={order.status} />
 

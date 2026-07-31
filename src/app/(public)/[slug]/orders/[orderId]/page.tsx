@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { AppError } from "@/lib/api/errors";
 import { resolveRestaurantBySlug } from "@/lib/orders/resolve-public-context";
 import { getPublicOrderStatus } from "@/lib/orders/get-public-order-status";
+import { getOrderTableContext } from "@/lib/orders/get-order-table-context";
 import { EmptyState } from "@/components/ui/empty-state";
 import { OrderTrackingView } from "@/components/cardapio-cliente/order-tracking-view";
 
@@ -22,6 +23,14 @@ export const dynamic = "force-dynamic";
  * seguintes via polling do próprio endpoint público, feito dentro do
  * `<OrderTrackingView>` (Client Component) — ver o comentário lá sobre por
  * que não é uma assinatura Realtime anônima.
+ *
+ * Sprint "Continuar Comprando" (2026-07-31): `getOrderTableContext` roda
+ * só nesta carga inicial (Server Component), fora do contrato 3.4 —
+ * resolve o `token` da mesa e se a `order_session` ainda está aberta, para
+ * `<OrderTrackingView>` decidir se mostra o botão de volta ao cardápio.
+ * Best-effort: se não conseguir resolver (pedido sem mesa associada, num
+ * caso hipotético), a tela de acompanhamento continua funcionando
+ * normalmente, só sem o botão.
  */
 export default async function AcompanharPedidoPage({
   params,
@@ -47,8 +56,16 @@ export default async function AcompanharPedidoPage({
       );
     }
 
+    const tableContext = await getOrderTableContext(admin, restaurant.id, orderId);
+
     return (
-      <OrderTrackingView slug={slug} orderId={orderId} restaurantName={restaurant.name} initialOrder={order} />
+      <OrderTrackingView
+        slug={slug}
+        orderId={orderId}
+        restaurantName={restaurant.name}
+        initialOrder={order}
+        tableToken={tableContext?.isSessionOpen ? tableContext.tableToken : null}
+      />
     );
   } catch (err) {
     if (err instanceof AppError) {
