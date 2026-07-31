@@ -5,6 +5,7 @@ import { apiSuccess } from "@/lib/api/response";
 import { AppError, handleRouteError } from "@/lib/api/errors";
 import { parseOrThrow } from "@/lib/api/validation";
 import { closeBillSchema } from "@/lib/validations/tables";
+import { getOpenOrderSessions, getOrdersForSessions } from "@/lib/tables/get-open-table-operations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -23,16 +24,6 @@ interface CloseTableBillResult {
   table_name: string;
   table_status: string;
   table_qr_token: string;
-}
-
-// Forma da linha que a consulta do novo GET devolve — mesmo raciocínio de
-// `CloseTableBillResult` acima: sem os tipos gerados do Supabase,
-// declaramos a forma esperada explicitamente em vez de deixar `any`
-// vazar, tipando a variável desestruturada em vez de usar cast.
-interface OpenSessionOrderRow {
-  id: string;
-  status: string;
-  order_items: { name: string; quantity: number; price: number }[];
 }
 
 /**
@@ -106,21 +97,19 @@ interface OpenSessionOrderRow {
  * ela, de qualquer status — a mesma fonte de verdade dos dois lados.
  * Somente leitura, nenhuma escrita — `PATCH` abaixo continua idêntico.
  *
- * ⚠️ DIAGNÓSTICO TEMPORÁRIO (2026-07-30, seguinte): mesmo depois da rota
- * acima existir, o modal continuou reportando comanda vazia. Este `GET`
- * está, temporariamente, logando (`console.error`, tag `[DEBUG]`): o
- * `session.id` encontrado logo após a 1ª consulta; para cada pedido
- * devolvido pela 2ª consulta (`order_session_id = session.id`), o
- * `order.id` e a contagem de itens; e, se a 2ª consulta não devolver
- * nenhum pedido, uma 3ª consulta extra (só pedidos por `table_id`, sem
- * filtro de sessão) pra comparar `order_session_id` real desses pedidos
- * contra o `session.id` esperado. Também loga o objeto bruto e completo
- * (via `JSON.stringify`) do primeiro pedido retornado, antes de qualquer
- * `.map()`/transformação — pra distinguir "dado não veio do banco" de
- * "dado veio, mas se perde na transformação". Reverter assim que a causa
- * for encontrada. Também roda a MESMA consulta com o cliente admin
- * (service role, ignora RLS) só pra comparar a contagem de itens — se
- * vier maior que a do cliente normal, confirma que é RLS.
+ * Diagnóstico anterior (2026-07-30, mesmo dia): a causa raiz de "comanda
+ * vazia" era uma policy de RLS não-correlacionada em `order_items`
+ * (corrigida na migration 0022) — a instrumentação temporária usada para
+ * achar isso já foi removida, confirmada a correção.
+ *
+ * Sprint "Fonte Única de Verdade — order_session" (2026-07-30, seguinte):
+ * as duas consultas deste `GET` (achar a sessão aberta, buscar os pedidos
+ * dela) foram extraídas para `lib/tables/get-open-table-operations.ts` —
+ * o Painel de Mesas (`GET /api/v1/tables/operations`) precisava do mesmo
+ * critério "comanda = sessão aberta" para o restaurante inteiro, e manter
+ * duas cópias da mesma regra de negócio era exatamente o tipo de
+ * divergência futura que motivou esta extração. Nenhuma mudança de
+ * comportamento aqui — mesmas duas consultas, mesmo formato de resposta.
  */
 export async function GET(_request: Request, { params }: RouteParams) {
   try {
@@ -129,116 +118,21 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const supabase = await createClient();
 
-    // Mesmo critério de `close_table_bill` para "qual é a comanda desta
-    // mesa": a `order_session` aberta — não o status dos pedidos.
-    const { data: session, error: sessionError } = await supabase
-      .from("order_sessions")
-      .select("id, opened_at")
-      .eq("table_id", id)
-      .eq("restaurant_id", profile.restaurantId)
-      .is("closed_at", null)
-      .maybeSingle();
+    const [session] = await getOpenOrderSessions(supabase, profile.restaurantId, id);
 
-    if (sessionError) {
-      throw new AppError("INTERNAL_ERROR", "Não foi possível carregar a comanda desta mesa.");
-    }
     if (!session) {
       throw new AppError("NOT_FOUND", "Esta mesa não tem uma comanda aberta para fechar.");
     }
 
-    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-    console.error("[close-bill][GET][DEBUG] session.id encontrado", {
-      table_id: id,
-      session_id: session.id,
-      opened_at: session.opened_at,
-    });
-
-    // Todos os pedidos da sessão, sem filtro de status — um pedido já
-    // `delivered` continua fazendo parte da comanda que está sendo fechada.
-    const {
-      data: orders,
-      error: ordersError,
-    }: { data: OpenSessionOrderRow[] | null; error: unknown } = await supabase
-      .from("orders")
-      .select("id, status, order_items(name, quantity, price)")
-      .eq("order_session_id", session.id);
-
-    if (ordersError) {
-      throw new AppError("INTERNAL_ERROR", "Não foi possível carregar os pedidos desta comanda.");
-    }
-
-    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-    console.error("[close-bill][GET][DEBUG] pedidos retornados pela consulta por order_session_id", {
-      session_id: session.id,
-      count: orders?.length ?? 0,
-      orders: (orders ?? []).map((o) => ({
-        order_id: o.id,
-        order_session_id: session.id, // a própria condição do WHERE — incluído aqui só pra facilitar comparação visual na mesma linha
-        item_count: o.order_items?.length ?? 0,
-      })),
-    });
-
-    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-    // Objeto COMPLETO do primeiro pedido, exatamente como veio do
-    // Supabase — antes de qualquer `.map()`/transformação. Se
-    // `order_items` já vier vazio ou ausente aqui, o problema é na
-    // consulta/join; se vier preenchido aqui mas some depois, o problema
-    // é na transformação (`.map()` mais abaixo ou no componente).
-    console.error(
-      "[close-bill][GET][DEBUG] objeto bruto do primeiro pedido (JSON.stringify completo)",
-      JSON.stringify(orders?.[0] ?? null, null, 2),
-    );
-
-    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-    // Teste de RLS: exatamente a mesma consulta, com o cliente admin
-    // (service role, ignora RLS por completo). Se a contagem aqui vier
-    // maior que a de cima (mesmo cliente normal), a política de SELECT em
-    // `order_items` é a causa confirmada; se vier igual (inclusive igual a
-    // zero), RLS está descartado.
-    const adminForDiagnostics = createAdminClient();
-    const { data: ordersViaAdmin, error: ordersViaAdminError } = await adminForDiagnostics
-      .from("orders")
-      .select("id, status, order_items(name, quantity, price)")
-      .eq("order_session_id", session.id);
-
-    console.error("[close-bill][GET][DEBUG] TESTE DE RLS — mesma consulta com cliente admin (ignora RLS)", {
-      session_id: session.id,
-      count_cliente_normal: orders?.length ?? 0,
-      item_count_cliente_normal: (orders ?? []).reduce((sum, o) => sum + (o.order_items?.length ?? 0), 0),
-      count_cliente_admin: ordersViaAdmin?.length ?? 0,
-      item_count_cliente_admin: (ordersViaAdmin ?? []).reduce(
-        (sum: number, o: OpenSessionOrderRow) => sum + (o.order_items?.length ?? 0),
-        0,
-      ),
-      error_cliente_admin: ordersViaAdminError ? ordersViaAdminError.message : null,
-    });
-
-    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-    // Se a consulta por order_session_id não trouxe nada, busca TODOS os
-    // pedidos da mesa (sem filtro de sessão) pra comparar: o que essa
-    // segunda consulta mostrar em `order_session_id` é o valor real que os
-    // pedidos têm — pode ser outra sessão, ou `null`.
-    if (!orders || orders.length === 0) {
-      const { data: allTableOrders, error: allTableOrdersError } = await supabase
-        .from("orders")
-        .select("id, order_session_id, table_id, status")
-        .eq("table_id", id);
-
-      console.error("[close-bill][GET][DEBUG] nenhum pedido encontrado por order_session_id — comparação com todos os pedidos da mesa", {
-        table_id: id,
-        session_id_esperado: session.id,
-        error: allTableOrdersError ? allTableOrdersError.message : null,
-        orders: allTableOrders,
-      });
-    }
+    const orders = await getOrdersForSessions(supabase, [session.id]);
 
     return apiSuccess({
       session_id: session.id,
-      opened_at: session.opened_at,
-      orders: (orders ?? []).map((order) => ({
+      opened_at: session.openedAt,
+      orders: orders.map((order) => ({
         id: order.id,
         status: order.status,
-        items: order.order_items,
+        items: order.items,
       })),
     });
   } catch (err) {

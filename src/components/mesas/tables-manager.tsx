@@ -193,23 +193,23 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
     // sair, para isolar "foi chamada mas travou no fetch" de "nunca foi chamada".
     pushMesasDebugLog("fetchOperations: chamada iniciada", { trigger });
     try {
-      // Sprint "Correção — Pedido Finalizado Sumindo da Mesa" (2026-07-30,
-      // seguinte à Simplificação do Fluxo de Status): `delivered` entrou
-      // aqui porque agora um pedido pode ficar `delivered` bem antes da
-      // conta fechar (botão "Finalizar pedido", por pedido, manual) — antes
-      // dessa mudança, `delivered` só existia por uma fração de segundo,
-      // marcado pelo próprio `close_table_bill` no instante de fechar a
-      // conta, então nunca precisou aparecer aqui como "pedido em aberto".
-      // Sem esse status, um pedido finalizado sumia desta lista assim que
-      // trocava de status — o card da mesa perdia o valor da comanda e
-      // podia regredir para "Aguardando pedido", e `allDelivered` (que
-      // decide se o botão de fechar conta habilita, em `table-drawer.tsx`)
-      // nunca ficava verdadeiro, porque `openOrders` (que vem desta mesma
-      // consulta) nunca conseguia conter um pedido `delivered`. `cancelled`
-      // continua de fora de propósito — pedido cancelado não é comanda
-      // aberta. `ready` continua por segurança (pedido legado que ainda
-      // não foi resolvido desde antes da Simplificação).
-      const response = await fetch("/api/v1/orders?status=pending,preparing,ready,delivered&per_page=100");
+      // Sprint "Fonte Única de Verdade — order_session" (2026-07-30,
+      // seguinte à Correção "Pedido Finalizado Sumindo da Mesa"): a
+      // correção anterior (incluir `delivered` na lista de status) trocou
+      // um bug por outro — `delivered` é permanente, então um pedido de
+      // uma sessão já FECHADA (mesa já liberada, talvez há dias) nunca
+      // parava de aparecer aqui, porque a query só olhava `status`, nunca
+      // "essa sessão ainda está aberta?". Resultado: mesa "Livre"
+      // mostrando valor/itens de comanda antiga, e nada em "Liberar mesa"
+      // conseguia resolver, porque não havia de fato nada pendente.
+      //
+      // `GET /api/v1/tables/operations` substitui a lista de status por
+      // completo — ele devolve só pedidos de `order_sessions` com
+      // `closed_at is null` (mesmo critério de `close_table_bill`, ver
+      // `lib/tables/get-open-table-operations.ts`). Nenhuma lista de
+      // status a manter aqui nunca mais: um pedido para de contar no
+      // instante em que a sessão dele fecha, não importa o status.
+      const response = await fetch("/api/v1/tables/operations");
       const body = await response.json();
       if (!response.ok) {
         pushMesasDebugLog("fetchOperations: resposta não-ok", { status: response.status, body });
