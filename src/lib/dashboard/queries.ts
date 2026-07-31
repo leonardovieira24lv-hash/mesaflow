@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { OrderStatus } from "@/types/domain";
 import type { Database } from "@/types/database.types";
+import { getOpenOrderSessions, getOrdersForSessions } from "@/lib/tables/get-open-table-operations";
+import { getCashierData, resolveCashierDateRange } from "@/lib/cashier/queries";
 
 export interface RecentOrder {
   id: string;
@@ -62,7 +64,108 @@ export async function getRecentOrders(
   }));
 }
 
-/** Contagem de pedidos criados desde o início do dia local — indicador rápido do Dashboard. */
+/**
+ * Contagem de mesas ocupadas — Sprint UI-05 ("Ações Necessárias"/"Mesas
+ * ocupadas"). Mesmo critério (`tables.status = 'ocupada'`) já usado em
+ * `tables-manager.tsx` (`occupiedCount`) — aqui só um `COUNT` no servidor,
+ * nenhuma regra nova.
+ */
+export async function getOccupiedTablesCount(
+  supabase: SupabaseClient<Database>,
+  restaurantId: string,
+): Promise<{ occupied: number; total: number }> {
+  const [occupiedResult, totalResult] = await Promise.all([
+    supabase
+      .from("tables")
+      .select("id", { count: "exact", head: true })
+      .eq("restaurant_id", restaurantId)
+      .eq("status", "ocupada"),
+    supabase.from("tables").select("id", { count: "exact", head: true }).eq("restaurant_id", restaurantId),
+  ]);
+
+  return { occupied: occupiedResult.count ?? 0, total: totalResult.count ?? 0 };
+}
+
+/**
+ * Contagem de pedidos `pending` do restaurante inteiro — mesmo critério que
+ * já governa `hasUnprocessedOrders`/`hasPendingOrder`
+ * (`lib/mesas/derive-table-card-state.ts`), agregado aqui por restaurante
+ * em vez de por mesa. Nenhuma sessão fechada deveria ter pedido `pending`
+ * residual (a própria trigger de liberação de mesa e o fechamento de conta
+ * já impedem isso), então não precisa de filtro extra por sessão aberta.
+ */
+export async function getPendingOrdersCount(supabase: SupabaseClient<Database>, restaurantId: string): Promise<number> {
+  const { count } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("restaurant_id", restaurantId)
+    .eq("status", "pending");
+
+  return count ?? 0;
+}
+
+/**
+ * Contagem de eventos de mesa em aberto (`table_events.status = 'open'`),
+ * por tipo — mesmo filtro de `GET /api/v1/tables/events?status=open`
+ * (`api/v1/tables/events/route.ts`), a mesma consulta que já alimenta os
+ * alertas do Painel de Mesas. Não reaproveita a Route Handler em si (Server
+ * Component chamando a própria API é o mesmo anti-padrão já evitado em
+ * `getRestaurantOverview`) — só o critério de filtro é o mesmo.
+ */
+export async function getPendingTableEventCounts(
+  supabase: SupabaseClient<Database>,
+  restaurantId: string,
+): Promise<{ waiterCall: number; billRequest: number }> {
+  const { data, error } = await supabase
+    .from("table_events")
+    .select("type")
+    .eq("restaurant_id", restaurantId)
+    .eq("status", "open");
+
+  if (error || !data) return { waiterCall: 0, billRequest: 0 };
+
+  const rows = data as unknown as Array<{ type: "waiter_call" | "bill_request" }>;
+  return {
+    waiterCall: rows.filter((r) => r.type === "waiter_call").length,
+    billRequest: rows.filter((r) => r.type === "bill_request").length,
+  };
+}
+
+/**
+ * Soma dos pedidos em sessões de mesa ainda abertas ("Valor em aberto") —
+ * mesmo cálculo que `openAmount` em `tables-manager.tsx`, reaproveitando
+ * diretamente `getOpenOrderSessions`/`getOrdersForSessions`
+ * (`lib/tables/get-open-table-operations.ts`, sem `tableId` = restaurante
+ * inteiro), a mesma função já usada por `close-bill` e
+ * `tables/operations`.
+ */
+export async function getOpenAmount(supabase: SupabaseClient<Database>, restaurantId: string): Promise<number> {
+  const sessions = await getOpenOrderSessions(supabase, restaurantId);
+  if (sessions.length === 0) return 0;
+
+  const orders = await getOrdersForSessions(
+    supabase,
+    sessions.map((s) => s.id),
+  );
+  return orders.reduce((sum, order) => sum + order.totalAmount, 0);
+}
+
+/**
+ * Faturamento + ticket médio de hoje — reaproveita `getCashierData`
+ * (`lib/cashier/queries.ts`), a mesma consulta que já alimenta a tela de
+ * Caixa, só com o intervalo "hoje" (`resolveCashierDateRange("today")`).
+ * `perPage: 1` porque só o `summary` importa aqui — a lista de sessões
+ * devolvida é descartada.
+ */
+export async function getTodaySalesSummary(
+  supabase: SupabaseClient<Database>,
+  restaurantId: string,
+): Promise<{ revenue: number; averageTicket: number }> {
+  const { from, to } = resolveCashierDateRange("today");
+  const result = await getCashierData(supabase, restaurantId, { from, to, page: 1, perPage: 1 });
+  return { revenue: result.summary.revenue, averageTicket: result.summary.averageTicket };
+}
+
 export async function getOrdersTodayCount(
   supabase: SupabaseClient<Database>,
   restaurantId: string,
