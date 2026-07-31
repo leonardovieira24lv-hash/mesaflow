@@ -479,6 +479,12 @@ export function TableDrawer({
   // (`ds2-warning`), precisa de texto escuro em vez do branco genérico.
   const isDarkOnLight = TABLE_CARD_TONE_DARK_TEXT.includes(cardState.tone);
 
+  // Sprint UI-03 (Refinamento DS2, 2026-07-31): mesmo raciocínio de
+  // `tables-manager.tsx` — `Button` (componente compartilhado) não define
+  // `focus-visible` próprio; anel aplicado por instância, só aqui.
+  const focusRingClass =
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background";
+
   return (
     <dialog
       ref={ref}
@@ -489,8 +495,8 @@ export function TableDrawer({
       }}
       aria-label={`Mesa ${table.name}`}
       className={cn(
-        "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88vh] w-full overflow-hidden rounded-t-3xl border-t border-border bg-surface p-0 text-surface-foreground shadow-sheet",
-        "sm:inset-y-0 sm:left-auto sm:right-0 sm:bottom-0 sm:top-0 sm:m-0 sm:h-full sm:max-h-none sm:w-[420px] sm:rounded-none sm:rounded-l-2xl sm:border-l sm:border-t-0 sm:shadow-card-hover",
+        "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88vh] w-full overflow-hidden rounded-t-ds2-lg border-t border-ds2-border bg-ds2-surface p-0 text-ds2-foreground shadow-ds2-lg",
+        "sm:inset-y-0 sm:left-auto sm:right-0 sm:bottom-0 sm:top-0 sm:m-0 sm:h-full sm:max-h-none sm:w-[420px] sm:rounded-none sm:rounded-l-ds2-lg sm:border-l sm:border-t-0 sm:shadow-ds2-lg",
         "backdrop:bg-black/50 backdrop:backdrop-blur-[2px]",
         "open:animate-sheet-up sm:open:animate-slide-in-right",
       )}
@@ -498,26 +504,28 @@ export function TableDrawer({
       <div className="flex h-full max-h-[88vh] flex-col sm:max-h-none">
         <div
           className={cn(
-            "flex flex-col gap-3 border-b border-border px-5 py-4",
+            "flex flex-col gap-3 border-b border-ds2-border px-5 py-4",
             isFilled && TABLE_CARD_TONE_CLASSES[cardState.tone],
           )}
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex flex-col gap-1.5">
-              <span className="font-numeric text-3xl font-bold leading-none tabular-nums">{table.name}</span>
+              <span className="font-numeric text-3xl font-bold leading-none tabular-nums text-ds2-foreground">
+                {table.name}
+              </span>
               <span
                 className={cn(
-                  "inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide",
+                  "inline-flex w-fit items-center gap-1.5 rounded-ds2-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide",
                   isFilled
                     ? isDarkOnLight
                       ? "bg-ds2-warning-foreground/15 text-ds2-warning-foreground"
                       : "bg-white/20 text-white"
-                    : "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
+                    : "bg-ds2-surface-hover text-ds2-foreground-muted ring-1 ring-inset ring-ds2-border",
                 )}
               >
                 <span
                   className={cn(
-                    "h-1.5 w-1.5 shrink-0 rounded-full",
+                    "h-1.5 w-1.5 shrink-0 rounded-ds2-full",
                     isFilled
                       ? isDarkOnLight
                         ? "bg-ds2-warning-foreground/70"
@@ -545,7 +553,7 @@ export function TableDrawer({
               */}
               {cardState.hasUnprocessedOrders && cardState.tone !== "new_order" && (
                 <span
-                  className="inline-flex w-fit animate-pulse items-center gap-1.5 rounded-full bg-ds2-warning px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-ds2-warning-foreground"
+                  className="inline-flex w-fit animate-pulse items-center gap-1.5 rounded-ds2-full bg-ds2-warning px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-ds2-warning-foreground"
                   title="Pedido novo aguardando envio para a cozinha"
                 >
                   <Bell className="h-3 w-3" aria-hidden />
@@ -566,7 +574,7 @@ export function TableDrawer({
               */}
               {cardState.hasWaiterCall && (
                 <span
-                  className="inline-flex w-fit items-center gap-1.5 rounded-full bg-ds2-primary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-ds2-primary-foreground"
+                  className="inline-flex w-fit items-center gap-1.5 rounded-ds2-full bg-ds2-primary px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-ds2-primary-foreground"
                   title="Cliente chamando o garçom"
                 >
                   <Hand className="h-3 w-3" aria-hidden />
@@ -585,6 +593,7 @@ export function TableDrawer({
                   (isDarkOnLight
                     ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
                     : "text-white hover:bg-white/15 hover:text-white"),
+                focusRingClass,
               )}
             >
               <X className="h-4 w-4" />
@@ -596,18 +605,20 @@ export function TableDrawer({
               <span
                 className={cn(
                   "text-xs",
-                  isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/80" : "text-white/80") : "text-muted-foreground",
+                  isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/80" : "text-white/80") : "text-ds2-foreground-muted",
                 )}
               >
                 Valor atual
               </span>
-              <span className="font-numeric text-2xl font-bold leading-tight tabular-nums">{formatCurrency(subtotal)}</span>
+              <span className="font-numeric text-2xl font-bold leading-tight tabular-nums text-ds2-foreground">
+                {formatCurrency(subtotal)}
+              </span>
             </div>
             {openedAt && (
               <span
                 className={cn(
                   "inline-flex items-center gap-1 text-xs",
-                  isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/80" : "text-white/80") : "text-muted-foreground",
+                  isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/80" : "text-white/80") : "text-ds2-foreground-muted",
                 )}
               >
                 <Clock3 className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -618,7 +629,7 @@ export function TableDrawer({
         </div>
 
         {(waiterCallAlert || billRequestAlert) && (
-          <div className="flex flex-col gap-2 border-b border-border px-5 py-3">
+          <div className="flex flex-col gap-2 border-b border-ds2-border px-5 py-3">
             {waiterCallAlert && (
               <Alert variant="info" className="items-center justify-between">
                 <span className="font-medium">Chamando garçom · há {formatRelativeTimeShort(waiterCallAlert.createdAt)}</span>
@@ -626,7 +637,7 @@ export function TableDrawer({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="ml-3 shrink-0"
+                  className={cn("ml-3 shrink-0", focusRingClass)}
                   onClick={() => handleResolveAlert(waiterCallAlert.id)}
                   isLoading={resolvingAlertId === waiterCallAlert.id}
                 >
@@ -641,7 +652,7 @@ export function TableDrawer({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="ml-3 shrink-0"
+                  className={cn("ml-3 shrink-0", focusRingClass)}
                   onClick={() => handleResolveAlert(billRequestAlert.id)}
                   isLoading={resolvingAlertId === billRequestAlert.id}
                 >
@@ -653,14 +664,14 @@ export function TableDrawer({
         )}
 
         {openOrders.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 border-b border-border px-5 py-3">
-            <div className="flex flex-col items-center gap-0.5 rounded-xl bg-muted/50 py-2.5">
-              <span className="font-numeric text-lg font-bold tabular-nums text-foreground">{openOrders.length}</span>
-              <span className="text-[11px] text-muted-foreground">{openOrders.length === 1 ? "Pedido" : "Pedidos"}</span>
+          <div className="grid grid-cols-2 gap-2 border-b border-ds2-border px-5 py-3">
+            <div className="flex flex-col items-center gap-0.5 rounded-ds2-md bg-ds2-surface-hover py-2.5">
+              <span className="font-numeric text-lg font-bold tabular-nums text-ds2-foreground">{openOrders.length}</span>
+              <span className="text-xs text-ds2-foreground-muted">{openOrders.length === 1 ? "Pedido" : "Pedidos"}</span>
             </div>
-            <div className="flex flex-col items-center gap-0.5 rounded-xl bg-muted/50 py-2.5">
-              <span className="font-numeric text-lg font-bold tabular-nums text-foreground">{itemCount}</span>
-              <span className="text-[11px] text-muted-foreground">{itemCount === 1 ? "Item" : "Itens"}</span>
+            <div className="flex flex-col items-center gap-0.5 rounded-ds2-md bg-ds2-surface-hover py-2.5">
+              <span className="font-numeric text-lg font-bold tabular-nums text-ds2-foreground">{itemCount}</span>
+              <span className="text-xs text-ds2-foreground-muted">{itemCount === 1 ? "Item" : "Itens"}</span>
             </div>
           </div>
         )}
@@ -669,16 +680,16 @@ export function TableDrawer({
           {error && <Alert variant="destructive">{error}</Alert>}
 
           {openOrders.length > 0 && (
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted">
               Pedidos desta mesa
             </span>
           )}
 
           {openOrders.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum pedido em aberto nesta mesa.</p>
+            <p className="text-sm text-ds2-foreground-muted">Nenhum pedido em aberto nesta mesa.</p>
           ) : loadingDetails ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden />
+              <Loader2 className="h-5 w-5 animate-spin text-ds2-foreground-muted" aria-hidden />
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -687,11 +698,11 @@ export function TableDrawer({
                 return (
                   <div
                     key={order.id}
-                    className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-3.5 shadow-card"
+                    className="flex flex-col gap-3 rounded-ds2-lg border border-ds2-border bg-ds2-surface p-3.5 shadow-ds2-sm"
                   >
                     <div className="flex items-center justify-between">
                       <AdminOrderStatusBadge status={order.status} />
-                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1 text-xs text-ds2-foreground-muted">
                         <Clock3 className="h-3 w-3 shrink-0" aria-hidden />
                         {formatRelativeTimeShort(order.created_at)}
                       </span>
@@ -702,18 +713,18 @@ export function TableDrawer({
                         {detail.items.map((item) => (
                           <li key={item.id} className="flex flex-col gap-0.5">
                             <div className="flex items-center justify-between gap-2 text-sm">
-                              <span className="flex items-center gap-2 text-foreground">
-                                <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-md bg-muted px-1 font-numeric text-[11px] font-semibold text-muted-foreground">
+                              <span className="flex items-center gap-2 text-ds2-foreground">
+                                <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-ds2-sm bg-ds2-surface-hover px-1 font-numeric text-xs font-semibold text-ds2-foreground-muted">
                                   {item.quantity}×
                                 </span>
                                 {item.name}
                               </span>
-                              <span className="font-numeric font-medium text-muted-foreground">
+                              <span className="font-numeric font-medium text-ds2-foreground-muted">
                                 {formatCurrency(item.price * item.quantity)}
                               </span>
                             </div>
                             {item.notes && (
-                              <span className="flex items-center gap-1 pl-7 text-xs italic text-muted-foreground">
+                              <span className="flex items-center gap-1 pl-7 text-xs italic text-ds2-foreground-muted">
                                 <StickyNote className="h-3 w-3 shrink-0" aria-hidden />
                                 {item.notes}
                               </span>
@@ -722,15 +733,15 @@ export function TableDrawer({
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-xs text-muted-foreground">Itens indisponíveis.</p>
+                      <p className="text-xs text-ds2-foreground-muted">Itens indisponíveis.</p>
                     )}
 
-                    <div className="flex items-center justify-between border-t border-border pt-2.5">
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                    <div className="flex items-center justify-between border-t border-ds2-border pt-2.5">
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-ds2-foreground-muted">
                         <Receipt className="h-3.5 w-3.5 shrink-0" aria-hidden />
                         Subtotal
                       </span>
-                      <span className="font-numeric text-base font-bold tabular-nums text-foreground">
+                      <span className="font-numeric text-base font-bold tabular-nums text-ds2-foreground">
                         {formatCurrency(order.total_amount)}
                       </span>
                     </div>
@@ -742,7 +753,7 @@ export function TableDrawer({
                         size="sm"
                         onClick={() => handleSendToKitchen(order.id)}
                         isLoading={updatingOrderId === order.id}
-                        className="w-full justify-center"
+                        className={cn("w-full justify-center", focusRingClass)}
                       >
                         <ChefHat className="h-3.5 w-3.5" />
                         Enviar para cozinha
@@ -757,7 +768,7 @@ export function TableDrawer({
                         size="sm"
                         onClick={() => handleMarkDelivered(order.id)}
                         isLoading={updatingOrderId === order.id}
-                        className="w-full justify-center"
+                        className={cn("w-full justify-center", focusRingClass)}
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         Finalizar pedido
@@ -788,21 +799,27 @@ export function TableDrawer({
           <p>Total: {formatCurrency(subtotal)}</p>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-border px-5 py-4">
+        <div className="flex flex-col gap-2 border-t border-ds2-border px-5 py-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">Total da mesa</span>
-            <span className="font-numeric text-lg font-bold tabular-nums text-foreground">{formatCurrency(subtotal)}</span>
+            <span className="text-sm font-medium text-ds2-foreground-muted">Total da mesa</span>
+            <span className="font-numeric text-lg font-bold tabular-nums text-ds2-foreground">{formatCurrency(subtotal)}</span>
           </div>
 
           <div className="flex gap-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => window.print()} disabled={openOrders.length === 0}>
+            <Button
+              type="button"
+              variant="outline"
+              className={cn("flex-1", focusRingClass)}
+              onClick={() => window.print()}
+              disabled={openOrders.length === 0}
+            >
               <Printer className="h-4 w-4" />
               Imprimir
             </Button>
             <Button
               type="button"
               variant="outline"
-              className="flex-1"
+              className={cn("flex-1", focusRingClass)}
               onClick={() => setConfirmingRelease(true)}
               disabled={isReleasing}
             >
@@ -815,6 +832,7 @@ export function TableDrawer({
             onClick={() => setCloseBillModalOpen(true)}
             disabled={!allDelivered}
             title={!allDelivered ? "Só é possível finalizar quando todos os pedidos estiverem finalizados" : undefined}
+            className={focusRingClass}
           >
             {/* Item 3 do checklist do fluxo operacional das mesas: mesmo
                 botão de sempre — só o rótulo muda para comunicar "esta é a
@@ -826,7 +844,7 @@ export function TableDrawer({
             {allDelivered ? "Finalizar atendimento" : "Fechar conta"}
           </Button>
           {!allDelivered && openOrders.length > 0 && (
-            <p className="text-center text-xs text-muted-foreground">
+            <p className="text-center text-xs text-ds2-foreground-muted">
               Ainda há pedido{openOrders.length > 1 ? "s" : ""} em preparo — finalizar libera quando tudo estiver finalizado.
             </p>
           )}
@@ -834,7 +852,7 @@ export function TableDrawer({
           {openOrders.length > 0 && (
             <Link
               href={ROUTES.pedidoDetalhe(openOrders[0]!.id)}
-              className="text-center text-xs font-medium text-primary hover:underline"
+              className={cn("rounded-ds2-sm text-center text-xs font-medium text-ds2-primary hover:underline", focusRingClass)}
             >
               Ver histórico completo de pedidos desta mesa
             </Link>

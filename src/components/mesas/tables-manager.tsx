@@ -866,11 +866,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   ];
 
   const toneClasses: Record<(typeof indicators)[number]["tone"], string> = {
-    success: "bg-success/10 text-success ring-1 ring-inset ring-success/15",
-    warning: "bg-warning/10 text-warning ring-1 ring-inset ring-warning/15",
-    muted: "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
-    info: "bg-info/10 text-info ring-1 ring-inset ring-info/15",
-    default: "bg-primary/10 text-primary ring-1 ring-inset ring-primary/15",
+    success: "bg-ds2-success/10 text-ds2-success ring-1 ring-inset ring-ds2-success/15",
+    warning: "bg-ds2-warning/10 text-ds2-warning ring-1 ring-inset ring-ds2-warning/15",
+    muted: "bg-ds2-surface-hover text-ds2-foreground-muted ring-1 ring-inset ring-ds2-border",
+    info: "bg-ds2-info/10 text-ds2-info ring-1 ring-inset ring-ds2-info/15",
+    default: "bg-ds2-primary/10 text-ds2-primary ring-1 ring-inset ring-ds2-primary/15",
   };
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -886,6 +886,15 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
     { value: "ocupada", label: "Ocupadas" },
     { value: "manutencao", label: "Manutenção" },
   ];
+
+  // Sprint UI-03 (Refinamento DS2, 2026-07-31): foco visível pros elementos
+  // já interativos deste componente — `Button` (componente compartilhado)
+  // não define `focus-visible` próprio hoje; em vez de mexer nele (afetaria
+  // toda tela que o usa), o anel é aplicado por instância, só aqui, via
+  // `className`. Usa `ds2-ring`/`ds2-background` — só funciona vivo dentro
+  // do escopo `.ds2-dark` já ativo neste componente.
+  const focusRingClass =
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background";
 
   return (
     /**
@@ -936,14 +945,14 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
       )}
 
       {/* Header Operacional */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5 shadow-card sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-ds2-lg border border-ds2-border bg-ds2-surface p-5 shadow-ds2-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-ds2-md bg-ds2-primary/10 text-ds2-primary">
             <LayoutGrid className="h-5 w-5" aria-hidden />
           </span>
           <div className="flex flex-col">
-            <h2 className="font-display text-xl font-semibold leading-tight">Centro de Operações</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="font-display text-xl font-semibold leading-tight text-ds2-foreground">Centro de Operações</h2>
+            <p className="text-sm text-ds2-foreground-muted">
               {totalTables === 0
                 ? "Nenhuma mesa cadastrada"
                 : `${totalTables} ${totalTables === 1 ? "mesa cadastrada" : "mesas cadastradas"}`}
@@ -957,11 +966,14 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
               rota `/admin/debug/mesas` assim que a causa raiz for corrigida. */}
           <Link
             href="/admin/debug/mesas"
-            className="text-xs font-medium text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground"
+            className={cn(
+              "rounded-ds2-sm text-xs font-medium text-ds2-foreground-muted underline decoration-dotted underline-offset-4 hover:text-ds2-foreground",
+              focusRingClass,
+            )}
           >
             Ver logs de debug
           </Link>
-          <Button onClick={openCreateModal}>
+          <Button onClick={openCreateModal} className={focusRingClass}>
             <Plus className="h-4 w-4" />
             Nova mesa
           </Button>
@@ -974,13 +986,13 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           {indicators.map((indicator) => (
             <div
               key={indicator.key}
-              className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3.5 shadow-card"
+              className="flex flex-col gap-2 rounded-ds2-md border border-ds2-border bg-ds2-surface p-3.5 shadow-ds2-sm"
             >
-              <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", toneClasses[indicator.tone])}>
+              <span className={cn("flex h-8 w-8 items-center justify-center rounded-ds2-sm", toneClasses[indicator.tone])}>
                 <indicator.icon className="h-4 w-4" aria-hidden />
               </span>
-              <span className="font-numeric text-xl font-bold tabular-nums text-foreground">{indicator.value}</span>
-              <span className="text-xs text-muted-foreground">{indicator.label}</span>
+              <span className="font-numeric text-xl font-bold tabular-nums text-ds2-foreground">{indicator.value}</span>
+              <span className="text-xs text-ds2-foreground-muted">{indicator.label}</span>
             </div>
           ))}
         </div>
@@ -988,7 +1000,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
 
       {/* Barra de filtros */}
       {totalTables > 0 && (
-        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-ds2-md border border-ds2-border bg-ds2-surface p-3 sm:flex-row sm:items-center sm:justify-between">
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -1005,6 +1017,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 size="sm"
                 variant={statusFilter === option.value ? "secondary" : "ghost"}
                 onClick={() => setStatusFilter(option.value)}
+                className={focusRingClass}
               >
                 {option.label}
               </Button>
@@ -1020,7 +1033,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           title="Nenhuma mesa cadastrada"
           description="Adicione a primeira mesa para gerar seu QR Code de acesso ao cardápio."
           action={
-            <Button onClick={openCreateModal} variant="outline">
+            <Button onClick={openCreateModal} variant="outline" className={focusRingClass}>
               <Plus className="h-4 w-4" />
               Nova mesa
             </Button>
@@ -1038,6 +1051,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 setStatusFilter("todas");
               }}
               variant="outline"
+              className={focusRingClass}
             >
               Limpar filtros
             </Button>
@@ -1103,7 +1117,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 tableId: table.id,
                 isFlashing,
                 classNameFinal: cn(
-                  "group relative flex h-full flex-col gap-2 overflow-hidden rounded-2xl border p-2.5 shadow-card transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
+                  "group relative flex h-full flex-col gap-2 overflow-hidden rounded-ds2-lg border p-2.5 shadow-ds2-sm transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-ds2-md",
                   toneClass,
                   isFlashing && "animate-status-flash",
                 ),
@@ -1115,7 +1129,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 key={table.id}
                 data-table-tile-id={table.id}
                 className={cn(
-                  "group relative flex h-full flex-col gap-2 overflow-hidden rounded-2xl border p-2.5 shadow-card transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
+                  "group relative flex h-full flex-col gap-2 overflow-hidden rounded-ds2-lg border p-2.5 shadow-ds2-sm transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-ds2-md",
                   toneClass,
                   isFlashing && "animate-status-flash",
                   state.hasUnprocessedOrders && "animate-new-order-alert",
@@ -1126,7 +1140,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                   aria-hidden
                   className={cn(
                     "pointer-events-none absolute -bottom-2 -right-2 h-11 w-11",
-                    isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/15" : "text-white/15") : "text-muted-foreground/10",
+                    isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/15" : "text-white/15") : "text-ds2-foreground-muted/10",
                   )}
                 />
 
@@ -1145,7 +1159,8 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                         ? isDarkOnLight
                           ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
                           : "text-white hover:bg-white/15 hover:text-white"
-                        : "text-muted-foreground",
+                        : "text-ds2-foreground-muted",
+                      focusRingClass,
                     )}
                   >
                     <QrCode className="h-3.5 w-3.5" />
@@ -1164,7 +1179,8 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                         ? isDarkOnLight
                           ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
                           : "text-white hover:bg-white/15 hover:text-white"
-                        : "text-muted-foreground",
+                        : "text-ds2-foreground-muted",
+                      focusRingClass,
                     )}
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -1184,6 +1200,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                           ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
                           : "text-white hover:bg-white/15 hover:text-white"
                         : "text-destructive",
+                      focusRingClass,
                     )}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -1194,7 +1211,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 <span
                   className={cn(
                     "z-10 pr-14 font-numeric text-2xl font-bold leading-none tabular-nums",
-                    isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-foreground",
+                    isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-ds2-foreground",
                   )}
                 >
                   {table.name}
@@ -1203,15 +1220,15 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 {/* 2. Status — badge elegante com indicador de cor, nunca texto solto. */}
                 <span
                   className={cn(
-                    "z-10 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                    "z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide",
                     isFilled
                       ? isDarkOnLight
                         ? "bg-ds2-warning-foreground/15 text-ds2-warning-foreground"
                         : "bg-white/20 text-white"
-                      : "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
+                      : "bg-ds2-surface-hover text-ds2-foreground-muted ring-1 ring-inset ring-ds2-border",
                   )}
                 >
-                  <span className={cn("h-1 w-1 shrink-0 rounded-full", dotClass)} aria-hidden />
+                  <span className={cn("h-1 w-1 shrink-0 rounded-ds2-full", dotClass)} aria-hidden />
                   {state.label}
                 </span>
 
@@ -1231,13 +1248,20 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
 
                   Sprint UI-01 (Migração DS2, Etapa 1, 2026-07-31): cor
                   migrada de `hsl(16_78%_46%)` hardcoded para
-                  `bg-ds2-warning`/`text-ds2-warning-foreground` — mesma
-                  ressalva de `derive-table-card-state.ts`: sem efeito
-                  visual correto até `.ds2-dark` ser aplicado (Etapa 2).
+                  `bg-ds2-warning`/`text-ds2-warning-foreground`.
+
+                  Sprint UI-03 (Refinamento DS2, 2026-07-31): removido
+                  `animate-pulse` daqui — o tile inteiro já pulsa
+                  (`animate-new-order-alert`, aplicado no card-raiz) quando
+                  `hasUnprocessedOrders` é `true`. As duas animações juntas
+                  competiam pela atenção no mesmo elemento visual; mantida
+                  só a do tile inteiro, que é a mais visível à distância —
+                  o selo permanece como reforço textual estático (cor +
+                  contagem), sem movimento próprio.
                 */}
                 {state.hasUnprocessedOrders && state.tone !== "new_order" && (
                   <span
-                    className="z-10 inline-flex w-fit animate-pulse items-center gap-1 rounded-full bg-ds2-warning px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ds2-warning-foreground"
+                    className="z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full bg-ds2-warning px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-ds2-warning-foreground"
                     title="Pedido novo aguardando envio para a cozinha"
                   >
                     <Bell className="h-2.5 w-2.5 shrink-0" aria-hidden />
@@ -1259,7 +1283,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 */}
                 {state.hasWaiterCall && (
                   <span
-                    className="z-10 inline-flex w-fit items-center gap-1 rounded-full bg-ds2-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ds2-primary-foreground"
+                    className="z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full bg-ds2-primary px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-ds2-primary-foreground"
                     title="Cliente chamando o garçom"
                   >
                     <Hand className="h-2.5 w-2.5 shrink-0" aria-hidden />
@@ -1273,7 +1297,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     <span
                       className={cn(
                         "font-numeric text-lg font-bold leading-tight tabular-nums",
-                        isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-foreground",
+                        isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-ds2-foreground",
                       )}
                     >
                       {formatCurrency(data.totalAmount)}
@@ -1281,8 +1305,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                     {data.lastOrderAt && (
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1 text-[10px]",
-                          isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/70" : "text-white/70") : "text-muted-foreground",
+                          "inline-flex items-center gap-1 text-xs",
+                          isFilled
+                            ? isDarkOnLight
+                              ? "text-ds2-warning-foreground/70"
+                              : "text-white/70"
+                            : "text-ds2-foreground-muted",
                         )}
                       >
                         <Clock3 className="h-2.5 w-2.5 shrink-0" aria-hidden />
@@ -1293,8 +1321,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 ) : (
                   <span
                     className={cn(
-                      "z-10 text-[11px]",
-                      isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/70" : "text-white/70") : "text-muted-foreground",
+                      "z-10 text-xs",
+                      isFilled
+                        ? isDarkOnLight
+                          ? "text-ds2-warning-foreground/70"
+                          : "text-white/70"
+                        : "text-ds2-foreground-muted",
                     )}
                   >
                     Sem pedidos em aberto
@@ -1305,8 +1337,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 {data && (data.itemCount > 0 || ordersCount > 0) && (
                   <div
                     className={cn(
-                      "z-10 flex items-center gap-2.5 text-[10px]",
-                      isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/80" : "text-white/80") : "text-muted-foreground",
+                      "z-10 flex items-center gap-2.5 text-xs",
+                      isFilled
+                        ? isDarkOnLight
+                          ? "text-ds2-warning-foreground/80"
+                          : "text-white/80"
+                        : "text-ds2-foreground-muted",
                     )}
                   >
                     {ordersCount > 0 && (
@@ -1339,7 +1375,8 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                       ? isDarkOnLight
                         ? "border-ds2-warning-foreground/25 bg-ds2-warning-foreground/10 text-ds2-warning-foreground hover:bg-ds2-warning-foreground/20"
                         : "border-white/25 bg-white/10 text-white hover:bg-white/20"
-                      : "border-border bg-surface hover:bg-muted",
+                      : "border-ds2-border bg-ds2-surface hover:bg-ds2-surface-hover",
+                    focusRingClass,
                   )}
                 >
                   {actionLabel}
