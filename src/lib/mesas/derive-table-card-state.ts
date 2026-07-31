@@ -190,67 +190,72 @@ export function deriveTableCardState(
 
 /**
  * Tons sólidos para o tile inteiro (grade de Mesas e cabeçalho do Drawer).
- * Valores usam os tokens `ds2-*` (`tailwind.config.ts`/`app/globals.css`,
- * classe `.ds2-dark`, aplicada na raiz do shell administrativo).
  *
- * `waiter_call` não existe nesta paleta — deixou de ser tom, ver
- * `hasWaiterCall`/comentário no topo do arquivo.
+ * Nova geração visual (redesign estrutural): abandonado o modelo anterior
+ * de "preenchimento saturado" (fundo laranja/azul/verde vibrante) e
+ * "contorno = livre/aguardando" — cada mesa agora é um bloco sólido de
+ * grafite profundo (`ds2-background`), sempre, com uma tonalidade sutil
+ * (`from-{cor}/10` a `/15`) comunicando o estado. Nunca mais "só contorno"
+ * como único indicador — mesmo `free` tem preenchimento sólido, só sem
+ * tonalidade (grafite puro).
  *
- * Paleta (7 estados):
- * - `free`/`maintenance`: sem preenchimento (cinza elegante / opaco).
- * - `awaiting_order`: só contorno na cor da marca — mesa ocupada mas sem
- *   nada acontecendo ainda não deveria competir visualmente com os estados
- *   de progresso do pedido.
- * - `new_order`: `ds2-warning` — precisa ser o mais chamativo (algo novo
- *   chegou). Foreground é `ds2-warning-foreground` (escuro), não branco —
- *   `ds2-warning` é um tom claro.
- * - `preparing`: `ds2-info`.
- * - `ready`: `ds2-success` — sinaliza "nada pendente na cozinha, falta
- *   fechar a conta" (cobre tanto pedido `ready` legado quanto o caso comum
- *   hoje, comanda com tudo `delivered`).
- * - `bill_requested`: `ds2-danger`.
+ * Mapeamento de cor (paleta oficial, sem dourado, sem azul como segunda
+ * cor de marca):
+ * - `free`: grafite neutro, sem tonalidade.
+ * - `maintenance`: grafite com leve vermelho — "manutenção/urgência".
+ * - `awaiting_order`/`preparing`/`ready`: grafite com leve verde — os três
+ *   são "mesa ocupada, operação em andamento, nada fora do normal";
+ *   antes eram 3 tratamentos visuais diferentes (contorno, azul, verde
+ *   saturado), agora é um único bucket "ocupada".
+ * - `new_order`: grafite com leve laranja — "novo pedido/atenção".
+ * - `bill_requested`: grafite com leve vermelho — mesmo bucket de
+ *   `maintenance` ("urgência"), mais intenso por ser realmente acionável.
+ *
+ * Como todo tom agora tem fundo escuro (nunca mais um fundo claro tipo
+ * `ds2-warning` puro), o texto secundário é sempre claro — por isso
+ * `TABLE_CARD_TONE_DARK_TEXT` (abaixo) fica vazio: nenhum tom precisa mais
+ * da variante de texto escuro.
  */
 export const TABLE_CARD_TONE_CLASSES: Record<TableCardTone, string> = {
-  free: "border-ds2-border bg-ds2-surface",
-  maintenance: "border-ds2-border bg-ds2-surface-hover opacity-75",
-  awaiting_order: "border-ds2-primary/50 bg-ds2-surface",
-  new_order: "border-transparent bg-ds2-warning text-ds2-warning-foreground",
-  preparing: "border-transparent bg-ds2-info text-ds2-info-foreground",
-  ready: "border-transparent bg-ds2-success text-ds2-success-foreground",
-  bill_requested: "border-transparent bg-ds2-danger text-ds2-danger-foreground",
+  free: "border border-ds2-border bg-ds2-background",
+  maintenance: "border border-ds2-danger/20 bg-gradient-to-br from-ds2-danger/10 via-ds2-background to-ds2-background opacity-90",
+  awaiting_order: "border border-ds2-success/20 bg-gradient-to-br from-ds2-success/10 via-ds2-background to-ds2-background",
+  new_order: "border border-ds2-warning/25 bg-gradient-to-br from-ds2-warning/15 via-ds2-background to-ds2-background",
+  preparing: "border border-ds2-success/20 bg-gradient-to-br from-ds2-success/10 via-ds2-background to-ds2-background",
+  ready: "border border-ds2-success/25 bg-gradient-to-br from-ds2-success/15 via-ds2-background to-ds2-background",
+  bill_requested: "border border-ds2-danger/30 bg-gradient-to-br from-ds2-danger/20 via-ds2-background to-ds2-background",
 };
 
 /**
- * Tiles com tom preenchido usam texto claro para os textos secundários
- * (itens, tempo) — `awaiting_order` fica de fora de propósito: é só
- * contorno, não preenchimento, então continua usando as cores neutras de
- * texto.
- *
- * `new_order` usa `ds2-warning-foreground` ESCURO (fundo claro), diferente
- * dos outros três (fundo escuro, texto claro) — ver
- * `TABLE_CARD_TONE_DARK_TEXT` abaixo, que `TablesManager`/`TableDrawer`
- * consultam para escolher a variante certa de texto por tom.
+ * Todo tom agora é um card sólido (fundo escuro sempre) — não sobra
+ * nenhum tom "só contorno" fora desta lista, então ela passou a incluir
+ * os 7. O mecanismo (`isFilled` nos arquivos que consomem) continua
+ * existindo e é consultado do mesmo jeito; só os dados aqui mudaram.
  */
-export const TABLE_CARD_FILLED_TONES: readonly TableCardTone[] = ["new_order", "preparing", "ready", "bill_requested"];
+export const TABLE_CARD_FILLED_TONES: readonly TableCardTone[] = [
+  "free",
+  "maintenance",
+  "awaiting_order",
+  "new_order",
+  "preparing",
+  "ready",
+  "bill_requested",
+];
 
 export const TABLE_CARD_TONE_DOT_CLASSES: Record<TableCardTone, string> = {
   free: "bg-ds2-foreground-muted/40",
-  maintenance: "bg-ds2-foreground-muted/40",
-  awaiting_order: "bg-ds2-primary/60",
+  maintenance: "bg-ds2-danger",
+  awaiting_order: "bg-ds2-success/70",
   new_order: "bg-ds2-warning",
-  preparing: "bg-ds2-info",
+  preparing: "bg-ds2-success/70",
   ready: "bg-ds2-success",
   bill_requested: "bg-ds2-danger",
 };
 
 /**
- * Textos/ícones secundários de um tile preenchido (`TABLE_CARD_FILLED_TONES`)
- * não podem assumir texto branco de forma genérica: verdade para
- * `preparing`/`ready`/`bill_requested` (fundo escuro, `ds2-*-foreground` é
- * branco mesmo), mas o oposto para `new_order`: `ds2-warning` é um fundo
- * CLARO, `ds2-warning-foreground` é escuro (`0 0% 8%`). Esta lista existe
- * pra `TablesManager`/`TableDrawer` saberem qual dos dois casos aplicar —
- * é a distinção real entre os tons, não um caso especial temporário. Se um
- * tom novo de fundo claro for adicionado no futuro, ele entra aqui.
+ * Nenhum tom tem fundo claro na nova paleta (todos são grafite profundo)
+ * — lista vazia, de propósito. O mecanismo que a consulta
+ * (`TablesManager`/`TableDrawer`) continua exatamente como estava; se um
+ * tom de fundo claro voltar a existir no futuro, ele entra aqui de novo.
  */
-export const TABLE_CARD_TONE_DARK_TEXT: readonly TableCardTone[] = ["new_order"];
+export const TABLE_CARD_TONE_DARK_TEXT: readonly TableCardTone[] = [];

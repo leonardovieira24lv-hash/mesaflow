@@ -521,7 +521,7 @@ export function TableDrawer({
                   isFilled
                     ? isDarkOnLight
                       ? "bg-ds2-warning-foreground/15 text-ds2-warning-foreground"
-                      : "bg-white/20 text-white"
+                      : "bg-ds2-surface-hover text-ds2-foreground-muted"
                     : "bg-ds2-surface-hover text-ds2-foreground-muted ring-1 ring-inset ring-ds2-border",
                 )}
               >
@@ -531,7 +531,7 @@ export function TableDrawer({
                     isFilled
                       ? isDarkOnLight
                         ? "bg-ds2-warning-foreground/70"
-                        : "bg-white/70"
+                        : TABLE_CARD_TONE_DOT_CLASSES[cardState.tone]
                       : TABLE_CARD_TONE_DOT_CLASSES[cardState.tone],
                   )}
                   aria-hidden
@@ -588,7 +588,7 @@ export function TableDrawer({
                 isFilled &&
                   (isDarkOnLight
                     ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
-                    : "text-white hover:bg-white/15 hover:text-white"),
+                    : "text-ds2-foreground-muted hover:bg-ds2-surface-hover hover:text-ds2-foreground"),
                 focusRingClass,
               )}
             >
@@ -601,7 +601,7 @@ export function TableDrawer({
               <span
                 className={cn(
                   "text-xs",
-                  isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/80" : "text-white/80") : "text-ds2-foreground-muted",
+                  isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/80" : "text-ds2-foreground-muted") : "text-ds2-foreground-muted",
                 )}
               >
                 Valor atual
@@ -614,7 +614,7 @@ export function TableDrawer({
               <span
                 className={cn(
                   "inline-flex items-center gap-1 text-xs",
-                  isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/80" : "text-white/80") : "text-ds2-foreground-muted",
+                  isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/80" : "text-ds2-foreground-muted") : "text-ds2-foreground-muted",
                 )}
               >
                 <Clock3 className="h-3.5 w-3.5 shrink-0" aria-hidden />
