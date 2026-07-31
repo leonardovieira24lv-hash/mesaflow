@@ -17,11 +17,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <AdminShellProvider>
-      {/* Dark Theme Premium: `.dark` aqui ativa a paleta definida em
-          `globals.css` (bloco `.dark`) só dentro do shell administrativo —
-          Cardápio público, Onboarding e Autenticação ficam de fora, no tema
-          claro original, sem precisar de nenhuma mudança neles. */}
-      <div className="dark flex min-h-screen bg-background">
+      {/* `.dark` continua aqui só como infraestrutura do Tailwind
+          (variáveis que alguns tokens legados ainda resolvem) — nunca
+          substituída. `.ds2-dark` é o tema visual de fato do shell
+          administrativo inteiro: Sidebar, Header e `<main>` leem tokens
+          `ds2-*` diretamente daqui, na raiz — nenhuma tela precisa de um
+          wrapper próprio. Cardápio público, Onboarding e Autenticação
+          continuam de fora, no tema claro original. */}
+      <div className="dark ds2-dark flex min-h-screen bg-background">
         <AdminSidebar />
         {/* `min-w-0` é a correção real do overflow horizontal no mobile: um
             item flex tem `min-width: auto` por padrão, então sem isso ele
@@ -33,7 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             sintoma. */}
         <div className="flex min-w-0 flex-1 flex-col">
           <AdminHeader userEmail={user.email} />
-          <main className="min-w-0 flex-1 bg-muted/30 p-4 md:p-6">{children}</main>
+          <main className="min-w-0 flex-1 bg-ds2-background p-4 md:p-6">{children}</main>
         </div>
       </div>
     </AdminShellProvider>

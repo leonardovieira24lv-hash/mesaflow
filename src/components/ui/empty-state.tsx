@@ -19,18 +19,18 @@ export function EmptyState({ icon: Icon, title, description, action, className }
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-muted/20 p-12 text-center",
+        "flex flex-col items-center gap-3 rounded-ds2-md border border-dashed border-ds2-border bg-ds2-surface-hover/20 p-12 text-center",
         className,
       )}
     >
       {Icon && (
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted ring-1 ring-inset ring-border">
-          <Icon className="h-6 w-6 text-muted-foreground" aria-hidden />
+        <div className="flex h-12 w-12 items-center justify-center rounded-ds2-full bg-ds2-surface-hover ring-1 ring-inset ring-ds2-border">
+          <Icon className="h-6 w-6 text-ds2-foreground-muted" aria-hidden />
         </div>
       )}
       <div className="flex flex-col gap-1">
-        <p className="font-medium text-foreground">{title}</p>
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+        <p className="font-medium text-ds2-foreground">{title}</p>
+        {description && <p className="text-sm text-ds2-foreground-muted">{description}</p>}
       </div>
       {action}
     </div>

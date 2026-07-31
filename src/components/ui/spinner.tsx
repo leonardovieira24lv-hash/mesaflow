@@ -18,7 +18,7 @@ interface SpinnerProps {
 export function Spinner({ size = "md", className, label = "Carregando" }: SpinnerProps) {
   return (
     <span role="status" className="inline-flex items-center">
-      <Loader2 className={cn("animate-spin text-muted-foreground", sizeClasses[size], className)} aria-hidden />
+      <Loader2 className={cn("animate-spin text-ds2-foreground-muted", sizeClasses[size], className)} aria-hidden />
       <span className="sr-only">{label}</span>
     </span>
   );
@@ -29,7 +29,7 @@ export function PageLoading({ label = "Carregando" }: { label?: string }) {
   return (
     <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3">
       <Spinner size="lg" label={label} />
-      <p className="text-sm text-muted-foreground">{label}...</p>
+      <p className="text-sm text-ds2-foreground-muted">{label}...</p>
     </div>
   );
 }

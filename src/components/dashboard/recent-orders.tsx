@@ -62,7 +62,7 @@ export async function RecentOrders({ restaurantId }: { restaurantId: string }) {
                       <AdminOrderStatusBadge status={order.status} />
                     </TableCell>
                     <TableCell className="font-numeric">{formatCurrency(order.totalAmount)}</TableCell>
-                    <TableCell className="font-numeric text-muted-foreground">
+                    <TableCell className="font-numeric text-ds2-foreground-muted">
                       {timeFormatter.format(new Date(order.createdAt))}
                     </TableCell>
                   </TableRow>

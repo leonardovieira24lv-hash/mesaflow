@@ -8,29 +8,29 @@ import { cn } from "@/lib/utils";
  */
 export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="w-full overflow-x-auto rounded-lg border border-border">
+    <div className="w-full overflow-x-auto rounded-ds2-sm border border-ds2-border">
       <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   );
 }
 
 export function TableHeader({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn("sticky top-0 z-10 bg-muted/60 backdrop-blur-sm", className)} {...props} />;
+  return <thead className={cn("sticky top-0 z-10 bg-ds2-surface-hover/60 backdrop-blur-sm", className)} {...props} />;
 }
 
 export function TableBody({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <tbody className={cn("divide-y divide-border", className)} {...props} />;
+  return <tbody className={cn("divide-y divide-ds2-border", className)} {...props} />;
 }
 
 export function TableRow({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn("transition-colors hover:bg-muted/40", className)} {...props} />;
+  return <tr className={cn("transition-colors hover:bg-ds2-surface-hover/40", className)} {...props} />;
 }
 
 export function TableHead({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
       className={cn(
-        "h-11 whitespace-nowrap px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground",
+        "h-11 whitespace-nowrap px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted",
         className,
       )}
       {...props}
@@ -43,5 +43,5 @@ export function TableCell({ className, ...props }: TdHTMLAttributes<HTMLTableCel
 }
 
 export function TableCaption({ className, ...props }: HTMLAttributes<HTMLTableCaptionElement>) {
-  return <caption className={cn("mt-3 text-sm text-muted-foreground", className)} {...props} />;
+  return <caption className={cn("mt-3 text-sm text-ds2-foreground-muted", className)} {...props} />;
 }

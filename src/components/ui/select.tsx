@@ -11,6 +11,12 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
  * Select nativo estilizado (não um combobox customizado) — garante
  * comportamento de acessibilidade e teclado corretos "de graça" em todos os
  * navegadores e leitores de tela, sem reimplementar um listbox do zero.
+ *
+ * Mesma base de `Input` (hover, focus-visible com anel, disabled) — sem
+ * estado `readonly` de propósito: o HTML nativo de `<select>` não suporta
+ * o atributo `readonly` de forma útil (só `disabled`). Se um dia for
+ * necessário um "select somente leitura" de verdade, a solução é um
+ * componente próprio (combobox/listbox custom), não forçar o nativo.
  */
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, invalid, children, ...props }, ref) => {
@@ -20,9 +26,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           aria-invalid={invalid || undefined}
           className={cn(
-            "h-10 w-full appearance-none rounded-md border border-border bg-surface pl-3 pr-9 text-sm text-surface-foreground",
-            "transition-colors focus-visible:border-primary",
-            "disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-60",
+            "h-10 w-full appearance-none rounded-ds2-sm border border-ds2-border bg-ds2-surface pl-3 pr-9 text-sm text-ds2-foreground",
+            "transition-colors hover:border-ds2-primary/40",
+            "focus-visible:outline-none focus-visible:border-ds2-primary focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background",
+            "disabled:cursor-not-allowed disabled:border-ds2-border disabled:bg-ds2-surface-hover disabled:opacity-60 disabled:hover:border-ds2-border",
             invalid && inputInvalidClasses,
             className,
           )}
@@ -31,7 +38,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           {children}
         </select>
         <ChevronDown
-          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ds2-foreground-muted"
           aria-hidden
         />
       </div>

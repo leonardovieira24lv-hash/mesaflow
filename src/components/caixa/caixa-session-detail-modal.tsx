@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Clock3 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { Card } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert } from "@/components/ui/alert";
 import { formatCurrency, formatDurationBetween } from "@/lib/format";
@@ -77,66 +78,66 @@ export function CaixaSessionDetailModal({ sessionId, onClose }: CaixaSessionDeta
 
         {detail && !isLoading && (
           <>
-            <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-3">
+            <div className="grid grid-cols-2 gap-2 rounded-ds2-md bg-ds2-surface-hover/50 p-3">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] text-muted-foreground">Abertura</span>
-                <span className="text-sm font-medium text-foreground">
+                <span className="text-xs text-ds2-foreground-muted">Abertura</span>
+                <span className="text-sm font-medium text-ds2-foreground">
                   {new Date(detail.openedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] text-muted-foreground">Fechamento</span>
-                <span className="text-sm font-medium text-foreground">
+                <span className="text-xs text-ds2-foreground-muted">Fechamento</span>
+                <span className="text-sm font-medium text-ds2-foreground">
                   {new Date(detail.closedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
-              <div className="col-span-2 flex items-center gap-1.5 border-t border-border pt-2 text-sm text-muted-foreground">
+              <div className="col-span-2 flex items-center gap-1.5 border-t border-ds2-border pt-2 text-sm text-ds2-foreground-muted">
                 <Clock3 className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 Tempo de permanência:{" "}
-                <span className="font-medium text-foreground">
+                <span className="font-medium text-ds2-foreground">
                   {formatDurationBetween(detail.openedAt, detail.closedAt)}
                 </span>
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted">
                 Produtos consumidos
               </span>
-              <div className="flex flex-col overflow-hidden rounded-xl border border-border">
+              <Card className="flex flex-col overflow-hidden p-0">
                 {detail.items.map((item: CashierSessionDetail["items"][number], index: number) => (
                   <div
                     key={`${item.name}-${item.unitPrice}`}
                     className={
                       "flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm" +
-                      (index > 0 ? " border-t border-border" : "")
+                      (index > 0 ? " border-t border-ds2-border" : "")
                     }
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-2">
-                      <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-md bg-muted px-1 font-numeric text-[11px] font-semibold text-muted-foreground">
+                      <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-ds2-sm bg-ds2-surface-hover px-1 font-numeric text-xs font-semibold text-ds2-foreground-muted">
                         {item.quantity}×
                       </span>
-                      <span className="truncate text-foreground">{item.name}</span>
+                      <span className="truncate text-ds2-foreground">{item.name}</span>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
-                      <span className="text-xs text-muted-foreground">{formatCurrency(item.unitPrice)} un.</span>
-                      <span className="font-numeric font-semibold tabular-nums text-foreground">
+                      <span className="text-xs text-ds2-foreground-muted">{formatCurrency(item.unitPrice)} un.</span>
+                      <span className="font-numeric font-semibold tabular-nums text-ds2-foreground">
                         {formatCurrency(item.lineTotal)}
                       </span>
                     </div>
                   </div>
                 ))}
-              </div>
+              </Card>
             </div>
 
-            <div className="flex items-center justify-between rounded-xl bg-muted/50 px-3.5 py-3">
+            <div className="flex items-center justify-between rounded-ds2-md bg-ds2-surface-hover/50 px-3.5 py-3">
               <div className="flex flex-col gap-0.5">
-                <span className="text-sm font-semibold text-foreground">Valor final</span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-sm font-semibold text-ds2-foreground">Valor final</span>
+                <span className="text-xs text-ds2-foreground-muted">
                   {detail.paymentMethod ? PAYMENT_METHOD_LABELS[detail.paymentMethod] : "Forma de pagamento não registrada"}
                 </span>
               </div>
-              <span className="font-numeric text-xl font-bold tabular-nums text-foreground">
+              <span className="font-numeric text-xl font-bold tabular-nums text-ds2-foreground">
                 {formatCurrency(detail.totalAmount)}
               </span>
             </div>

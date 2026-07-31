@@ -24,7 +24,7 @@ interface ProductStatusFilterProps {
  */
 export function ProductStatusFilter({ value, onChange }: ProductStatusFilterProps) {
   return (
-    <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface p-1" role="tablist" aria-label="Filtrar produtos por status">
+    <div className="inline-flex items-center gap-1 rounded-ds2-sm border border-ds2-border bg-ds2-surface p-1" role="tablist" aria-label="Filtrar produtos por status">
       {OPTIONS.map((option) => (
         <Button
           key={option.value}

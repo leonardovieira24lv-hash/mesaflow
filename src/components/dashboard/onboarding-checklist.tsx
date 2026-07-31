@@ -72,11 +72,11 @@ export async function OnboardingChecklist({ restaurantId }: { restaurantId: stri
             <div key={item.key} className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 {item.done ? (
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden />
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-ds2-success" aria-hidden />
                 ) : (
-                  <Circle className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+                  <Circle className="h-5 w-5 shrink-0 text-ds2-foreground-muted" aria-hidden />
                 )}
-                <span className={cn("text-sm", item.done && "text-muted-foreground line-through")}>
+                <span className={cn("text-sm", item.done && "text-ds2-foreground-muted line-through")}>
                   {item.label}
                 </span>
               </div>

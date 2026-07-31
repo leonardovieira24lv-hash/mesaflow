@@ -84,19 +84,19 @@ export function ProductImageUpload({ restaurantId, value, onChange, disabled }: 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-start gap-4">
-        <div className="relative aspect-square w-32 shrink-0 overflow-hidden rounded-2xl border border-border bg-muted">
+        <div className="relative aspect-square w-32 shrink-0 overflow-hidden rounded-ds2-md border border-ds2-border bg-ds2-surface-hover">
           {value ? (
             <Image src={value} alt="" fill sizes="128px" className="object-cover" />
           ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-muted to-muted/60">
-              <ImageOff className="h-6 w-6 text-muted-foreground/40" strokeWidth={1.5} aria-hidden />
-              <span className="text-[11px] text-muted-foreground/70">Sem foto</span>
+            <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-ds2-surface-hover to-ds2-surface-hover/60">
+              <ImageOff className="h-6 w-6 text-ds2-foreground-muted/40" strokeWidth={1.5} aria-hidden />
+              <span className="text-xs text-ds2-foreground-muted/70">Sem foto</span>
             </div>
           )}
 
           {isUploading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-surface/80 backdrop-blur-[1px]">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden />
+            <div className="absolute inset-0 flex items-center justify-center bg-ds2-surface/80 backdrop-blur-[1px]">
+              <Loader2 className="h-6 w-6 animate-spin text-ds2-primary" aria-hidden />
             </div>
           )}
         </div>
@@ -121,14 +121,14 @@ export function ProductImageUpload({ restaurantId, value, onChange, disabled }: 
               size="sm"
               onClick={() => onChange("")}
               disabled={disabled || isUploading}
-              className="text-destructive hover:text-destructive"
+              className="text-ds2-danger hover:text-ds2-danger"
             >
               <Trash2 className="h-4 w-4" />
               Remover imagem
             </Button>
           )}
 
-          <p className="text-xs text-muted-foreground">JPG, PNG ou WEBP · até 5 MB</p>
+          <p className="text-xs text-ds2-foreground-muted">JPG, PNG ou WEBP · até 5 MB</p>
         </div>
       </div>
 

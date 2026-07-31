@@ -222,6 +222,10 @@ export function OrdersList({ restaurantId, initialOrders, initialMeta }: OrdersL
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId]);
 
+  // Estas abas são um grupo de seleção (Segmented Control/Toggle Group),
+  // não botões de ação isolados — por isso não usam `<Button>`, mesmo
+  // reproduzindo manualmente um padrão parecido com os filtros do Painel
+  // de Mesas. Dívida técnica registrada para uma sprint própria futura.
   const filterTabs = useMemo(
     () =>
       STATUS_FILTERS.map((filter) => (
@@ -231,10 +235,11 @@ export function OrdersList({ restaurantId, initialOrders, initialMeta }: OrdersL
           onClick={() => handleFilterChange(filter.value)}
           aria-pressed={statusFilter === filter.value}
           className={cn(
-            "shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+            "shrink-0 rounded-ds2-full px-4 py-1.5 text-sm font-medium transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background",
             statusFilter === filter.value
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:bg-muted/70",
+              ? "bg-ds2-primary text-ds2-primary-foreground"
+              : "bg-ds2-surface-hover text-ds2-foreground-muted hover:bg-ds2-surface-hover/70",
           )}
         >
           {filter.label}
@@ -300,17 +305,18 @@ export function OrdersList({ restaurantId, initialOrders, initialMeta }: OrdersL
                       if (e.key === "Enter") router.push(ROUTES.pedidoDetalhe(order.id));
                     }}
                     className={cn(
-                      "cursor-pointer transition-colors duration-700 focus-visible:bg-muted/40 focus-visible:outline-none",
-                      highlightedIds.has(order.id) && "bg-primary/10",
+                      "cursor-pointer transition-colors duration-700",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ds2-ring",
+                      highlightedIds.has(order.id) && "bg-ds2-primary/10",
                     )}
                   >
-                    <TableCell className="font-medium text-foreground">{order.table.name}</TableCell>
+                    <TableCell className="font-medium text-ds2-foreground">{order.table.name}</TableCell>
                     <TableCell>
                       <AdminOrderStatusBadge status={order.status} />
                     </TableCell>
                     <TableCell>{order.item_count}</TableCell>
                     <TableCell className="font-numeric">{formatCurrency(order.total_amount)}</TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-ds2-foreground-muted">
                       {dateTimeFormatter.format(new Date(order.created_at))}
                     </TableCell>
                   </TableRow>

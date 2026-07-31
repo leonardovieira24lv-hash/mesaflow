@@ -40,12 +40,12 @@ export function QuickActions() {
       {ACTIONS.map(({ label, href, icon: Icon }) => (
         <Link key={label} href={href} className="group">
           <Card interactive className="flex items-center gap-3 p-5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-transform group-hover:scale-110">
-              <Icon className="h-5 w-5 text-primary" aria-hidden />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-ds2-sm bg-ds2-primary/10 transition-transform group-hover:scale-110">
+              <Icon className="h-5 w-5 text-ds2-primary" aria-hidden />
             </div>
-            <span className="flex-1 text-sm font-medium">{label}</span>
+            <span className="flex-1 text-sm font-medium text-ds2-foreground">{label}</span>
             <ArrowUpRight
-              className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+              className="h-4 w-4 shrink-0 text-ds2-foreground-muted opacity-0 transition-opacity group-hover:opacity-100"
               aria-hidden
             />
           </Card>

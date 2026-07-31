@@ -6,6 +6,12 @@ export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
   invalid?: boolean;
 }
 
+/**
+ * Nenhum token próprio aqui — herda de `inputBaseClasses`/
+ * `inputInvalidClasses` (`components/ui/input.tsx`), incluindo hover,
+ * focus-visible com anel e o tratamento de `readonly` (discreto, sem
+ * opacidade reduzida — ver comentário em `input.tsx`).
+ */
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, invalid, rows = 4, ...props }, ref) => {
     return (

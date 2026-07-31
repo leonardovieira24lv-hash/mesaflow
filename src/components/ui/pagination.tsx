@@ -39,7 +39,7 @@ export function Pagination({ page, totalPages, onPageChange, className }: Pagina
       <ul className="flex items-center gap-1">
         {pageNumbers.map((p, i) =>
           p === "..." ? (
-            <li key={`ellipsis-${i}`} className="px-2 text-sm text-muted-foreground">
+            <li key={`ellipsis-${i}`} className="px-2 text-sm text-ds2-foreground-muted">
               …
             </li>
           ) : (
@@ -48,10 +48,11 @@ export function Pagination({ page, totalPages, onPageChange, className }: Pagina
                 onClick={() => onPageChange(p)}
                 aria-current={p === page ? "page" : undefined}
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-md text-sm font-medium transition-colors",
+                  "flex h-8 w-8 items-center justify-center rounded-ds2-sm text-sm font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background",
                   p === page
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted",
+                    ? "bg-ds2-primary text-ds2-primary-foreground"
+                    : "text-ds2-foreground-muted hover:bg-ds2-surface-hover",
                 )}
               >
                 {p}

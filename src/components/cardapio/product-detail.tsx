@@ -72,7 +72,7 @@ export function ProductDetail({ item, categories, restaurantId }: ProductDetailP
         />
       </div>
 
-      <div className="max-w-xl border-t border-border pt-6">
+      <div className="max-w-xl border-t border-ds2-border pt-6">
         <Button variant="destructive" onClick={() => setConfirmingDelete(true)} isLoading={isDeleting}>
           <Trash2 className="h-4 w-4" />
           Excluir produto

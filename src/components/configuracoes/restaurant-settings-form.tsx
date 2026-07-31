@@ -160,27 +160,27 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
         </CardHeader>
         <CardContent className="flex flex-col gap-3 text-sm sm:flex-row sm:flex-wrap sm:gap-6">
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Nome</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-ds2-foreground-muted">Nome</span>
             <span className="font-medium">{restaurant.name}</span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Slug</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-ds2-foreground-muted">Slug</span>
             <span className="font-mono">{restaurant.slug}</span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-ds2-foreground-muted">Status</span>
             <RestaurantStatusBadge status={restaurant.status} className="w-fit" />
           </div>
           {currentPublicUrl && (
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <span className="text-xs font-medium uppercase tracking-wide text-ds2-foreground-muted">
                 Cardápio público
               </span>
               <a
                 href={currentPublicUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-primary hover:underline"
+                className="inline-flex items-center gap-1 text-ds2-primary hover:underline"
               >
                 {currentPublicUrl}
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden />
@@ -222,7 +222,7 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
             </FormField>
 
             {slugChanged && (
-              <p className="rounded-md bg-warning/10 px-3 py-2 text-xs text-warning">
+              <p className="rounded-ds2-sm bg-ds2-warning/10 px-3 py-2 text-xs text-ds2-warning">
                 Alterar o slug muda a URL pública do cardápio. QR Codes já impressos e links já
                 compartilhados com o slug atual (<span className="font-mono">{restaurant.slug}</span>)
                 deixarão de funcionar e precisarão ser gerados/enviados de novo.

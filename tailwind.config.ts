@@ -145,12 +145,6 @@ const config: Config = {
         // mais lento e discreto que um alerta genérico de app de consumo,
         // pra parecer profissional (referência: PDV/KDS de cozinha), não
         // "piscando" freneticamente.
-        //
-        // Sprint UI-01 (Migração DS2, Etapa 1, 2026-07-31): cor migrada de
-        // `hsl(var(--destructive))` (token legado) para
-        // `hsl(var(--ds2-danger))` — mesma ressalva de
-        // `derive-table-card-state.ts`: sem efeito visual correto até
-        // `.ds2-dark` ser aplicado (Etapa 2).
         "new-order-alert": {
           "0%, 100%": {
             transform: "scale(1)",

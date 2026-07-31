@@ -22,14 +22,14 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
         />
         <span
           className={cn(
-            "pointer-events-none flex h-5 w-5 items-center justify-center rounded border border-border bg-surface",
-            "transition-colors peer-checked:border-primary peer-checked:bg-primary",
+            "pointer-events-none flex h-5 w-5 items-center justify-center rounded-ds2-sm border border-ds2-border bg-ds2-surface",
+            "transition-colors peer-checked:border-ds2-primary peer-checked:bg-ds2-primary",
             "peer-checked:[&>svg]:scale-100",
-            "peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2",
+            "peer-focus-visible:ring-2 peer-focus-visible:ring-ds2-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-ds2-background",
             "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
           )}
         >
-          <Check className="h-3.5 w-3.5 scale-0 text-primary-foreground transition-transform" />
+          <Check className="h-3.5 w-3.5 scale-0 text-ds2-primary-foreground transition-transform" />
         </span>
       </span>
     );

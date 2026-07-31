@@ -175,57 +175,57 @@ export function CloseBillModal({ open, table, onCancel, onConfirm, isSubmitting,
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-3">
+            <div className="grid grid-cols-2 gap-2 rounded-ds2-md bg-ds2-surface-hover p-3">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] text-muted-foreground">Aberta às</span>
-                <span className="text-sm font-medium text-foreground">
+                <span className="text-xs text-ds2-foreground-muted">Aberta às</span>
+                <span className="text-sm font-medium text-ds2-foreground">
                   {openedAt
                     ? new Date(openedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
                     : "—"}
                 </span>
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] text-muted-foreground">Agora</span>
-                <span className="text-sm font-medium text-foreground">
+                <span className="text-xs text-ds2-foreground-muted">Agora</span>
+                <span className="text-sm font-medium text-ds2-foreground">
                   {new Date(now).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
-              <div className="col-span-2 flex items-center gap-1.5 border-t border-border pt-2 text-sm text-muted-foreground">
+              <div className="col-span-2 flex items-center gap-1.5 border-t border-ds2-border pt-2 text-sm text-ds2-foreground-muted">
                 <Clock3 className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 Tempo de permanência:{" "}
-                <span className="font-medium text-foreground">
+                <span className="font-medium text-ds2-foreground">
                   {openedAt ? formatDurationBetween(openedAt, now) : "—"}
                 </span>
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted">
                 Produtos consumidos
               </span>
               {lines.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border px-3.5 py-4 text-center text-sm text-muted-foreground">
+                <p className="rounded-ds2-md border border-dashed border-ds2-border px-3.5 py-4 text-center text-sm text-ds2-foreground-muted">
                   Nenhum produto encontrado para esta mesa.
                 </p>
               ) : (
-                <div className="flex max-h-56 flex-col overflow-y-auto rounded-xl border border-border">
+                <div className="flex max-h-56 flex-col overflow-y-auto rounded-ds2-md border border-ds2-border">
                   {lines.map((line: ConsolidatedLine, index: number) => (
                     <div
                       key={line.key}
                       className={cn(
                         "flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm",
-                        index > 0 && "border-t border-border",
+                        index > 0 && "border-t border-ds2-border",
                       )}
                     >
                       <div className="flex min-w-0 flex-1 items-center gap-2">
-                        <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-md bg-muted px-1 font-numeric text-[11px] font-semibold text-muted-foreground">
+                        <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-ds2-sm bg-ds2-surface-hover px-1 font-numeric text-xs font-semibold text-ds2-foreground-muted">
                           {line.quantity}×
                         </span>
-                        <span className="truncate text-foreground">{line.name}</span>
+                        <span className="truncate text-ds2-foreground">{line.name}</span>
                       </div>
                       <div className="flex shrink-0 items-center gap-3">
-                        <span className="text-xs text-muted-foreground">{formatCurrency(line.unitPrice)} un.</span>
-                        <span className="font-numeric font-semibold tabular-nums text-foreground">
+                        <span className="text-xs text-ds2-foreground-muted">{formatCurrency(line.unitPrice)} un.</span>
+                        <span className="font-numeric font-semibold tabular-nums text-ds2-foreground">
                           {formatCurrency(line.unitPrice * line.quantity)}
                         </span>
                       </div>
@@ -235,15 +235,15 @@ export function CloseBillModal({ open, table, onCancel, onConfirm, isSubmitting,
               )}
             </div>
 
-            <div className="flex items-center justify-between rounded-xl bg-muted/50 px-3.5 py-3">
-              <span className="text-sm font-semibold text-foreground">Valor total</span>
-              <span className="font-numeric text-xl font-bold tabular-nums text-foreground">
+            <div className="flex items-center justify-between rounded-ds2-md bg-ds2-surface-hover px-3.5 py-3">
+              <span className="text-sm font-semibold text-ds2-foreground">Valor total</span>
+              <span className="font-numeric text-xl font-bold tabular-nums text-ds2-foreground">
                 {formatCurrency(total)}
               </span>
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted">
                 Forma de pagamento
               </span>
               <div className="grid grid-cols-2 gap-2">
@@ -258,13 +258,14 @@ export function CloseBillModal({ open, table, onCancel, onConfirm, isSubmitting,
                       aria-pressed={isSelected}
                       disabled={isSubmitting}
                       className={cn(
-                        "flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-colors duration-150",
+                        "flex flex-col items-center gap-1.5 rounded-ds2-md border p-3 text-center transition-colors duration-150",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background",
                         isSelected
-                          ? "border-primary bg-primary/10 text-foreground"
-                          : "border-border bg-surface text-muted-foreground hover:border-foreground/20 hover:text-foreground",
+                          ? "border-ds2-primary bg-ds2-primary/10 text-ds2-foreground"
+                          : "border-ds2-border bg-ds2-surface text-ds2-foreground-muted hover:border-ds2-foreground/20 hover:text-ds2-foreground",
                       )}
                     >
-                      <Icon className={cn("h-5 w-5", isSelected && "text-primary")} aria-hidden />
+                      <Icon className={cn("h-5 w-5", isSelected && "text-ds2-primary")} aria-hidden />
                       <span className="text-xs font-medium">{option.label}</span>
                     </button>
                   );

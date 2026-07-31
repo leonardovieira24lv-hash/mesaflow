@@ -314,10 +314,13 @@
     background-size: 200% 100%;
   }
 
-  /* Botão principal — tema claro: preenchimento sólido na cor de marca
-     (verde). Tema escuro (`.dark`, abaixo) sobrescreve para o tratamento
-     "preto com detalhes dourados" pedido no briefing — nunca dourado
-     sólido preenchendo o botão inteiro, o dourado fica na borda/texto. */
+  /* Sprint UI-06.3 (2026-07-31): `Button` (variant="primary") parou de
+     depender desta classe — migrado para tokens `ds2-*` diretamente em
+     `button.tsx`. Esta classe continua aqui porque `menu-item-card.tsx`
+     (Cardápio do cliente, tema claro, fora do escopo admin) e
+     `admin-sidebar.tsx` (BrandMark) ainda a usam diretamente, fora do
+     componente `Button` — não são "outras coisas" desta sprint, são
+     consumidores próprios da classe que continuam precisando dela. */
   .btn-primary-surface {
     background-image: linear-gradient(180deg, hsl(var(--primary) / 1), hsl(var(--primary) / 0.92));
   }

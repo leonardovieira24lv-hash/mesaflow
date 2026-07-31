@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("skeleton-shimmer animate-shimmer overflow-hidden rounded-md bg-muted", className)}
+      className={cn("skeleton-shimmer animate-shimmer overflow-hidden rounded-ds2-sm bg-ds2-surface-hover", className)}
       role="presentation"
       aria-hidden
       {...props}
@@ -20,13 +20,13 @@ export function SkeletonText({ className, width = "100%" }: { className?: string
 
 /** Skeleton de avatar/ícone circular. */
 export function SkeletonAvatar({ className }: { className?: string }) {
-  return <Skeleton className={cn("h-10 w-10 rounded-full", className)} />;
+  return <Skeleton className={cn("h-10 w-10 rounded-ds2-full", className)} />;
 }
 
 /** Skeleton de um card inteiro (ex.: card de pedido carregando). */
 export function SkeletonCard({ className }: { className?: string }) {
   return (
-    <div className={cn("rounded-lg border border-border bg-surface p-6", className)}>
+    <div className={cn("rounded-ds2-sm border border-ds2-border bg-ds2-surface p-6", className)}>
       <div className="flex items-center gap-3">
         <SkeletonAvatar />
         <div className="flex flex-1 flex-col gap-2">

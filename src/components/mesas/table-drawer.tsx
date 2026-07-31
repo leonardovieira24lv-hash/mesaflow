@@ -479,9 +479,11 @@ export function TableDrawer({
   // (`ds2-warning`), precisa de texto escuro em vez do branco genérico.
   const isDarkOnLight = TABLE_CARD_TONE_DARK_TEXT.includes(cardState.tone);
 
-  // Sprint UI-03 (Refinamento DS2, 2026-07-31): mesmo raciocínio de
-  // `tables-manager.tsx` — `Button` (componente compartilhado) não define
-  // `focus-visible` próprio; anel aplicado por instância, só aqui.
+  // `focusRingClass`: mesmo raciocínio de `tables-manager.tsx` — usado em
+  // elementos que não são `Button` (o link "Ver histórico completo");
+  // `Button` já tem `focus-visible` nativo desde a migração DS2 do
+  // componente, então onde este valor é passado para um `<Button>` é
+  // redundante, não incorreto.
   const focusRingClass =
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background";
 
@@ -538,18 +540,12 @@ export function TableDrawer({
               </span>
 
               {/*
-                Sprint "Indicador de Pedido Não Processado" (2026-07-31),
-                atualizado na Sprint "Destaque de Pedido Não Processado"
-                (2026-07-31): mesma regra do card na grade — só aparece
+                Selo à parte do tom, para os dois coexistirem (mesa
+                "Preparando" com pedido novo ainda em pending). Só aparece
                 quando soma informação nova ao tom já mostrado acima.
                 Contagem (não só "Pedido novo") pela mesma razão do tile:
                 deixou de ser o destaque principal (isso é a animação do
                 card na grade), aqui reforça de forma consistente.
-
-                Sprint UI-01 (Migração DS2, Etapa 1, 2026-07-31): cor
-                migrada para `ds2-warning`/`ds2-warning-foreground` — sem
-                efeito visual correto até `.ds2-dark` ser aplicado (Etapa 2,
-                ver `derive-table-card-state.ts`).
               */}
               {cardState.hasUnprocessedOrders && cardState.tone !== "new_order" && (
                 <span

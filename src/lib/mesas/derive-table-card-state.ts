@@ -190,19 +190,11 @@ export function deriveTableCardState(
 
 /**
  * Tons sólidos para o tile inteiro (grade de Mesas e cabeçalho do Drawer).
+ * Valores usam os tokens `ds2-*` (`tailwind.config.ts`/`app/globals.css`,
+ * classe `.ds2-dark`, aplicada na raiz do shell administrativo).
  *
- * Sprint UI-01 (Migração DS2, Etapa 1 — 2026-07-31): valores migrados de
- * HSL literal (`bg-[hsl(...)]`) para os tokens `ds2-*`
- * (`tailwind.config.ts`/`app/globals.css`, classe `.ds2-dark`). IMPORTANTE:
- * esta etapa NÃO aplica `.ds2-dark` em nenhuma tela ainda — as variáveis
- * `--ds2-*` só existem dentro daquele escopo, então até a Etapa 2 (que liga
- * `.ds2-dark` no Painel de Mesas) estas classes não têm efeito visual
- * correto se renderizadas isoladamente. Checkpoint intencional: token
- * correto primeiro, ativação visual depois, para isolar qualquer regressão
- * a uma das duas etapas, nunca as duas de uma vez.
- *
- * `waiter_call` foi removido desta paleta (Sprint UI-01) — deixou de ser
- * tom, ver `hasWaiterCall`/comentário no topo do arquivo.
+ * `waiter_call` não existe nesta paleta — deixou de ser tom, ver
+ * `hasWaiterCall`/comentário no topo do arquivo.
  *
  * Paleta (7 estados):
  * - `free`/`maintenance`: sem preenchimento (cinza elegante / opaco).
@@ -234,13 +226,10 @@ export const TABLE_CARD_TONE_CLASSES: Record<TableCardTone, string> = {
  * contorno, não preenchimento, então continua usando as cores neutras de
  * texto.
  *
- * RESOLVIDO na Sprint UI-02: `new_order` usa `ds2-warning-foreground`
- * ESCURO (fundo claro), diferente dos outros três (fundo escuro, texto
- * claro). Antes desta sprint, `TablesManager`/`TableDrawer` assumiam "tom
- * preenchido = texto branco" de forma genérica para os textos secundários
- * — incorreto para `new_order`. Ver `TABLE_CARD_TONE_DARK_TEXT` abaixo,
- * que os dois arquivos agora consultam para escolher a variante certa de
- * texto por tom.
+ * `new_order` usa `ds2-warning-foreground` ESCURO (fundo claro), diferente
+ * dos outros três (fundo escuro, texto claro) — ver
+ * `TABLE_CARD_TONE_DARK_TEXT` abaixo, que `TablesManager`/`TableDrawer`
+ * consultam para escolher a variante certa de texto por tom.
  */
 export const TABLE_CARD_FILLED_TONES: readonly TableCardTone[] = ["new_order", "preparing", "ready", "bill_requested"];
 
@@ -255,12 +244,10 @@ export const TABLE_CARD_TONE_DOT_CLASSES: Record<TableCardTone, string> = {
 };
 
 /**
- * Sprint UI-02 (Ativação DS2 no Painel de Mesas, 2026-07-31): resolve a
- * raiz do risco sinalizado na Etapa 1 — os textos/ícones secundários de um
- * tile preenchido (`TABLE_CARD_FILLED_TONES`) assumiam texto branco de
- * forma genérica (`isFilled ? "text-white..." : ...`). Isso é verdade para
+ * Textos/ícones secundários de um tile preenchido (`TABLE_CARD_FILLED_TONES`)
+ * não podem assumir texto branco de forma genérica: verdade para
  * `preparing`/`ready`/`bill_requested` (fundo escuro, `ds2-*-foreground` é
- * branco mesmo) mas é o oposto para `new_order`: `ds2-warning` é um fundo
+ * branco mesmo), mas o oposto para `new_order`: `ds2-warning` é um fundo
  * CLARO, `ds2-warning-foreground` é escuro (`0 0% 8%`). Esta lista existe
  * pra `TablesManager`/`TableDrawer` saberem qual dos dois casos aplicar —
  * é a distinção real entre os tons, não um caso especial temporário. Se um

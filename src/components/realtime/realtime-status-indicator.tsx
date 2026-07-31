@@ -5,10 +5,15 @@ const CONFIG: Record<
   RealtimeConnectionStatus,
   { label: string; dotClass: string; textClass: string; pulse: boolean }
 > = {
-  connected: { label: "Ao vivo", dotClass: "bg-success", textClass: "text-success", pulse: true },
-  connecting: { label: "Conectando…", dotClass: "bg-muted-foreground", textClass: "text-muted-foreground", pulse: false },
-  reconnecting: { label: "Reconectando…", dotClass: "bg-warning", textClass: "text-warning", pulse: true },
-  offline: { label: "Sem conexão", dotClass: "bg-destructive", textClass: "text-destructive", pulse: false },
+  connected: { label: "Ao vivo", dotClass: "bg-ds2-success", textClass: "text-ds2-success", pulse: true },
+  connecting: {
+    label: "Conectando…",
+    dotClass: "bg-ds2-foreground-muted",
+    textClass: "text-ds2-foreground-muted",
+    pulse: false,
+  },
+  reconnecting: { label: "Reconectando…", dotClass: "bg-ds2-warning", textClass: "text-ds2-warning", pulse: true },
+  offline: { label: "Sem conexão", dotClass: "bg-ds2-danger", textClass: "text-ds2-danger", pulse: false },
 };
 
 /**
@@ -35,7 +40,7 @@ export function RealtimeStatusIndicator({
       aria-live="polite"
       title={config.label}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium ring-1 ring-inset ring-border",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-ds2-full bg-ds2-surface-hover px-2.5 py-1 text-xs font-medium ring-1 ring-inset ring-ds2-border",
         config.textClass,
         className,
       )}
@@ -44,10 +49,10 @@ export function RealtimeStatusIndicator({
         {config.pulse && (
           <span
             aria-hidden
-            className={cn("absolute inline-flex h-full w-full animate-ping rounded-full opacity-75", config.dotClass)}
+            className={cn("absolute inline-flex h-full w-full animate-ping rounded-ds2-full opacity-75", config.dotClass)}
           />
         )}
-        <span aria-hidden className={cn("relative inline-flex h-1.5 w-1.5 rounded-full", config.dotClass)} />
+        <span aria-hidden className={cn("relative inline-flex h-1.5 w-1.5 rounded-ds2-full", config.dotClass)} />
       </span>
       {config.label}
     </span>

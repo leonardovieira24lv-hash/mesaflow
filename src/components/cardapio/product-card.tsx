@@ -55,35 +55,35 @@ export function ProductCard({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-border bg-surface p-2.5",
+        "flex items-center gap-3 rounded-ds2-sm border border-ds2-border bg-ds2-surface p-2.5",
         isArchived && "opacity-75",
       )}
     >
-      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-ds2-sm border border-ds2-border bg-ds2-surface-hover">
         {item.imageUrl ? (
           <Image src={item.imageUrl} alt="" fill sizes="56px" className="object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <ImageOff className="h-4 w-4 text-muted-foreground/40" strokeWidth={1.5} aria-hidden />
+            <ImageOff className="h-4 w-4 text-ds2-foreground-muted/40" strokeWidth={1.5} aria-hidden />
           </div>
         )}
         {isArchived && (
-          <div className="absolute inset-0 flex items-center justify-center bg-surface/60">
-            <Archive className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+          <div className="absolute inset-0 flex items-center justify-center bg-ds2-surface/60">
+            <Archive className="h-5 w-5 text-ds2-foreground-muted" strokeWidth={1.75} aria-hidden />
           </div>
         )}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-semibold text-foreground">{item.name}</p>
+          <p className="truncate text-sm font-semibold text-ds2-foreground">{item.name}</p>
           {isArchived && (
             <Badge variant="muted" className="shrink-0">
               Arquivado
             </Badge>
           )}
         </div>
-        <p className="font-numeric text-sm font-bold text-primary">{formatCurrency(item.price)}</p>
+        <p className="font-numeric text-sm font-bold text-ds2-primary">{formatCurrency(item.price)}</p>
       </div>
 
       {isArchived ? (
@@ -118,7 +118,7 @@ export function ProductCard({
               onClick={() => onDelete(item)}
               aria-label={`Excluir ${item.name}`}
             >
-              <Trash2 className="h-4 w-4 text-destructive" />
+              <Trash2 className="h-4 w-4 text-ds2-danger" />
             </Button>
           </div>
         </>

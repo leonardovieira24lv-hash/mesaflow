@@ -10,10 +10,14 @@ interface AlertProps extends HTMLAttributes<HTMLDivElement> {
   hideIcon?: boolean;
 }
 
+/**
+ * Sem variante `success`, de propósito — não foi aprovada como variante
+ * nova; não criar por conta própria.
+ */
 const VARIANT_CONFIG: Record<AlertVariant, { icon: typeof Info; className: string }> = {
-  warning: { icon: AlertTriangle, className: "border-warning/30 bg-warning/5 text-warning" },
-  destructive: { icon: XCircle, className: "border-destructive/30 bg-destructive/5 text-destructive" },
-  info: { icon: Info, className: "border-info/30 bg-info/5 text-info" },
+  warning: { icon: AlertTriangle, className: "border-ds2-warning/30 bg-ds2-warning/5 text-ds2-warning" },
+  destructive: { icon: XCircle, className: "border-ds2-danger/30 bg-ds2-danger/5 text-ds2-danger" },
+  info: { icon: Info, className: "border-ds2-info/30 bg-ds2-info/5 text-ds2-info" },
 };
 
 /**
@@ -29,7 +33,7 @@ export function Alert({ variant = "warning", hideIcon, className, children, ...p
   return (
     <div
       role="alert"
-      className={cn("flex items-start gap-2.5 rounded-lg border p-4 text-sm", variantClassName, className)}
+      className={cn("flex items-start gap-2.5 rounded-ds2-md border p-4 text-sm", variantClassName, className)}
       {...props}
     >
       {!hideIcon && <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />}

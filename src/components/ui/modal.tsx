@@ -24,6 +24,12 @@ interface ModalProps {
  *
  * Para confirmações (excluir, cancelar), preferir `<ConfirmDialog>`, que já
  * usa este componente por baixo com o rótulo/variante certos.
+ *
+ * `animate-scale-in` usa sua duração/easing atuais (0.15s ease-out),
+ * divergentes do padrão oficial de entrada de Modal (`ds2-duration-slow`/
+ * `ds2-ease`, seção 10 do MesaFlow Visual Language) — não corrigido: essa
+ * animação é compartilhada com telas públicas do Cardápio do cliente,
+ * ajustar sua duração afeta lá também.
  */
 export function Modal({ open, onClose, title, description, children, footer, hideHeader, className }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -57,7 +63,7 @@ export function Modal({ open, onClose, title, description, children, footer, hid
       aria-labelledby={hideHeader ? undefined : "modal-title"}
       aria-label={hideHeader ? title : undefined}
       className={cn(
-        "m-auto w-full max-w-md rounded-2xl border border-border bg-surface p-0 text-surface-foreground shadow-card-hover",
+        "m-auto w-full max-w-md rounded-ds2-lg border border-ds2-border bg-ds2-surface p-0 text-ds2-foreground shadow-ds2-lg",
         "backdrop:bg-black/50 backdrop:backdrop-blur-[2px]",
         "open:animate-scale-in",
         className,
@@ -66,10 +72,10 @@ export function Modal({ open, onClose, title, description, children, footer, hid
       {!hideHeader && (
         <div className="flex items-start justify-between gap-4 p-7 pb-4">
           <div className="flex flex-col gap-1.5">
-            <h2 id="modal-title" className="font-display text-xl font-semibold tracking-tight">
+            <h2 id="modal-title" className="font-display text-xl font-semibold tracking-tight text-ds2-foreground">
               {title}
             </h2>
-            {description && <p className="text-sm text-muted-foreground">{description}</p>}
+            {description && <p className="text-sm text-ds2-foreground-muted">{description}</p>}
           </div>
           <Button
             variant="ghost"

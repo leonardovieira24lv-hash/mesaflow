@@ -21,15 +21,15 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(({ className, id
       />
       <span
         className={cn(
-          "pointer-events-none absolute inset-0 rounded-full bg-muted transition-colors",
-          "peer-checked:bg-primary",
-          "peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2",
+          "pointer-events-none absolute inset-0 rounded-ds2-full bg-ds2-surface-hover transition-colors",
+          "peer-checked:bg-ds2-primary",
+          "peer-focus-visible:ring-2 peer-focus-visible:ring-ds2-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-ds2-background",
           "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
         )}
       />
       <span
         className={cn(
-          "pointer-events-none absolute left-0.5 h-5 w-5 rounded-full bg-surface shadow transition-transform",
+          "pointer-events-none absolute left-0.5 h-5 w-5 rounded-ds2-full bg-ds2-surface shadow-ds2-sm transition-transform",
           "peer-checked:translate-x-5",
         )}
       />

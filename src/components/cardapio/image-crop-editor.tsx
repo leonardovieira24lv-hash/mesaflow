@@ -355,7 +355,7 @@ export function ImageCropEditor({ open, file, onCancel, onSave, isSaving }: Imag
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           onWheel={handleWheel}
-          className="relative mx-auto aspect-square w-full max-w-[320px] touch-none select-none overflow-hidden rounded-2xl border border-border bg-muted"
+          className="relative mx-auto aspect-square w-full max-w-[320px] touch-none select-none overflow-hidden rounded-ds2-lg border border-ds2-border bg-ds2-surface-hover"
         >
           {imageUrl && naturalSize && (
             // eslint-disable-next-line @next/next/no-img-element -- posicionamento manual via transform, fora do fluxo de otimização do <Image>

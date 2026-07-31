@@ -80,8 +80,8 @@ export function CategorySection({
         onOpenChange={onOpenChange}
         title={
           <span className="flex items-center gap-2">
-            <span className="font-display text-sm font-semibold text-foreground">{category.name}</span>
-            <span className="text-xs text-muted-foreground">
+            <span className="font-display text-sm font-semibold text-ds2-foreground">{category.name}</span>
+            <span className="text-xs text-ds2-foreground-muted">
               ({items.length} {items.length === 1 ? "produto" : "produtos"})
             </span>
           </span>
@@ -89,7 +89,7 @@ export function CategorySection({
         actions={
           <>
             <span
-              className="cursor-grab px-1 text-muted-foreground active:cursor-grabbing"
+              className="cursor-grab px-1 text-ds2-foreground-muted active:cursor-grabbing"
               aria-label={`Arrastar para reordenar ${category.name}`}
             >
               <GripVertical className="h-4 w-4" aria-hidden />
@@ -103,7 +103,7 @@ export function CategorySection({
               onClick={onDeleteCategory}
               aria-label={`Excluir categoria ${category.name}`}
             >
-              <Trash2 className="h-4 w-4 text-destructive" />
+              <Trash2 className="h-4 w-4 text-ds2-danger" />
             </Button>
           </>
         }

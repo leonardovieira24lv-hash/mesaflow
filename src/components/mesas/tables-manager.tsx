@@ -887,34 +887,17 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
     { value: "manutencao", label: "Manutenção" },
   ];
 
-  // Sprint UI-03 (Refinamento DS2, 2026-07-31): foco visível pros elementos
-  // já interativos deste componente — `Button` (componente compartilhado)
-  // não define `focus-visible` próprio hoje; em vez de mexer nele (afetaria
-  // toda tela que o usa), o anel é aplicado por instância, só aqui, via
-  // `className`. Usa `ds2-ring`/`ds2-background` — só funciona vivo dentro
-  // do escopo `.ds2-dark` já ativo neste componente.
+  // `focusRingClass`: aplicado por instância a elementos que não são
+  // `Button` (ex.: o link "Ver logs de debug") — `Button` já tem
+  // `focus-visible` nativo desde a migração DS2 do componente; onde este
+  // valor ainda é passado para um `<Button>`, é redundante (não incorreto,
+  // só duplicado) e pode ser retirado numa limpeza futura desses call
+  // sites específicos.
   const focusRingClass =
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background";
 
   return (
-    /**
-     * Sprint UI-02 (Ativação DS2 no Painel de Mesas, 2026-07-31): escopo
-     * de `.ds2-dark` aplicado aqui, dentro do próprio componente — não em
-     * `(admin)/mesas/page.tsx` nem em `(admin)/layout.tsx` (que continuam
-     * intocados, compartilhados por todas as outras telas admin).
-     *
-     * `-m-4 md:-m-6` cancela exatamente o `p-4 md:p-6` do `<main>` em
-     * `(admin)/layout.tsx` — sem editar aquele arquivo. O `<main>` também
-     * tem `bg-muted/30`; sem isso, sobraria uma faixa cinza-clara (o
-     * padding dele) ao redor do conteúdo grafite-escuro da DS2. Com a
-     * margem negativa, este wrapper "vaza" até a borda de `<main>`, e o
-     * `bg-ds2-background` + `p-4 md:p-6` (nossos, substituindo o padding
-     * cancelado) cobrem essa faixa por dentro. Sidebar/Header (`.dark`,
-     * fora deste componente) continuam na paleta atual — essa costura
-     * entre os dois temas é esperada nesta etapa, não um bug.
-     */
-    <div className="ds2-dark -m-4 bg-ds2-background p-4 md:-m-6 md:p-6">
-      <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5">
       {showQrDebugBox && (
         <div className="flex flex-col gap-1.5 rounded-xl border-2 border-dashed border-destructive bg-destructive/5 p-3 font-mono text-[11px] leading-relaxed text-foreground">
           <p className="font-sans text-xs font-bold uppercase tracking-wide text-destructive">
@@ -1233,10 +1216,8 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 </span>
 
                 {/*
-                  Sprint "Indicador de Pedido Não Processado" (2026-07-31),
-                  atualizado na Sprint "Destaque de Pedido Não Processado"
-                  (2026-07-31): selo à parte do tom, para os dois coexistirem
-                  (mesa "Preparando" com pedido novo ainda em pending). Só
+                  Selo à parte do tom, para os dois coexistirem (mesa
+                  "Preparando" com pedido novo ainda em pending). Só
                   aparece quando soma informação nova — se o tom já É
                   "new_order", o card inteiro já está laranja e rotulado
                   "Novo pedido", repetir o selo seria redundante. Deixou de
@@ -1246,18 +1227,13 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                   Some sozinho quando o pedido sai de `pending` (mesmo sinal
                   que já governa `tone`) — nada de timer/timeout.
 
-                  Sprint UI-01 (Migração DS2, Etapa 1, 2026-07-31): cor
-                  migrada de `hsl(16_78%_46%)` hardcoded para
-                  `bg-ds2-warning`/`text-ds2-warning-foreground`.
-
-                  Sprint UI-03 (Refinamento DS2, 2026-07-31): removido
-                  `animate-pulse` daqui — o tile inteiro já pulsa
-                  (`animate-new-order-alert`, aplicado no card-raiz) quando
-                  `hasUnprocessedOrders` é `true`. As duas animações juntas
-                  competiam pela atenção no mesmo elemento visual; mantida
-                  só a do tile inteiro, que é a mais visível à distância —
-                  o selo permanece como reforço textual estático (cor +
-                  contagem), sem movimento próprio.
+                  `animate-pulse` foi removido daqui de propósito — o tile
+                  inteiro já pulsa (`animate-new-order-alert`, aplicado no
+                  card-raiz) quando `hasUnprocessedOrders` é `true`. Duas
+                  animações competindo pela atenção no mesmo elemento
+                  visual; mantida só a do tile inteiro, mais visível à
+                  distância — o selo permanece como reforço textual
+                  estático (cor + contagem), sem movimento próprio.
                 */}
                 {state.hasUnprocessedOrders && state.tone !== "new_order" && (
                   <span
@@ -1464,7 +1440,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           }}
         />
       )}
-      </div>
     </div>
   );
 }

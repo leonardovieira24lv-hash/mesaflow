@@ -46,7 +46,7 @@ export function AccordionItem({
   }
 
   return (
-    <div className={cn("overflow-hidden rounded-xl border border-border bg-surface", className)}>
+    <div className={cn("overflow-hidden rounded-ds2-md border border-ds2-border bg-ds2-surface", className)}>
       <div className="flex items-center gap-2 px-4 py-3">
         <button
           type="button"
@@ -56,7 +56,7 @@ export function AccordionItem({
         >
           <ChevronDown
             className={cn(
-              "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+              "h-4 w-4 shrink-0 text-ds2-foreground-muted transition-transform duration-200",
               isOpen && "rotate-180",
             )}
             aria-hidden
@@ -67,7 +67,7 @@ export function AccordionItem({
         {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
       </div>
 
-      {isOpen && <div className="border-t border-border px-4 py-4">{children}</div>}
+      {isOpen && <div className="border-t border-ds2-border px-4 py-4">{children}</div>}
     </div>
   );
 }

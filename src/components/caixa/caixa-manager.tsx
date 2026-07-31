@@ -180,7 +180,7 @@ export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) 
       <Card className="relative overflow-hidden">
         <CardContent className="p-0">
           {isLoading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface/70 backdrop-blur-[1px]">
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-ds2-surface/70 backdrop-blur-[1px]">
               <Spinner className="h-6 w-6" />
             </div>
           )}
@@ -213,8 +213,8 @@ export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) 
                     onClick={() => setSelectedSessionId(session.id)}
                     className="cursor-pointer"
                   >
-                    <TableCell className="font-medium text-foreground">{session.tableName}</TableCell>
-                    <TableCell className="font-numeric text-muted-foreground">
+                    <TableCell className="font-medium text-ds2-foreground">{session.tableName}</TableCell>
+                    <TableCell className="font-numeric text-ds2-foreground-muted">
                       #{session.id.slice(0, 8).toUpperCase()}
                     </TableCell>
                     <TableCell>
@@ -229,7 +229,7 @@ export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) 
                       })}
                     </TableCell>
                     <TableCell>{formatDurationBetween(session.openedAt, session.closedAt)}</TableCell>
-                    <TableCell className="font-numeric font-semibold text-foreground">
+                    <TableCell className="font-numeric font-semibold text-ds2-foreground">
                       {formatCurrency(session.totalAmount)}
                     </TableCell>
                     <TableCell>
@@ -256,14 +256,14 @@ export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) 
 function SummaryCard({ icon: Icon, label, value }: { icon: typeof Banknote; label: string; value: string }) {
   return (
     <Card>
-      <CardContent className="flex flex-col gap-3 p-6">
+      <CardContent className="flex flex-col gap-3 p-4 sm:p-5">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-            <Icon className="h-4 w-4 text-primary" aria-hidden />
+          <div className="flex h-8 w-8 items-center justify-center rounded-ds2-sm bg-ds2-primary/10">
+            <Icon className="h-4 w-4 text-ds2-primary" aria-hidden />
           </div>
-          <span className="text-sm font-medium text-muted-foreground">{label}</span>
+          <span className="text-sm font-medium text-ds2-foreground-muted">{label}</span>
         </div>
-        <span className="font-numeric text-2xl font-bold tabular-nums tracking-tight">{value}</span>
+        <span className="font-numeric text-2xl font-bold tabular-nums tracking-tight text-ds2-foreground">{value}</span>
       </CardContent>
     </Card>
   );

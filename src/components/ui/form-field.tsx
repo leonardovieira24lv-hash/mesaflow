@@ -33,7 +33,7 @@ export function FormField({ label, children, hint, error, required, className }:
       <Label htmlFor={id}>
         {label}
         {required && (
-          <span className="ml-0.5 text-destructive" aria-hidden>
+          <span className="ml-0.5 text-ds2-danger" aria-hidden>
             *
           </span>
         )}
@@ -42,12 +42,12 @@ export function FormField({ label, children, hint, error, required, className }:
       {cloneElement(children, { id, invalid: Boolean(error), "aria-describedby": describedBy })}
 
       {hint && !error && (
-        <p id={hintId} className="text-xs text-muted-foreground">
+        <p id={hintId} className="text-xs text-ds2-foreground-muted">
           {hint}
         </p>
       )}
       {error && (
-        <p id={errorId} role="alert" className="text-xs font-medium text-destructive">
+        <p id={errorId} role="alert" className="text-xs font-medium text-ds2-danger">
           {error}
         </p>
       )}

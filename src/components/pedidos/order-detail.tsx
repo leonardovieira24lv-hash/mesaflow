@@ -214,21 +214,21 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
             {order.items.map((item) => (
               <li
                 key={item.id}
-                className="flex flex-col gap-0.5 rounded-lg border border-border bg-surface p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-0.5 rounded-ds2-sm border border-ds2-border bg-ds2-surface p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="flex flex-col">
-                  <span className="font-medium text-foreground">
+                  <span className="font-medium text-ds2-foreground">
                     {item.quantity}× {item.name}
                   </span>
-                  {item.notes && <span className="text-xs text-muted-foreground">{item.notes}</span>}
+                  {item.notes && <span className="text-xs text-ds2-foreground-muted">{item.notes}</span>}
                 </div>
-                <span className="font-numeric text-muted-foreground">{formatCurrency(item.price * item.quantity)}</span>
+                <span className="font-numeric text-ds2-foreground-muted">{formatCurrency(item.price * item.quantity)}</span>
               </li>
             ))}
           </ul>
 
           {order.notes && (
-            <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-foreground">
+            <div className="rounded-ds2-sm border border-ds2-border bg-ds2-surface-hover/40 p-3 text-sm text-ds2-foreground">
               <span className="font-medium">Observações: </span>
               {order.notes}
             </div>
@@ -238,8 +238,8 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
         <CardDivider />
 
         <CardFooter className="justify-between">
-          <span className="font-medium text-foreground">Total</span>
-          <span className="font-numeric text-lg font-semibold text-foreground">
+          <span className="font-medium text-ds2-foreground">Total</span>
+          <span className="font-numeric text-lg font-semibold text-ds2-foreground">
             {formatCurrency(order.total_amount)}
           </span>
         </CardFooter>
@@ -263,7 +263,7 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-ds2-foreground-muted">
           Este pedido já está em um status final e não pode mais ser alterado.
         </p>
       )}

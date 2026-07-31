@@ -90,7 +90,7 @@ export function TableQrModal({ open, onClose, tableName, url }: TableQrModalProp
     >
       <div className="flex flex-col items-center gap-5 pb-7">
         {/* Área principal — o QR Code é o protagonista, com bastante respiro. */}
-        <div className="flex w-full items-center justify-center rounded-2xl border border-border bg-muted/20 p-6 sm:p-8">
+        <div className="flex w-full items-center justify-center rounded-ds2-lg border border-ds2-border bg-ds2-surface-hover/20 p-6 sm:p-8">
           {dataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- data URL gerado no cliente, não passa pelo otimizador de imagens
             <img
@@ -98,16 +98,16 @@ export function TableQrModal({ open, onClose, tableName, url }: TableQrModalProp
               alt={`QR Code de acesso da ${tableName}`}
               width={272}
               height={272}
-              className="h-auto w-full max-w-[272px] animate-fade-in rounded-lg"
+              className="h-auto w-full max-w-[272px] animate-fade-in rounded-ds2-sm"
             />
           ) : (
-            <Skeleton className="h-[272px] w-[272px] rounded-lg" />
+            <Skeleton className="h-[272px] w-[272px] rounded-ds2-sm" />
           )}
         </div>
 
         {/* Informações auxiliares — discretas, só o que já existe (URL). */}
-        <div className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5">
-          <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground" title={url}>
+        <div className="flex w-full items-center gap-2 rounded-ds2-sm border border-ds2-border bg-ds2-surface px-3 py-2.5">
+          <span className="min-w-0 flex-1 truncate font-mono text-xs text-ds2-foreground-muted" title={url}>
             {url}
           </span>
         </div>
@@ -121,7 +121,7 @@ export function TableQrModal({ open, onClose, tableName, url }: TableQrModalProp
 
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={handleCopyLink} className="flex-1">
-              {copied ? <Check className="h-4 w-4 text-success" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+              {copied ? <Check className="h-4 w-4 text-ds2-success" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
               {copied ? "Copiado" : "Copiar link"}
             </Button>
             <Button type="button" variant="outline" onClick={handlePrint} disabled={!dataUrl} className="flex-1">
@@ -130,7 +130,7 @@ export function TableQrModal({ open, onClose, tableName, url }: TableQrModalProp
             </Button>
           </div>
 
-          <Button type="button" variant="ghost" onClick={onClose} className="w-full text-muted-foreground">
+          <Button type="button" variant="ghost" onClick={onClose} className="w-full text-ds2-foreground-muted">
             Fechar
           </Button>
         </div>

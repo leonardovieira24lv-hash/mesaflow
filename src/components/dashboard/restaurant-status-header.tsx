@@ -1,37 +1,22 @@
 import { ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getRestaurantOverview } from "@/lib/restaurant/get-restaurant-overview";
-import { Badge } from "@/components/ui/badge";
+import { RestaurantStatusBadge } from "@/components/ui/badge";
 import { SectionError } from "@/components/dashboard/section-error";
-
-/**
- * Sprint UI-05 (2026-07-31): rótulo evoluiu de "Ativo" (linguagem de status
- * de conta/sistema) para "Recebendo pedidos" (o que está de fato
- * acontecendo, na língua do dono) — aprovado na revisão de linguagem que
- * antecedeu esta sprint.
- *
- * Continua um mapa (`Record<RestaurantStatus, ...>`), não um `if/else` —
- * de propósito: `RestaurantStatus` hoje só tem `"onboarding" | "active"`,
- * mas o pedido foi deixar isto "preparado para futuras variações"
- * (Pausado, Fechado). Nenhuma mudança de banco/regra de negócio nesta
- * sprint — só a estrutura já pronta para que um valor novo no tipo vire
- * uma entrada nova aqui, não uma reescrita do componente.
- */
-const STATUS_CONFIG = {
-  onboarding: { label: "Ainda configurando", variant: "warning" as const },
-  active: { label: "Recebendo pedidos", variant: "success" as const },
-};
 
 /**
  * Cabeçalho do Dashboard: nome do restaurante, status e link para o
  * cardápio público. Server Component assíncrono, isolado em `<Suspense>`
  * próprio no `page.tsx` — o resto da tela renderiza mesmo se isto demorar.
+ *
+ * Usa `RestaurantStatusBadge` (`components/ui/badge.tsx`) — única fonte
+ * de verdade para o texto de status do restaurante, usado também em
+ * `restaurant-settings-form.tsx` (Configurações).
  */
 export async function RestaurantStatusHeader({ restaurantId }: { restaurantId: string }) {
   try {
     const supabase = await createClient();
     const overview = await getRestaurantOverview(supabase, restaurantId);
-    const status = STATUS_CONFIG[overview.status];
 
     return (
       <div className="flex flex-col gap-2.5">
@@ -39,9 +24,7 @@ export async function RestaurantStatusHeader({ restaurantId }: { restaurantId: s
           <h1 className="font-display text-3xl font-bold tracking-tight text-ds2-foreground sm:text-4xl">
             {overview.name}
           </h1>
-          <Badge variant={status.variant} dot>
-            {status.label}
-          </Badge>
+          <RestaurantStatusBadge status={overview.status} />
         </div>
         <a
           href={`/${overview.slug}/menu`}
