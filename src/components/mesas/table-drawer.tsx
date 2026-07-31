@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, ChefHat, Clock3, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
+import { Bell, CheckCircle2, ChefHat, Clock3, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -515,6 +515,21 @@ export function TableDrawer({
                 />
                 {cardState.label}
               </span>
+
+              {/*
+                Sprint "Indicador de Pedido Não Processado" (2026-07-31):
+                mesma regra do card na grade — só aparece quando soma
+                informação nova ao tom já mostrado acima.
+              */}
+              {cardState.hasUnprocessedOrders && cardState.tone !== "new_order" && (
+                <span
+                  className="inline-flex w-fit animate-pulse items-center gap-1.5 rounded-full bg-[hsl(16_78%_46%)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white"
+                  title="Pedido novo aguardando envio para a cozinha"
+                >
+                  <Bell className="h-3 w-3" aria-hidden />
+                  Pedido novo
+                </span>
+              )}
             </div>
             <Button
               type="button"

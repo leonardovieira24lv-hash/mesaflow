@@ -79,6 +79,23 @@ export interface TableCardState {
    * `deriveTableCardState`.
    */
   pulse: boolean;
+  /**
+   * Sprint "Indicador de Pedido Não Processado" (2026-07-31): existe pelo
+   * menos um pedido `pending` na mesa — independente de qual `tone` venceu.
+   * Antes desta sprint, `hasPendingOrder` decidia sozinho o tom inteiro
+   * (`new_order` sempre vencia `preparing`) — uma mesa já em preparo que
+   * recebia um pedido novo pelo QR Code perdia visualmente a informação
+   * "está preparando algo", porque o tom pulava inteiro para "Novo pedido".
+   * Esse campo existe pra caso assim continuar mostrando o tom operacional
+   * de verdade (`preparing`) e, ao mesmo tempo, sinalizar "tem pedido
+   * parado em pending" através de um indicador independente — quem
+   * renderiza o card decide como (badge, ponto, etc.), sem competir pelo
+   * `tone`. Nome deliberadamente não-temporal ("novo"): o que importa não é
+   * há quanto tempo o pedido chegou, é ele ainda não ter sido processado
+   * (`pending → preparing`, "Enviar para cozinha") — desaparece nesse
+   * instante, não por um timeout.
+   */
+  hasUnprocessedOrders: boolean;
 }
 
 /**
@@ -87,10 +104,19 @@ export interface TableCardState {
  * pedido do dono: "Centro de Operações").
  *
  * Prioridade: conta solicitada > garçom chamado > manutenção > livre >
- * (dentro de "ocupada", do mais urgente pro mais resolvido) novo pedido >
- * preparando > pronto para fechar > aguardando pedido. Os dois primeiros
- * nunca disparam hoje (`alerts` sempre chega `[]` — sem backend, ver
- * acima), mas a ordem já está certa para quando existirem.
+ * (dentro de "ocupada", do mais avançado operacionalmente pro menos)
+ * preparando > novo pedido > pronto para fechar > aguardando pedido. Os
+ * dois primeiros nunca disparam hoje (`alerts` sempre chega `[]` — sem
+ * backend, ver acima), mas a ordem já está certa para quando existirem.
+ *
+ * Sprint "Indicador de Pedido Não Processado" (2026-07-31): `preparing`
+ * passou a vencer `pending` na escolha do `tone` — antes era o contrário
+ * (`hasPendingOrder` sempre ganhava), o que fazia uma mesa já em preparo
+ * "perder" esse tom assim que um pedido novo chegava pelo QR Code. O tom
+ * `new_order` continua existindo — só aparece quando pending é o único
+ * sinal (mesa nova, primeiro pedido, nada em preparo ainda), exatamente o
+ * caso em que ele já era o mais informativo. `hasUnprocessedOrders` (ver
+ * `TableCardState`) cobre o caso misto, independente de qual tom venceu.
  *
  * "Aguardando pedido" é o estado de uma mesa `ocupada` sem NENHUM pedido
  * ainda (`data` chega `null`) — ex.: atendente abriu a mesa para um cliente
@@ -102,32 +128,34 @@ export function deriveTableCardState(
   data: TableOperationalData | null,
   alerts: TableCardAlert[],
 ): TableCardState {
+  const hasUnprocessedOrders = data?.hasPendingOrder ?? false;
+
   if (alerts.some((a) => a.type === "bill_request")) {
-    return { tone: "bill_requested", label: "Conta solicitada", pulse: true };
+    return { tone: "bill_requested", label: "Conta solicitada", pulse: true, hasUnprocessedOrders };
   }
 
   if (alerts.some((a) => a.type === "waiter_call")) {
-    return { tone: "waiter_call", label: "Chamando garçom", pulse: true };
+    return { tone: "waiter_call", label: "Chamando garçom", pulse: true, hasUnprocessedOrders };
   }
 
   if (status === "manutencao") {
-    return { tone: "maintenance", label: "Manutenção", pulse: false };
+    return { tone: "maintenance", label: "Manutenção", pulse: false, hasUnprocessedOrders };
   }
 
   if (status === "livre") {
-    return { tone: "free", label: "Livre", pulse: false };
+    return { tone: "free", label: "Livre", pulse: false, hasUnprocessedOrders };
   }
 
   if (!data) {
-    return { tone: "awaiting_order", label: "Aguardando pedido", pulse: false };
-  }
-
-  if (data.hasPendingOrder) {
-    return { tone: "new_order", label: "Novo pedido", pulse: true };
+    return { tone: "awaiting_order", label: "Aguardando pedido", pulse: false, hasUnprocessedOrders };
   }
 
   if (data.hasPreparingOrder) {
-    return { tone: "preparing", label: "Preparando", pulse: false };
+    return { tone: "preparing", label: "Preparando", pulse: false, hasUnprocessedOrders };
+  }
+
+  if (data.hasPendingOrder) {
+    return { tone: "new_order", label: "Novo pedido", pulse: true, hasUnprocessedOrders };
   }
 
   // Só sobra "ready" por eliminação: `data` existe (há comanda aberta),
@@ -138,7 +166,7 @@ export function deriveTableCardState(
   // manualmente, aguardando fechar a conta). Rótulo trocado de "Pronto
   // para servir" para não instruir o operador a servir algo que, no caso
   // comum, já foi servido.
-  return { tone: "ready", label: "Pronto para fechar", pulse: true };
+  return { tone: "ready", label: "Pronto para fechar", pulse: true, hasUnprocessedOrders };
 }
 
 /**

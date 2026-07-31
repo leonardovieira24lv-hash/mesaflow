@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
+  Armchair,
+  Bell,
   Clock3,
   LayoutGrid,
   Pencil,
@@ -14,7 +16,6 @@ import {
   TrendingUp,
   Trash2,
   UtensilsCrossed,
-  Armchair,
   Wallet,
   Wrench,
 } from "lucide-react";
@@ -1108,6 +1109,28 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                   <span className={cn("h-1 w-1 shrink-0 rounded-full", dotClass)} aria-hidden />
                   {state.label}
                 </span>
+
+                {/*
+                  Sprint "Indicador de Pedido Não Processado" (2026-07-31):
+                  selo à parte do tom, para os dois coexistirem (mesa
+                  "Preparando" com pedido novo ainda em pending). Só
+                  aparece quando soma informação nova — se o tom já É
+                  "new_order", o card inteiro já está laranja e rotulado
+                  "Novo pedido", repetir o selo seria redundante. Some
+                  sozinho quando o pedido sai de `pending` (mesmo sinal que
+                  já governa `tone`) — nada de timer/timeout, por isso
+                  `animate-pulse` (utilitário padrão do Tailwind, sem
+                  keyframe novo) em vez de um contador.
+                */}
+                {state.hasUnprocessedOrders && state.tone !== "new_order" && (
+                  <span
+                    className="z-10 inline-flex w-fit animate-pulse items-center gap-1 rounded-full bg-[hsl(16_78%_46%)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
+                    title="Pedido novo aguardando envio para a cozinha"
+                  >
+                    <Bell className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                    Pedido novo
+                  </span>
+                )}
 
                 {/* 3 + 4. Valor em aberto (se existir) e tempo, discreto. */}
                 {data ? (
