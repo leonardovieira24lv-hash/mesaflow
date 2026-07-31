@@ -122,20 +122,44 @@ const config: Config = {
         "status-flash": {
           "0%": {
             transform: "scale(1)",
-            boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 0 0 0 hsl(var(--primary) / 0)",
+            boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 0 0 0 hsl(var(--ds2-primary) / 0)",
           },
           "40%": {
             transform: "scale(1.035)",
-            boxShadow: "0 10px 28px -4px rgb(0 0 0 / 0.65), 0 0 0 4px hsl(var(--primary) / 0.55)",
+            boxShadow: "0 10px 28px -4px rgb(0 0 0 / 0.65), 0 0 0 4px hsl(var(--ds2-primary) / 0.55)",
           },
           "100%": {
             transform: "scale(1)",
-            boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 0 0 0 hsl(var(--primary) / 0)",
+            boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 0 0 0 hsl(var(--ds2-primary) / 0)",
           },
         },
         "slide-in-right": {
           from: { transform: "translateX(100%)" },
           to: { transform: "translateX(0)" },
+        },
+        // Sprint "Destaque de Pedido Não Processado" (2026-07-31): loop
+        // contínuo (diferente de `status-flash`, que é um único disparo na
+        // transição de tom) — enquanto `hasUnprocessedOrders` for `true`,
+        // não amarrado a nenhuma mudança de estado, só à condição em si.
+        // 2.2s, escala sutil (100%→103%), sombra vermelha — deliberadamente
+        // mais lento e discreto que um alerta genérico de app de consumo,
+        // pra parecer profissional (referência: PDV/KDS de cozinha), não
+        // "piscando" freneticamente.
+        //
+        // Sprint UI-01 (Migração DS2, Etapa 1, 2026-07-31): cor migrada de
+        // `hsl(var(--destructive))` (token legado) para
+        // `hsl(var(--ds2-danger))` — mesma ressalva de
+        // `derive-table-card-state.ts`: sem efeito visual correto até
+        // `.ds2-dark` ser aplicado (Etapa 2).
+        "new-order-alert": {
+          "0%, 100%": {
+            transform: "scale(1)",
+            boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.3), 0 0 0 0 hsl(var(--ds2-danger) / 0)",
+          },
+          "50%": {
+            transform: "scale(1.03)",
+            boxShadow: "0 10px 24px -6px hsl(var(--ds2-danger) / 0.5), 0 0 0 2px hsl(var(--ds2-danger) / 0.6)",
+          },
         },
       },
       animation: {
@@ -147,6 +171,7 @@ const config: Config = {
         "sheet-up": "sheet-up 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
         "status-flash": "status-flash 700ms ease-out",
         "slide-in-right": "slide-in-right 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+        "new-order-alert": "new-order-alert 2.2s ease-in-out infinite",
       },
       boxShadow: {
         card: "var(--shadow-card)",

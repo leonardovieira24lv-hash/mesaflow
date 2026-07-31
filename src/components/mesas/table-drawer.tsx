@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, CheckCircle2, ChefHat, Clock3, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
+import { Bell, CheckCircle2, ChefHat, Clock3, Hand, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -517,17 +517,47 @@ export function TableDrawer({
               </span>
 
               {/*
-                Sprint "Indicador de Pedido Não Processado" (2026-07-31):
-                mesma regra do card na grade — só aparece quando soma
-                informação nova ao tom já mostrado acima.
+                Sprint "Indicador de Pedido Não Processado" (2026-07-31),
+                atualizado na Sprint "Destaque de Pedido Não Processado"
+                (2026-07-31): mesma regra do card na grade — só aparece
+                quando soma informação nova ao tom já mostrado acima.
+                Contagem (não só "Pedido novo") pela mesma razão do tile:
+                deixou de ser o destaque principal (isso é a animação do
+                card na grade), aqui reforça de forma consistente.
+
+                Sprint UI-01 (Migração DS2, Etapa 1, 2026-07-31): cor
+                migrada para `ds2-warning`/`ds2-warning-foreground` — sem
+                efeito visual correto até `.ds2-dark` ser aplicado (Etapa 2,
+                ver `derive-table-card-state.ts`).
               */}
               {cardState.hasUnprocessedOrders && cardState.tone !== "new_order" && (
                 <span
-                  className="inline-flex w-fit animate-pulse items-center gap-1.5 rounded-full bg-[hsl(16_78%_46%)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white"
+                  className="inline-flex w-fit animate-pulse items-center gap-1.5 rounded-full bg-ds2-warning px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-ds2-warning-foreground"
                   title="Pedido novo aguardando envio para a cozinha"
                 >
                   <Bell className="h-3 w-3" aria-hidden />
-                  Pedido novo
+                  {(() => {
+                    const pendingCount = openOrders.filter((o) => o.status === "pending").length;
+                    return `${pendingCount} ${pendingCount === 1 ? "NOVO" : "NOVOS"}`;
+                  })()}
+                </span>
+              )}
+
+              {/*
+                Sprint UI-01 (Migração DS2, 2026-07-31): mesmo selo do card
+                na grade — "Chamando garçom" não é mais tom, é indicador
+                independente. `ds2-primary` (verde), nunca `ds2-info` nem
+                cor nova, por pedido explícito. Atender/resolver a chamada
+                continua no corpo do drawer (`waiterCallAlert`, mais abaixo)
+                — este selo é só o reforço visual no cabeçalho.
+              */}
+              {cardState.hasWaiterCall && (
+                <span
+                  className="inline-flex w-fit items-center gap-1.5 rounded-full bg-ds2-primary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-ds2-primary-foreground"
+                  title="Cliente chamando o garçom"
+                >
+                  <Hand className="h-3 w-3" aria-hidden />
+                  Garçom
                 </span>
               )}
             </div>

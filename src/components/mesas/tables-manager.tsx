@@ -7,6 +7,7 @@ import {
   Armchair,
   Bell,
   Clock3,
+  Hand,
   LayoutGrid,
   Pencil,
   Plus,
@@ -46,6 +47,7 @@ import {
   type TableCardTone,
   type TableCardAlert,
 } from "@/lib/mesas/derive-table-card-state";
+import { playNewOrderChime } from "@/lib/mesas/play-new-order-chime";
 import { createTableSchema, updateTableSchema, TABLE_STATUS_VALUES } from "@/lib/validations/tables";
 import type { OrderListRow } from "@/components/pedidos/orders-list";
 import type { Table as TableEntity, TableStatus, TableEvent } from "@/types/domain";
@@ -448,6 +450,59 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
     // Map acima; o cleanup do efeito de unmount (logo acima) cuida de
     // limpar tudo se o componente sair de tela com timers pendentes.
   }, [currentTones]);
+
+  // Sprint "Destaque de Pedido Não Processado" (2026-07-31), corrigida no
+  // mesmo dia a pedido do dono: sinal próprio para o som — deliberadamente
+  // SEPARADO de `currentTones`/`prevTonesRef` acima (que existem só para o
+  // flash visual). Guarda a QUANTIDADE de pedidos da mesa (`orders.length`,
+  // já disponível em `TableOperationalData` — nenhum campo novo) junto com
+  // `hasUnprocessedOrders`, em vez de `table.status`: a regra de negócio é
+  // "0 pedidos → 1 pedido não toca; N pedidos → N+1 toca (N ≥ 1)" — uma
+  // contagem, não um estado de mesa. Desacoplado de propósito: continua
+  // funcionando sem nenhuma mudança aqui se um dia existirem novos status
+  // de mesa (reservada, bloqueada, aguardando pagamento etc.) — a regra
+  // nunca olha `table.status`.
+  const currentSoundSignals = useMemo(() => {
+    const map: Record<string, { orderCount: number; hasUnprocessedOrders: boolean }> = {};
+    for (const table of tables) {
+      const data = operations[table.id] ?? null;
+      map[table.id] = {
+        orderCount: data?.orders.length ?? 0,
+        hasUnprocessedOrders: deriveTableCardState(table.status, data, tableEvents[table.id] ?? []).hasUnprocessedOrders,
+      };
+    }
+    return map;
+  }, [tables, operations, tableEvents]);
+
+  const prevSoundSignalsRef = useRef<Record<string, { orderCount: number; hasUnprocessedOrders: boolean }>>({});
+
+  useEffect(() => {
+    const previous = prevSoundSignalsRef.current;
+
+    // Só considera transição de verdade quando já existia um valor anterior
+    // para esta mesa (mesmo guard de `previous[id] !== undefined` usado no
+    // efeito do flash acima) — evita disparar som na primeira carga da
+    // página só porque uma mesa já chegou com `hasUnprocessedOrders: true`.
+    const shouldPlay = Object.entries(currentSoundSignals).some(([id, current]) => {
+      const prior = previous[id];
+      if (!prior) return false;
+
+      const justBecameUnprocessed = prior.hasUnprocessedOrders === false && current.hasUnprocessedOrders === true;
+      if (!justBecameUnprocessed) return false;
+
+      // Regra de negócio: não toca quando é o primeiro pedido da mesa
+      // (contagem saindo de 0) — qualquer pedido seguinte (1→2, 2→3, ...)
+      // toca. Baseado só na quantidade de pedidos, nunca em `table.status`.
+      const wasFirstOrderEver = prior.orderCount === 0;
+      return !wasFirstOrderEver;
+    });
+
+    prevSoundSignalsRef.current = currentSoundSignals;
+
+    if (shouldPlay) {
+      playNewOrderChime();
+    }
+  }, [currentSoundSignals]);
 
   // LOG 6 — verificação real no DOM: para cada mesa atualmente em
   // `flashingIds`, confirma se o navegador de fato registrou a animação CSS
@@ -991,6 +1046,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
 
             const dotClass = isFilled ? "bg-white/70" : TABLE_CARD_TONE_DOT_CLASSES[state.tone];
             const ordersCount = data?.orders.length ?? 0;
+            // Sprint "Destaque de Pedido Não Processado" (2026-07-31):
+            // contagem só pra exibição do badge ("1 NOVO"/"2 NOVOS") — não
+            // é um campo novo em `TableOperationalData`/`deriveTableCardState`,
+            // é derivado aqui direto de `data.orders` (que já traz o status
+            // de cada pedido), sem mudar nenhuma lib compartilhada.
+            const pendingCount = data?.orders.filter((o) => o.status === "pending").length ?? 0;
             // Sprint "Correção — Abrir Mesa Não Deve Mudar Status"
             // (2026-07-30): rótulo único — o clique sempre só abre o
             // Drawer agora, para qualquer status; manter "Abrir mesa" só
@@ -1030,6 +1091,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                   "group relative flex h-full flex-col gap-2 overflow-hidden rounded-2xl border p-2.5 shadow-card transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover",
                   toneClass,
                   isFlashing && "animate-status-flash",
+                  state.hasUnprocessedOrders && "animate-new-order-alert",
                 )}
               >
                 {/* Ícone decorativo — só personalidade visual, sem função. */}
@@ -1111,24 +1173,54 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 </span>
 
                 {/*
-                  Sprint "Indicador de Pedido Não Processado" (2026-07-31):
-                  selo à parte do tom, para os dois coexistirem (mesa
-                  "Preparando" com pedido novo ainda em pending). Só
+                  Sprint "Indicador de Pedido Não Processado" (2026-07-31),
+                  atualizado na Sprint "Destaque de Pedido Não Processado"
+                  (2026-07-31): selo à parte do tom, para os dois coexistirem
+                  (mesa "Preparando" com pedido novo ainda em pending). Só
                   aparece quando soma informação nova — se o tom já É
                   "new_order", o card inteiro já está laranja e rotulado
-                  "Novo pedido", repetir o selo seria redundante. Some
-                  sozinho quando o pedido sai de `pending` (mesmo sinal que
-                  já governa `tone`) — nada de timer/timeout, por isso
-                  `animate-pulse` (utilitário padrão do Tailwind, sem
-                  keyframe novo) em vez de um contador.
+                  "Novo pedido", repetir o selo seria redundante. Deixou de
+                  ser o destaque principal — isso agora é a animação do
+                  tile inteiro (`animate-new-order-alert` acima); o selo
+                  continua existindo, com a contagem, como reforço textual.
+                  Some sozinho quando o pedido sai de `pending` (mesmo sinal
+                  que já governa `tone`) — nada de timer/timeout.
+
+                  Sprint UI-01 (Migração DS2, Etapa 1, 2026-07-31): cor
+                  migrada de `hsl(16_78%_46%)` hardcoded para
+                  `bg-ds2-warning`/`text-ds2-warning-foreground` — mesma
+                  ressalva de `derive-table-card-state.ts`: sem efeito
+                  visual correto até `.ds2-dark` ser aplicado (Etapa 2).
                 */}
                 {state.hasUnprocessedOrders && state.tone !== "new_order" && (
                   <span
-                    className="z-10 inline-flex w-fit animate-pulse items-center gap-1 rounded-full bg-[hsl(16_78%_46%)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
+                    className="z-10 inline-flex w-fit animate-pulse items-center gap-1 rounded-full bg-ds2-warning px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ds2-warning-foreground"
                     title="Pedido novo aguardando envio para a cozinha"
                   >
                     <Bell className="h-2.5 w-2.5 shrink-0" aria-hidden />
-                    Pedido novo
+                    {pendingCount} {pendingCount === 1 ? "NOVO" : "NOVOS"}
+                  </span>
+                )}
+
+                {/*
+                  Sprint UI-01 (Migração DS2, 2026-07-31): "Chamando garçom"
+                  deixou de ser um tom (`waiter_call` não existe mais em
+                  `TableCardTone`) — vira só este selo independente, que
+                  coexiste com qualquer tom, mesmo padrão do selo de pedido
+                  não processado acima. Cor: `ds2-primary` (verde, a única
+                  cor de marca da DS2) — de propósito, não `ds2-info`
+                  (pedido explícito do dono: não reaproveitar "info" nem
+                  criar uma cor nova só para isto). Resolver/atender a
+                  chamada continua em `TableDrawer` (`waiterCallAlert`),
+                  sem relação com este selo.
+                */}
+                {state.hasWaiterCall && (
+                  <span
+                    className="z-10 inline-flex w-fit items-center gap-1 rounded-full bg-ds2-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ds2-primary-foreground"
+                    title="Cliente chamando o garçom"
+                  >
+                    <Hand className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                    Garçom
                   </span>
                 )}
 

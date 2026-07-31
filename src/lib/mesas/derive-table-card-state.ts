@@ -15,6 +15,16 @@ import type { TableStatus } from "@/types/domain";
  * entrada dedicada em `TABLE_CARD_TONE_CLASSES`/`TABLE_CARD_TONE_DOT_CLASSES`
  * — acrescentar um estágio novo no futuro (ex.: "aguardando pagamento") vira
  * só mais uma chave nesses mapas, nunca mais uma disputa por cor reservada.
+ *
+ * Sprint UI-01 (Migração DS2, 2026-07-31): `waiter_call` deixou de existir
+ * como tom. "Chamando garçom" é um EVENTO pontual, não um estado da mesa —
+ * a mesa deve continuar mostrando seu tom operacional de verdade
+ * (preparando, pronto, etc.) mesmo com uma chamada pendente. Virou
+ * `hasWaiterCall` em `TableCardState` (mesmo padrão de
+ * `hasUnprocessedOrders`): um indicador que coexiste com qualquer tom, em
+ * vez de competir por um. Também evita a DS2 (5 cores semânticas:
+ * primary/success/warning/danger/info) precisar de uma sexta cor só pra
+ * isso.
  */
 export type TableCardTone =
   | "free" // livre
@@ -23,17 +33,16 @@ export type TableCardTone =
   | "new_order" // tem pedido "pending" (chegou, ninguém olhou ainda)
   | "preparing" // tem pedido "preparing", nenhum "pending"
   | "ready" // nada mais pendente na cozinha — falta só fechar a conta
-  | "waiter_call" // reservado — sem backend ainda, ver docs/table-events-roadmap.md
-  | "bill_requested"; // reservado — sem backend ainda, ver docs/table-events-roadmap.md
+  | "bill_requested"; // mesa pediu a conta (evento real, via table_events)
 
 /**
- * Um alerta pontual de mesa (chamar garçom, pedir a conta). Não existe
- * backend para isso hoje — ver `docs/table-events-roadmap.md` para o que
- * falta (tabela `table_events`, endpoints, canal Realtime). Este tipo e a
- * lista `alerts` abaixo já modelam o formato que esse dado vai ter quando
- * existir, para que ligar o backend real não exija tocar em
- * `deriveTableCardState` nem no `TableCard` — só passar uma lista não-vazia
- * onde hoje sempre chega `[]`.
+ * Um alerta pontual de mesa (chamar garçom, pedir a conta) — real desde a
+ * Sprint de eventos de mesa (`docs/table-events-roadmap.md`,
+ * `table_events`, `POST /api/v1/public/{slug}/tables/{token}/call-waiter`),
+ * não mais um placeholder. `type: "waiter_call"` não decide mais o `tone`
+ * (ver nota da Sprint UI-01 acima) — só alimenta `hasWaiterCall`.
+ * `bill_request` continua decidindo o tom (`bill_requested`) — não fez
+ * parte do pedido desta sprint, permanece como estava.
  */
 export interface TableCardAlert {
   id: string;
@@ -70,13 +79,12 @@ export interface TableCardState {
   tone: TableCardTone;
   label: string;
   /**
-   * Sinaliza que o tile representa algo que pede atenção imediata (pedido
-   * novo, garçom chamado, conta pedida, comanda pronta para fechar). Não
-   * dispara mais uma pulsação contínua — o flash de transição em
-   * `TablesManager`/`TableDrawer` já acontece para qualquer mudança de tom,
-   * urgente ou não. Campo mantido disponível para uso futuro (ex.: destaque
-   * persistente na ordenação da grade) sem precisar mudar a assinatura de
-   * `deriveTableCardState`.
+   * Sinaliza que o tile representa algo que pede atenção imediata (conta
+   * pedida, comanda pronta para fechar). Não dispara mais uma pulsação
+   * contínua — o flash de transição em `TablesManager`/`TableDrawer` já
+   * acontece para qualquer mudança de tom, urgente ou não. Campo mantido
+   * disponível para uso futuro (ex.: destaque persistente na ordenação da
+   * grade) sem precisar mudar a assinatura de `deriveTableCardState`.
    */
   pulse: boolean;
   /**
@@ -96,6 +104,19 @@ export interface TableCardState {
    * instante, não por um timeout.
    */
   hasUnprocessedOrders: boolean;
+  /**
+   * Sprint UI-01 (Migração DS2, 2026-07-31): existe uma chamada de garçom
+   * pendente (`table_events`, `type: "waiter_call"`) — mesmo padrão de
+   * `hasUnprocessedOrders`, independente do `tone`. Antes disto, um
+   * chamado de garçom virava o próprio `tone` (`"waiter_call"`, roxo),
+   * escondendo o estado operacional real da mesa (uma mesa "Preparando"
+   * que chamava o garçom perdia visualmente o "Preparando"). Quem
+   * renderiza decide como mostrar (badge, ícone) — a resolução do alerta
+   * em si (marcar como atendido) não muda, continua vivendo em
+   * `TableDrawer` via `alerts`/`waiterCallAlert`, sem relação com este
+   * campo.
+   */
+  hasWaiterCall: boolean;
 }
 
 /**
@@ -103,11 +124,12 @@ export interface TableCardState {
  * bater o olho e entender em segundos, sem ler texto (Painel de Mesas,
  * pedido do dono: "Centro de Operações").
  *
- * Prioridade: conta solicitada > garçom chamado > manutenção > livre >
- * (dentro de "ocupada", do mais avançado operacionalmente pro menos)
- * preparando > novo pedido > pronto para fechar > aguardando pedido. Os
- * dois primeiros nunca disparam hoje (`alerts` sempre chega `[]` — sem
- * backend, ver acima), mas a ordem já está certa para quando existirem.
+ * Prioridade: conta solicitada > manutenção > livre > (dentro de
+ * "ocupada", do mais avançado operacionalmente pro menos) preparando >
+ * novo pedido > pronto para fechar > aguardando pedido. "Chamando garçom"
+ * não participa mais desta lista de prioridade (Sprint UI-01) — vira
+ * `hasWaiterCall`, computado à parte, sempre presente independente de qual
+ * tom venceu.
  *
  * Sprint "Indicador de Pedido Não Processado" (2026-07-31): `preparing`
  * passou a vencer `pending` na escolha do `tone` — antes era o contrário
@@ -129,33 +151,30 @@ export function deriveTableCardState(
   alerts: TableCardAlert[],
 ): TableCardState {
   const hasUnprocessedOrders = data?.hasPendingOrder ?? false;
+  const hasWaiterCall = alerts.some((a) => a.type === "waiter_call");
 
   if (alerts.some((a) => a.type === "bill_request")) {
-    return { tone: "bill_requested", label: "Conta solicitada", pulse: true, hasUnprocessedOrders };
-  }
-
-  if (alerts.some((a) => a.type === "waiter_call")) {
-    return { tone: "waiter_call", label: "Chamando garçom", pulse: true, hasUnprocessedOrders };
+    return { tone: "bill_requested", label: "Conta solicitada", pulse: true, hasUnprocessedOrders, hasWaiterCall };
   }
 
   if (status === "manutencao") {
-    return { tone: "maintenance", label: "Manutenção", pulse: false, hasUnprocessedOrders };
+    return { tone: "maintenance", label: "Manutenção", pulse: false, hasUnprocessedOrders, hasWaiterCall };
   }
 
   if (status === "livre") {
-    return { tone: "free", label: "Livre", pulse: false, hasUnprocessedOrders };
+    return { tone: "free", label: "Livre", pulse: false, hasUnprocessedOrders, hasWaiterCall };
   }
 
   if (!data) {
-    return { tone: "awaiting_order", label: "Aguardando pedido", pulse: false, hasUnprocessedOrders };
+    return { tone: "awaiting_order", label: "Aguardando pedido", pulse: false, hasUnprocessedOrders, hasWaiterCall };
   }
 
   if (data.hasPreparingOrder) {
-    return { tone: "preparing", label: "Preparando", pulse: false, hasUnprocessedOrders };
+    return { tone: "preparing", label: "Preparando", pulse: false, hasUnprocessedOrders, hasWaiterCall };
   }
 
   if (data.hasPendingOrder) {
-    return { tone: "new_order", label: "Novo pedido", pulse: true, hasUnprocessedOrders };
+    return { tone: "new_order", label: "Novo pedido", pulse: true, hasUnprocessedOrders, hasWaiterCall };
   }
 
   // Só sobra "ready" por eliminação: `data` existe (há comanda aberta),
@@ -166,61 +185,73 @@ export function deriveTableCardState(
   // manualmente, aguardando fechar a conta). Rótulo trocado de "Pronto
   // para servir" para não instruir o operador a servir algo que, no caso
   // comum, já foi servido.
-  return { tone: "ready", label: "Pronto para fechar", pulse: true, hasUnprocessedOrders };
+  return { tone: "ready", label: "Pronto para fechar", pulse: true, hasUnprocessedOrders, hasWaiterCall };
 }
 
 /**
  * Tons sólidos para o tile inteiro (grade de Mesas e cabeçalho do Drawer).
- * Deliberadamente mais dessaturados que os tokens semânticos globais
- * (`--success`/`--warning`/`--info`/`--destructive`, usados em Badge/Toast/
- * Alert/Dashboard) — em badges pequenos a cor vibrante ajuda a chamar
- * atenção, mas preenchendo um card inteiro o mesmo tom fica com aspecto de
- * alerta/erro em vez de software profissional. Valores isolados aqui (não
- * tokens globais) para não afetar nenhum outro componente do design system.
  *
- * Paleta (item 1 do checklist, 8 estados):
+ * Sprint UI-01 (Migração DS2, Etapa 1 — 2026-07-31): valores migrados de
+ * HSL literal (`bg-[hsl(...)]`) para os tokens `ds2-*`
+ * (`tailwind.config.ts`/`app/globals.css`, classe `.ds2-dark`). IMPORTANTE:
+ * esta etapa NÃO aplica `.ds2-dark` em nenhuma tela ainda — as variáveis
+ * `--ds2-*` só existem dentro daquele escopo, então até a Etapa 2 (que liga
+ * `.ds2-dark` no Painel de Mesas) estas classes não têm efeito visual
+ * correto se renderizadas isoladamente. Checkpoint intencional: token
+ * correto primeiro, ativação visual depois, para isolar qualquer regressão
+ * a uma das duas etapas, nunca as duas de uma vez.
+ *
+ * `waiter_call` foi removido desta paleta (Sprint UI-01) — deixou de ser
+ * tom, ver `hasWaiterCall`/comentário no topo do arquivo.
+ *
+ * Paleta (7 estados):
  * - `free`/`maintenance`: sem preenchimento (cinza elegante / opaco).
  * - `awaiting_order`: só contorno na cor da marca — mesa ocupada mas sem
  *   nada acontecendo ainda não deveria competir visualmente com os estados
  *   de progresso do pedido.
- * - `new_order`: laranja — precisa ser o mais chamativo (algo novo chegou).
- * - `preparing`: azul — mesmo matiz do badge `AdminOrderStatusBadge` para
- *   pedido "Preparando" (`ui/badge.tsx`), para o operador nunca ver cores
- *   diferentes para o mesmo status em telas diferentes.
- * - `ready`: verde — sinaliza "nada pendente na cozinha, falta fechar a
- *   conta" (cobre tanto pedido `ready` legado quanto o caso comum hoje,
- *   comanda com tudo `delivered`); mesmo tom usado no badge "Pronto".
- * - `waiter_call`/`bill_requested`: violeta/vermelho, cores próprias (sem
- *   backend ainda, mas já reservadas e sem colidir com as de progresso do
- *   pedido acima).
+ * - `new_order`: `ds2-warning` — precisa ser o mais chamativo (algo novo
+ *   chegou). Foreground é `ds2-warning-foreground` (escuro), não branco —
+ *   `ds2-warning` é um tom claro.
+ * - `preparing`: `ds2-info`.
+ * - `ready`: `ds2-success` — sinaliza "nada pendente na cozinha, falta
+ *   fechar a conta" (cobre tanto pedido `ready` legado quanto o caso comum
+ *   hoje, comanda com tudo `delivered`).
+ * - `bill_requested`: `ds2-danger`.
  */
 export const TABLE_CARD_TONE_CLASSES: Record<TableCardTone, string> = {
-  free: "border-border bg-surface",
-  maintenance: "border-border bg-muted/60 opacity-75",
-  awaiting_order: "border-primary/50 bg-surface",
-  new_order: "border-transparent bg-[hsl(16_78%_46%)] text-white",
-  preparing: "border-transparent bg-[hsl(212_55%_38%)] text-white",
-  ready: "border-transparent bg-[hsl(142_45%_32%)] text-white",
-  waiter_call: "border-transparent bg-[hsl(270_50%_42%)] text-white",
-  bill_requested: "border-transparent bg-[hsl(355_55%_40%)] text-white",
+  free: "border-ds2-border bg-ds2-surface",
+  maintenance: "border-ds2-border bg-ds2-surface-hover opacity-75",
+  awaiting_order: "border-ds2-primary/50 bg-ds2-surface",
+  new_order: "border-transparent bg-ds2-warning text-ds2-warning-foreground",
+  preparing: "border-transparent bg-ds2-info text-ds2-info-foreground",
+  ready: "border-transparent bg-ds2-success text-ds2-success-foreground",
+  bill_requested: "border-transparent bg-ds2-danger text-ds2-danger-foreground",
 };
 
-/** Tiles com tom preenchido usam texto branco — precisa de uma variante "clara" para os textos secundários (itens, tempo). `awaiting_order` fica de fora de propósito: é só contorno, não preenchimento, então continua usando as cores neutras de texto. */
-export const TABLE_CARD_FILLED_TONES: readonly TableCardTone[] = [
-  "new_order",
-  "preparing",
-  "ready",
-  "waiter_call",
-  "bill_requested",
-];
+/**
+ * Tiles com tom preenchido usam texto claro para os textos secundários
+ * (itens, tempo) — `awaiting_order` fica de fora de propósito: é só
+ * contorno, não preenchimento, então continua usando as cores neutras de
+ * texto.
+ *
+ * ATENÇÃO (risco documentado na Sprint UI-01): `new_order` usa
+ * `ds2-warning-foreground` ESCURO (fundo claro), diferente dos outros três
+ * (fundo escuro, texto claro). Quem renderiza (`TablesManager`/
+ * `TableDrawer`) hoje assume "tom preenchido = texto branco" de forma
+ * genérica para os textos secundários — isso fica incorreto
+ * especificamente para `new_order` assim que a Etapa 2 ativar `.ds2-dark`
+ * de verdade. Não corrigido nesta etapa (fora do escopo definido: só
+ * tokens/`derive-table-card-state`/animações) — sinalizado para revisão
+ * antes ou durante a Etapa 2.
+ */
+export const TABLE_CARD_FILLED_TONES: readonly TableCardTone[] = ["new_order", "preparing", "ready", "bill_requested"];
 
 export const TABLE_CARD_TONE_DOT_CLASSES: Record<TableCardTone, string> = {
-  free: "bg-muted-foreground/40",
-  maintenance: "bg-muted-foreground/40",
-  awaiting_order: "bg-primary/60",
-  new_order: "bg-warning",
-  preparing: "bg-info",
-  ready: "bg-success",
-  waiter_call: "bg-[hsl(270_60%_65%)]",
-  bill_requested: "bg-destructive",
+  free: "bg-ds2-foreground-muted/40",
+  maintenance: "bg-ds2-foreground-muted/40",
+  awaiting_order: "bg-ds2-primary/60",
+  new_order: "bg-ds2-warning",
+  preparing: "bg-ds2-info",
+  ready: "bg-ds2-success",
+  bill_requested: "bg-ds2-danger",
 };
