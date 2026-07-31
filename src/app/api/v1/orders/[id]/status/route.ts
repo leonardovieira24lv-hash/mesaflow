@@ -5,7 +5,7 @@ import { apiSuccess } from "@/lib/api/response";
 import { AppError, handleRouteError } from "@/lib/api/errors";
 import { parseOrThrow } from "@/lib/api/validation";
 import { updateOrderStatusSchema } from "@/lib/validations/orders";
-import { assertValidOrderStatusTransition, TERMINAL_ORDER_STATUSES } from "@/lib/orders/status-transitions";
+import { assertValidOrderStatusTransition } from "@/lib/orders/status-transitions";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -93,36 +93,25 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       );
     }
 
-    // Contrato 8.3: "se o novo status for terminal, também pode encerrar a
-    // order_session correspondente". Só encerra se este for o ÚLTIMO pedido
-    // não-terminal daquela sessão — uma mesa pode ter vários pedidos na
-    // mesma visita (contrato 3.1: "active_order"), então um pedido chegar a
-    // `delivered` não significa necessariamente que a comanda inteira da
-    // mesa acabou.
-    if (TERMINAL_ORDER_STATUSES.includes(nextStatus) && current.order_session_id) {
-      const { count: stillOpenCount, error: stillOpenError } = await supabase
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("order_session_id", current.order_session_id)
-        .neq("id", current.id)
-        .not("status", "in", "(delivered,cancelled)");
-
-      if (!stillOpenError && (stillOpenCount ?? 0) === 0) {
-        const { error: closeSessionError } = await admin
-          .from("order_sessions")
-          .update({ closed_at: new Date().toISOString() })
-          .eq("id", current.order_session_id)
-          .eq("restaurant_id", profile.restaurantId)
-          .is("closed_at", null);
-
-        if (closeSessionError) {
-          // Não falha a resposta por causa disso — o pedido já foi
-          // atualizado com sucesso; encerrar a sessão é um efeito colateral
-          // best-effort.
-          console.error("[orders.status] falha ao encerrar order_session", closeSessionError);
-        }
-      }
-    }
+    // Sprint "Correção — Responsabilidade de Fechamento Isolada em
+    // Fechar Conta" (2026-07-31): este endpoint já fechou a `order_session`
+    // sozinho quando o pedido virava o último não-terminal dela (contrato
+    // 8.3: "também pode encerrar a order_session correspondente"). Isso
+    // era inofensivo enquanto `delivered` só acontecia perto do fim da
+    // visita — deixou de ser depois do botão "Finalizar pedido" (marca
+    // `delivered` a qualquer momento, sem relação com a comanda ter
+    // acabado) e da arquitetura de `order_session` como fonte única para
+    // os cards de mesa: marcar o último pedido como "Finalizar pedido"
+    // passou a fechar a sessão por conta própria, sem "Fechar conta" ter
+    // sido chamado — a mesa sumia da grade e `close_table_bill` deixava de
+    // achar a comanda pra fechar de verdade (nenhum `payment_method`
+    // nunca era registrado nesses casos). `close_table_bill`
+    // (`0020_close_table_bill_marks_delivered.sql`) e a trigger
+    // `trg_enforce_no_pending_orders_on_table_release`
+    // (`0011_enforce_no_pending_orders_on_table_release.sql`, disparada só
+    // por "Liberar mesa") continuam as duas únicas ações autorizadas a
+    // fechar `order_session`/liberar mesa — esta rota agora só grava
+    // `orders.status`, nada mais.
 
     return apiSuccess(updated);
   } catch (err) {

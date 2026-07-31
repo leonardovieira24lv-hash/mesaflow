@@ -18,25 +18,11 @@ interface RouteParams {
 const ORDER_CREATION_RATE_LIMIT = { limit: 5, windowMs: 60_000 };
 
 // POST /api/v1/public/{slug}/orders — contrato seção 3.3
-//
-// ⚠️ DIAGNÓSTICO TEMPORÁRIO (2026-07-30): rastreando por que order_items
-// chega vazio no fechamento de conta, apesar da sessão e do pedido serem
-// encontrados corretamente. Loga o payload recebido — reverter assim que
-// a causa for encontrada.
 export async function POST(request: Request, { params }: RouteParams) {
   try {
     const { slug } = await params;
     const body = await request.json();
     const input = parseOrThrow(createOrderSchema, body);
-
-    // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-    console.error("[create-order][POST][DEBUG] payload recebido (já validado pelo zod)", {
-      slug,
-      table_token: input.table_token,
-      items: input.items,
-      notes: input.notes,
-      idempotency_key: input.idempotency_key,
-    });
 
     assertWithinRateLimit(`create-order:${input.table_token}`, ORDER_CREATION_RATE_LIMIT);
 

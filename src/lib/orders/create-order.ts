@@ -38,14 +38,12 @@ interface MenuItemRow {
  * cliente nunca carrega preço, então não há "preço divergente" possível do
  * lado do servidor — só disponibilidade, que é o que de fato se valida.
  *
- * ⚠️ DIAGNÓSTICO TEMPORÁRIO (2026-07-30): rastreando por que `order_items`
- * chega vazio no fechamento de conta apesar da sessão/pedido serem
- * encontrados. Loga (`console.error`, tag `[DEBUG]`): o resultado do
- * INSERT em `orders`; os itens que serão inseridos em `order_items` (com o
- * `order_id` usado); o resultado do INSERT em `order_items`
- * (sucesso/erro); e o `order_id` final devolvido — para comparar com o
- * `order.id` que `GET /api/v1/tables/{id}/close-bill` encontrar depois.
- * Reverter assim que a causa for encontrada.
+ * Sprint "Correção — Fonte Única de Verdade no Carregamento do Modal"
+ * (2026-07-30): a causa de "order_items chega vazio no fechamento de
+ * conta" era uma policy de RLS não-correlacionada em `order_items`
+ * (corrigida na migration 0022) — a instrumentação temporária usada para
+ * achar isso já foi removida daqui, do POST público e do `GET` de
+ * `close-bill`.
  */
 export async function createPublicOrder({
   admin,
@@ -250,34 +248,9 @@ export async function createPublicOrder({
     throw new AppError("INTERNAL_ERROR", "Não foi possível registrar o pedido. Tente novamente.");
   }
 
-  // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-  console.error("[create-order][DEBUG] INSERT em orders concluído", {
-    order_id: order.id,
-    table_id: tableId,
-    order_session_id: orderSessionId,
-    status: order.status,
-    total_amount: order.total_amount,
-  });
-
-  // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-  console.error("[create-order][DEBUG] itens que serão inseridos em order_items", {
-    order_id_usado: order.id,
-    quantidade_de_itens: orderItemsToInsert.length,
-    itens: orderItemsToInsert,
-  });
-
   const { error: orderItemsError } = await admin
     .from("order_items")
     .insert(orderItemsToInsert.map((item) => ({ ...item, order_id: order.id })));
-
-  // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-  console.error("[create-order][DEBUG] resultado do INSERT em order_items", {
-    order_id_usado: order.id,
-    sucesso: !orderItemsError,
-    error: orderItemsError
-      ? { code: orderItemsError.code, message: orderItemsError.message, details: orderItemsError.details, hint: orderItemsError.hint }
-      : null,
-  });
 
   if (orderItemsError) {
     // O cliente supabase-js não expõe transação explícita para o service
@@ -315,13 +288,6 @@ export async function createPublicOrder({
     // pedido inteiro falhar por causa de um UPDATE cosmético.
     console.error("[create-order] falha ao marcar mesa como ocupada", tableStatusError);
   }
-
-  // ─── DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa) ───
-  console.error("[create-order][DEBUG] retorno final de createPublicOrder — compare este order_id com o que aparecer em GET /api/v1/tables/{id}/close-bill", {
-    order_id: order.id,
-    order_session_id: orderSessionId,
-    table_id: tableId,
-  });
 
   return {
     id: order.id,
