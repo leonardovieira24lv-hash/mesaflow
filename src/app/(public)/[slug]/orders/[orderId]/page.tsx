@@ -3,11 +3,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { AppError } from "@/lib/api/errors";
 import { resolveRestaurantBySlug } from "@/lib/orders/resolve-public-context";
 import { getPublicOrderStatus } from "@/lib/orders/get-public-order-status";
+import { getPublicSessionOrders } from "@/lib/orders/get-public-session-orders";
 import { getOrderTableContext } from "@/lib/orders/get-order-table-context";
 import { EmptyState } from "@/components/ui/empty-state";
 import { OrderTrackingView } from "@/components/cardapio-cliente/order-tracking-view";
 
-export const metadata = { title: "Acompanhar pedido" };
+export const metadata = { title: "Sua comanda" };
 
 // Sprint de Correção de Regressões Críticas — mesma causa raiz do Bug 5
 // (ver `mesa/[token]/page.tsx`): só cliente admin, sem API dinâmica do
@@ -17,19 +18,24 @@ export const metadata = { title: "Acompanhar pedido" };
 export const dynamic = "force-dynamic";
 
 /**
- * Acompanhamento do Pedido (contrato seção 3.4). Carga inicial via
- * `getPublicOrderStatus` (mesma query do Route Handler, sem duplicá-la —
- * mesmo padrão das demais páginas desta Área do Cliente); atualizações
- * seguintes via polling do próprio endpoint público, feito dentro do
- * `<OrderTrackingView>` (Client Component) — ver o comentário lá sobre por
- * que não é uma assinatura Realtime anônima.
+ * Acompanhamento da Comanda. Carga inicial via `getPublicOrderStatus`
+ * (contrato seção 3.4, mesma query do Route Handler, sem duplicá-la —
+ * inalterada desde a Fase 2) só para o *gate* de "pedido não encontrado" —
+ * mantido de propósito, sem tocar num caminho já estabilizado.
  *
- * Sprint "Continuar Comprando" (2026-07-31): `getOrderTableContext` roda
- * só nesta carga inicial (Server Component), fora do contrato 3.4 —
- * resolve o `token` da mesa e se a `order_session` ainda está aberta, para
+ * Sprint "Evolução da Área do Cliente (Comanda)" (2026-07-31):
+ * `getPublicSessionOrders` roda em seguida (reaproveita `getOrdersForSessions`,
+ * `lib/tables/get-open-table-operations.ts` — ver o comentário lá) e traz
+ * TODOS os pedidos da mesma `order_session`, não só este. Atualizações
+ * seguintes via polling do endpoint novo
+ * (`GET /api/v1/public/{slug}/orders/{orderId}/session`), dentro de
+ * `<OrderTrackingView>` — o contrato 3.4 em si nunca é chamado de novo
+ * depois da carga inicial.
+ *
+ * Sprint "Continuar Comprando" (2026-07-31): `getOrderTableContext` resolve
+ * o `token` da mesa e se a `order_session` ainda está aberta, para
  * `<OrderTrackingView>` decidir se mostra o botão de volta ao cardápio.
- * Best-effort: se não conseguir resolver (pedido sem mesa associada, num
- * caso hipotético), a tela de acompanhamento continua funcionando
+ * Best-effort: se não conseguir resolver, a tela continua funcionando
  * normalmente, só sem o botão.
  */
 export default async function AcompanharPedidoPage({
@@ -56,14 +62,17 @@ export default async function AcompanharPedidoPage({
       );
     }
 
-    const tableContext = await getOrderTableContext(admin, restaurant.id, orderId);
+    const [tableContext, sessionOrders] = await Promise.all([
+      getOrderTableContext(admin, restaurant.id, orderId),
+      getPublicSessionOrders(admin, restaurant.id, orderId),
+    ]);
 
     return (
       <OrderTrackingView
         slug={slug}
         orderId={orderId}
         restaurantName={restaurant.name}
-        initialOrder={order}
+        initialOrders={sessionOrders ?? [{ id: order.id, status: order.status, items: order.items, totalAmount: 0, createdAt: new Date().toISOString() }]}
         tableToken={tableContext?.isSessionOpen ? tableContext.tableToken : null}
       />
     );
