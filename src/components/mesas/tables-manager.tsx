@@ -5,7 +5,6 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
   Armchair,
-  ArrowRight,
   Bell,
   Clock3,
   Hand,
@@ -1108,20 +1107,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
               });
             }
 
-            // Etapa "Compactação — Card da Mesa" (2026-08-01): exibição
-            // apenas visual, sem tocar em `table.name` de verdade — remove
-            // só a palavra "Mesa" (com ou sem espaço) do texto mostrado no
-            // número do card. Nomes que não começam com "Mesa" (ex.:
-            // "Varanda 2") continuam intactos. Fallback pro nome original
-            // se a remoção zerar a string (nunca deixa o card sem texto).
-            const displayName = table.name.replace(/^\s*mesa\s*/i, "").trim() || table.name;
-
             return (
               <div
                 key={table.id}
                 data-table-tile-id={table.id}
                 className={cn(
-                  "group relative flex h-full flex-col gap-1.5 overflow-hidden rounded-ds2-lg border p-2 shadow-ds2-sm transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-ds2-md",
+                  "group relative flex h-full flex-col gap-2 overflow-hidden rounded-ds2-lg border p-2.5 shadow-ds2-sm transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-ds2-md",
                   toneClass,
                   isFlashing && "animate-status-flash",
                   state.hasUnprocessedOrders && "animate-new-order-alert",
@@ -1136,80 +1127,78 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                   )}
                 />
 
-                {/* 1. Número da mesa + ações — mesma linha, número dominando. */}
-                <div className="z-10 flex items-start justify-between gap-1">
-                  <span
+                <div className="absolute right-1 top-1 z-20 flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setQrTable(table);
+                    }}
+                    aria-label={`Ver QR Code de ${table.name}`}
                     className={cn(
-                      "font-numeric text-4xl font-bold leading-none tabular-nums",
-                      isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-ds2-foreground",
+                      "h-8 w-8 opacity-70 hover:opacity-100",
+                      isFilled
+                        ? isDarkOnLight
+                          ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
+                          : "text-white hover:bg-white/15 hover:text-white"
+                        : "text-ds2-foreground-muted",
+                      focusRingClass,
                     )}
                   >
-                    {displayName}
-                  </span>
-
-                  <div className="flex shrink-0 gap-0.5">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setQrTable(table);
-                      }}
-                      aria-label={`Ver QR Code de ${table.name}`}
-                      className={cn(
-                        "h-7 w-7 opacity-70 hover:opacity-100",
-                        isFilled
-                          ? isDarkOnLight
-                            ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
-                            : "text-white hover:bg-white/15 hover:text-white"
-                          : "text-ds2-foreground-muted",
-                        focusRingClass,
-                      )}
-                    >
-                      <QrCode className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditModal(table);
-                      }}
-                      aria-label={`Editar ${table.name}`}
-                      className={cn(
-                        "h-7 w-7 opacity-70 hover:opacity-100",
-                        isFilled
-                          ? isDarkOnLight
-                            ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
-                            : "text-white hover:bg-white/15 hover:text-white"
-                          : "text-ds2-foreground-muted",
-                        focusRingClass,
-                      )}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeletingTable(table);
-                      }}
-                      aria-label={`Excluir ${table.name}`}
-                      className={cn(
-                        "h-7 w-7 opacity-70 hover:opacity-100",
-                        isFilled
-                          ? isDarkOnLight
-                            ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
-                            : "text-white hover:bg-white/15 hover:text-white"
-                          : "text-destructive",
-                        focusRingClass,
-                      )}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                    <QrCode className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditModal(table);
+                    }}
+                    aria-label={`Editar ${table.name}`}
+                    className={cn(
+                      "h-8 w-8 opacity-70 hover:opacity-100",
+                      isFilled
+                        ? isDarkOnLight
+                          ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
+                          : "text-white hover:bg-white/15 hover:text-white"
+                        : "text-ds2-foreground-muted",
+                      focusRingClass,
+                    )}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletingTable(table);
+                    }}
+                    aria-label={`Excluir ${table.name}`}
+                    className={cn(
+                      "h-8 w-8 opacity-70 hover:opacity-100",
+                      isFilled
+                        ? isDarkOnLight
+                          ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
+                          : "text-white hover:bg-white/15 hover:text-white"
+                        : "text-destructive",
+                      focusRingClass,
+                    )}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
+
+                {/* 1. Número da mesa — maior elemento do card, sem dominá-lo. */}
+                <span
+                  className={cn(
+                    "z-10 pr-14 font-numeric text-2xl font-bold leading-none tabular-nums",
+                    isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-ds2-foreground",
+                  )}
+                >
+                  {table.name}
+                </span>
 
                 {/* 2. Status — badge elegante com indicador de cor, nunca texto solto. */}
                 <span
@@ -1227,32 +1216,147 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
                 </span>
 
                 {/*
-                  Rodapé "Abrir mesa →" — <button> nativo (não <Button>) de
-                  propósito: sangra até as bordas do card (-mx/-mb casando
-                  com o padding do card-pai) e usa só border-t, sem
-                  moldura/fundo de botão próprio, pra parecer parte do card
-                  em vez de um elemento separado empilhado por cima.
+                  Selo à parte do tom, para os dois coexistirem (mesa
+                  "Preparando" com pedido novo ainda em pending). Só
+                  aparece quando soma informação nova — se o tom já É
+                  "new_order", o card inteiro já está laranja e rotulado
+                  "Novo pedido", repetir o selo seria redundante. Deixou de
+                  ser o destaque principal — isso agora é a animação do
+                  tile inteiro (`animate-new-order-alert` acima); o selo
+                  continua existindo, com a contagem, como reforço textual.
+                  Some sozinho quando o pedido sai de `pending` (mesmo sinal
+                  que já governa `tone`) — nada de timer/timeout.
+
+                  `animate-pulse` foi removido daqui de propósito — o tile
+                  inteiro já pulsa (`animate-new-order-alert`, aplicado no
+                  card-raiz) quando `hasUnprocessedOrders` é `true`. Duas
+                  animações competindo pela atenção no mesmo elemento
+                  visual; mantida só a do tile inteiro, mais visível à
+                  distância — o selo permanece como reforço textual
+                  estático (cor + contagem), sem movimento próprio.
                 */}
-                <button
+                {state.hasUnprocessedOrders && state.tone !== "new_order" && (
+                  <span
+                    className="z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full bg-ds2-warning px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-ds2-warning-foreground"
+                    title="Pedido novo aguardando envio para a cozinha"
+                  >
+                    <Bell className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                    {pendingCount} {pendingCount === 1 ? "NOVO" : "NOVOS"}
+                  </span>
+                )}
+
+                {/*
+                  Sprint UI-01 (Migração DS2, 2026-07-31): "Chamando garçom"
+                  deixou de ser um tom (`waiter_call` não existe mais em
+                  `TableCardTone`) — vira só este selo independente, que
+                  coexiste com qualquer tom, mesmo padrão do selo de pedido
+                  não processado acima. Cor: `ds2-primary` (verde, a única
+                  cor de marca da DS2) — de propósito, não `ds2-info`
+                  (pedido explícito do dono: não reaproveitar "info" nem
+                  criar uma cor nova só para isto). Resolver/atender a
+                  chamada continua em `TableDrawer` (`waiterCallAlert`),
+                  sem relação com este selo.
+                */}
+                {state.hasWaiterCall && (
+                  <span
+                    className="z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full bg-ds2-primary px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-ds2-primary-foreground"
+                    title="Cliente chamando o garçom"
+                  >
+                    <Hand className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                    Garçom
+                  </span>
+                )}
+
+                {/* 3 + 4. Valor em aberto (se existir) e tempo, discreto. */}
+                {data ? (
+                  <div className="z-10 flex flex-col gap-0.5">
+                    <span
+                      className={cn(
+                        "font-numeric text-lg font-bold leading-tight tabular-nums",
+                        isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-ds2-foreground",
+                      )}
+                    >
+                      {formatCurrency(data.totalAmount)}
+                    </span>
+                    {data.lastOrderAt && (
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 text-xs",
+                          isFilled
+                            ? isDarkOnLight
+                              ? "text-ds2-warning-foreground/70"
+                              : "text-white/70"
+                            : "text-ds2-foreground-muted",
+                        )}
+                      >
+                        <Clock3 className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                        último pedido {formatRelativeTimeShort(data.lastOrderAt)}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span
+                    className={cn(
+                      "z-10 text-xs",
+                      isFilled
+                        ? isDarkOnLight
+                          ? "text-ds2-warning-foreground/70"
+                          : "text-white/70"
+                        : "text-ds2-foreground-muted",
+                    )}
+                  >
+                    Sem pedidos em aberto
+                  </span>
+                )}
+
+                {/* 5. Resumo operacional — só o que já existe (itens, pedidos). */}
+                {data && (data.itemCount > 0 || ordersCount > 0) && (
+                  <div
+                    className={cn(
+                      "z-10 flex items-center gap-2.5 text-xs",
+                      isFilled
+                        ? isDarkOnLight
+                          ? "text-ds2-warning-foreground/80"
+                          : "text-white/80"
+                        : "text-ds2-foreground-muted",
+                    )}
+                  >
+                    {ordersCount > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <Receipt className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                        {ordersCount} {ordersCount === 1 ? "pedido" : "pedidos"}
+                      </span>
+                    )}
+                    {data.itemCount > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <UtensilsCrossed className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                        {data.itemCount} {data.itemCount === 1 ? "item" : "itens"}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Ação principal — sempre visível, alvo de toque grande, fixada no final do card. */}
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleOpenTable(table);
                   }}
-                  aria-label={`${actionLabel} — ${displayName}`}
                   className={cn(
-                    "z-10 -mx-2 -mb-2 mt-auto flex items-center justify-center gap-1 border-t px-2 py-1.5 text-xs font-semibold transition-colors",
+                    "z-10 mt-auto h-7 w-full justify-center border text-xs font-semibold",
                     isFilled
                       ? isDarkOnLight
-                        ? "border-ds2-warning-foreground/20 text-ds2-warning-foreground hover:bg-ds2-warning-foreground/10"
-                        : "border-white/20 text-white hover:bg-white/10"
-                      : "border-ds2-border text-ds2-foreground-muted hover:bg-ds2-surface-hover hover:text-ds2-foreground",
+                        ? "border-ds2-warning-foreground/25 bg-ds2-warning-foreground/10 text-ds2-warning-foreground hover:bg-ds2-warning-foreground/20"
+                        : "border-white/25 bg-white/10 text-white hover:bg-white/20"
+                      : "border-ds2-border bg-ds2-surface hover:bg-ds2-surface-hover",
                     focusRingClass,
                   )}
                 >
-                  Abrir mesa
-                  <ArrowRight className="h-3 w-3" aria-hidden />
-                </button>
+                  {actionLabel}
+                </Button>
               </div>
             );
           })}
