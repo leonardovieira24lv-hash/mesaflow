@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
-import { Banknote, ClipboardList, LayoutGrid, Receipt, Search } from "lucide-react";
+import { Banknote, ClipboardList, LayoutGrid, Lock, Receipt, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -11,6 +11,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert } from "@/components/ui/alert";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/toast";
 import { formatCurrency, formatDurationBetween } from "@/lib/format";
 import { CASHIER_PERIOD_VALUES, type CashierPeriod } from "@/lib/validations/cashier";
 import { PAYMENT_METHOD_LABELS, type CashierListResult, type ClosedSessionRow } from "@/lib/cashier/queries";
@@ -59,6 +63,20 @@ export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) 
   // rápido) sobrescreva o estado com uma resposta desatualizada — só a
   // resposta da requisição mais recente é aplicada.
   const latestRequestId = useRef(0);
+
+  // Fechamento de Caixa (Sprint "Painel de Caixa" — etapa 1, fluxo visual):
+  // nesta etapa não há persistência nem histórico, só o modal de
+  // confirmação com os dados reais do período já carregado e um campo de
+  // observações local. `handleConfirmClosing` só fecha o modal e avisa via
+  // toast — a gravação em si fica para a próxima etapa.
+  const [isClosingModalOpen, setIsClosingModalOpen] = useState(false);
+  const [closingObservations, setClosingObservations] = useState("");
+
+  function handleConfirmClosing() {
+    setIsClosingModalOpen(false);
+    setClosingObservations("");
+    toast.success("Fluxo preparado. A persistência será implementada na próxima etapa.");
+  }
 
   const fetchData = useCallback(async () => {
     if (period === "custom" && (!customStart || !customEnd)) return;
@@ -125,6 +143,13 @@ export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) 
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={() => setIsClosingModalOpen(true)}>
+          <Lock className="h-4 w-4" aria-hidden />
+          Fechar Caixa
+        </Button>
+      </div>
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <SummaryCard icon={Banknote} label="Faturamento do período" value={formatCurrency(summary.revenue)} />
         <SummaryCard icon={Receipt} label="Comandas fechadas" value={String(summary.closedSessionsCount)} />
@@ -249,6 +274,18 @@ export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) 
       <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} />
 
       <CaixaSessionDetailModal sessionId={selectedSessionId} onClose={() => setSelectedSessionId(null)} />
+
+      <CaixaClosingModal
+        open={isClosingModalOpen}
+        onClose={() => setIsClosingModalOpen(false)}
+        revenue={summary.revenue}
+        closedSessionsCount={summary.closedSessionsCount}
+        averageTicket={summary.averageTicket}
+        tablesServedCount={summary.tablesServedCount}
+        observations={closingObservations}
+        onObservationsChange={setClosingObservations}
+        onConfirm={handleConfirmClosing}
+      />
     </div>
   );
 }
@@ -266,5 +303,90 @@ function SummaryCard({ icon: Icon, label, value }: { icon: typeof Banknote; labe
         <span className="font-numeric text-2xl font-bold tabular-nums tracking-tight text-ds2-foreground">{value}</span>
       </CardContent>
     </Card>
+  );
+}
+
+interface CaixaClosingModalProps {
+  open: boolean;
+  onClose: () => void;
+  revenue: number;
+  closedSessionsCount: number;
+  averageTicket: number;
+  tablesServedCount: number;
+  observations: string;
+  onObservationsChange: (value: string) => void;
+  onConfirm: () => void;
+}
+
+/**
+ * Modal de confirmação de Fechamento de Caixa (Sprint "Painel de Caixa" —
+ * etapa 1, fluxo visual). Mostra só os 4 números que já vêm de
+ * `getCashierData` (mesmo `summary` dos cards de resumo, já filtrado pelo
+ * período/busca em uso) — nenhum dado inventado ou mockado.
+ *
+ * "Resumo por forma de pagamento" fica de fora desta etapa de propósito:
+ * `CashierSummary` (`lib/cashier/queries.ts`) ainda não tem esse
+ * agregado, e mostrar valores fixos/zerados aqui seria dado falso numa
+ * tela financeira — entra numa etapa futura, quando o backend passar a
+ * fornecer o agregado real.
+ *
+ * Sem persistência: "Fechar Caixa" aqui só fecha o modal e dispara um
+ * toast informativo. Gravar o fechamento (e o texto de `observations`)
+ * fica para a próxima etapa.
+ */
+function CaixaClosingModal({
+  open,
+  onClose,
+  revenue,
+  closedSessionsCount,
+  averageTicket,
+  tablesServedCount,
+  observations,
+  onObservationsChange,
+  onConfirm,
+}: CaixaClosingModalProps) {
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Fechar Caixa"
+      description="Confira os dados do período antes de confirmar."
+      className="max-w-lg"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="button" onClick={onConfirm}>
+            Fechar Caixa
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-5 pb-2">
+        <div className="grid grid-cols-2 gap-4">
+          <SummaryCard icon={Banknote} label="Faturamento do período" value={formatCurrency(revenue)} />
+          <SummaryCard icon={Receipt} label="Comandas fechadas" value={String(closedSessionsCount)} />
+          <SummaryCard icon={ClipboardList} label="Ticket médio" value={formatCurrency(averageTicket)} />
+          <SummaryCard icon={LayoutGrid} label="Mesas atendidas" value={String(tablesServedCount)} />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="closing-observations" className="text-sm font-medium text-ds2-foreground">
+            Observações <span className="font-normal text-ds2-foreground-muted">(opcional)</span>
+          </label>
+          <Textarea
+            id="closing-observations"
+            value={observations}
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onObservationsChange(e.target.value)}
+            placeholder="Ex.: retirada de R$ 50 às 14h, estorno da mesa 3..."
+          />
+          <p className="text-xs text-ds2-foreground-muted">
+            Registre aqui qualquer ocorrência importante deste caixa, como retiradas, diferenças, estornos ou outras
+            informações relevantes.
+          </p>
+        </div>
+      </div>
+    </Modal>
   );
 }
