@@ -54,12 +54,6 @@ const ADMIN_ROUTE_PREFIXES = [
   //   continua de propósito fora desta lista — tem que ser público.
   "/design-system",
   "/onboarding/mesas",
-  // Debug Tools — módulo permanente de diagnóstico interno
-  // (`/admin/debug/*`: orders, tables, sessions, restaurant, environment,
-  // api — algumas ainda placeholder). Cada página já chama
-  // `requirePageSession()` por conta própria; esta entrada é defesa em
-  // profundidade, mesmo padrão do "/design-system" acima.
-  "/admin/debug",
 ];
 
 export const config = {

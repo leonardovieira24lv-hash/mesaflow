@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
   Armchair,
@@ -35,7 +34,6 @@ import { createClient } from "@/lib/supabase/client";
 import { restaurantOrdersChannel, restaurantTablesChannel, restaurantTableEventsChannel } from "@/lib/realtime/channels";
 import { useRealtimeConnectionStatus } from "@/lib/realtime/use-realtime-connection-status";
 import { RealtimeStatusIndicator } from "@/components/realtime/realtime-status-indicator";
-import { pushMesasDebugLog } from "@/lib/debug/mesas-debug-log";
 import { getAppOrigin } from "@/lib/cliente-url";
 import { TableQrModal } from "@/components/mesas/table-qr-modal";
 import { TableDrawer } from "@/components/mesas/table-drawer";
@@ -53,15 +51,6 @@ import { createTableSchema, updateTableSchema, TABLE_STATUS_VALUES } from "@/lib
 import type { OrderListRow } from "@/components/pedidos/orders-list";
 import type { Table as TableEntity, TableStatus, TableEvent } from "@/types/domain";
 import type { ApiError, ApiSuccess } from "@/types/api";
-
-// DEBUG TEMPORÁRIO — pedido explícito do dono, para investigar visualmente
-// (direto pelo celular, sem precisar de console de navegador) de onde vem
-// o host errado no QR Code. Aparece se o build não for de produção OU se
-// esta constante estiver `true` — hoje está `true` de propósito, para
-// aparecer mesmo no deploy de produção que está sendo investigado agora.
-// Remover esta constante e o bloco `{showQrDebugBox && (...)}` mais abaixo
-// assim que o problema for identificado.
-const DEBUG = true;
 
 interface TablesManagerProps {
   initialTables: TableEntity[];
@@ -181,21 +170,8 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   const [, setClockTick] = useState(0);
 
   const origin = getAppOrigin();
-  const showQrDebugBox = DEBUG || process.env.NODE_ENV !== "production";
 
-  // Ref só para o LOG 3 abaixo (valor "anterior" de `operations` no momento do
-  // fetch) — não pode ser a própria `operations` do estado, ou `fetchOperations`
-  // deixaria de ser estável e o efeito do canal (que depende dela) reassinaria
-  // o canal a cada fetch, o que seria um bug novo introduzido pelo log.
-  const operationsRef = useRef<Record<string, TableOperations>>({});
-  // Mesmo raciocínio, para `fetchTableEvents` (ver comentário lá).
-  const tableEventsRef = useRef<Record<string, TableCardAlert[]>>({});
-
-  const fetchOperations = useCallback(async (trigger: string) => {
-    // LOG — prova que fetchOperations() foi de fato invocada, e por quê
-    // (mount, evento realtime, canal reconectado) — antes mesmo do fetch
-    // sair, para isolar "foi chamada mas travou no fetch" de "nunca foi chamada".
-    pushMesasDebugLog("fetchOperations: chamada iniciada", { trigger });
+  const fetchOperations = useCallback(async () => {
     try {
       // Sprint "Fonte Única de Verdade — order_session" (2026-07-30,
       // seguinte à Correção "Pedido Finalizado Sumindo da Mesa"): a
@@ -216,50 +192,19 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
       const response = await fetch("/api/v1/tables/operations");
       const body = await response.json();
       if (!response.ok) {
-        pushMesasDebugLog("fetchOperations: resposta não-ok", { status: response.status, body });
         setOperationsError(body?.error?.message ?? "Não foi possível carregar os pedidos em aberto.");
         return;
       }
       const success = body as ApiSuccess<OrderListRow[]>;
-      // LOG 4 — resposta crua de fetchOperations(), antes de qualquer agregação.
-      pushMesasDebugLog("fetchOperations: resposta crua", {
-        count: success.data.length,
-        orders: success.data.map((o) => ({ id: o.id, table_id: o.table.id, table_name: o.table.name, status: o.status })),
-      });
       const aggregated = aggregateByTable(success.data);
-      // LOG — resultado isolado de aggregateByTable(), antes de tocar em setOperations.
-      pushMesasDebugLog("aggregateByTable: resultado", { tableIds: Object.keys(aggregated), aggregated });
-      // LOG 3 — chamada de setOperations() (a INVOCAÇÃO do setter, não prova
-      // ainda que o React commitou — isso é confirmado à parte, no useEffect
-      // que observa `operations` mais abaixo).
-      pushMesasDebugLog("setOperations: invocado com", {
-        previousKeys: Object.keys(operationsRef.current),
-        nextKeys: Object.keys(aggregated),
-      });
-      operationsRef.current = aggregated;
       setOperations(aggregated);
       setOperationsError(null);
-    } catch (err) {
-      pushMesasDebugLog("fetchOperations: exceção", { err: String(err) });
+    } catch {
       setOperationsError("Não foi possível conectar para carregar os pedidos em aberto.");
     }
   }, []);
 
-  // LOG 7 — confirma que o estado React de fato foi commitado (dispara só
-  // depois que `operations` mudou de verdade, diferente do log de
-  // "setOperations: invocado com" acima, que só prova a chamada do setter).
-  useEffect(() => {
-    pushMesasDebugLog("operations: estado React confirmado (useEffect)", { keys: Object.keys(operations) });
-  }, [operations]);
-
-  // Mesmo raciocínio acima, para `tableEvents` — só dispara depois que o
-  // React de fato commitou o novo estado (diferente do log "setTableEvents:
-  // invocado com", que só prova a chamada do setter).
-  useEffect(() => {
-    pushMesasDebugLog("tableEvents: estado React confirmado (useEffect)", { keys: Object.keys(tableEvents) });
-  }, [tableEvents]);
-
-  // Correção Sprint 2 (Painel Vivo) — causa raiz do "só atualiza com F5":
+  // Correção Sprint 2 (Painel Vivo): causa raiz do "só atualiza com F5":
   // o Supabase Realtime NÃO reenvia eventos perdidos enquanto o canal
   // estava desconectado (aba em segundo plano, blip de rede, renovação de
   // token — tudo isso derruba o WebSocket por alguns instantes, rotineiramente,
@@ -277,7 +222,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
       const body = await response.json();
       if (!response.ok) return;
       const success = body as ApiSuccess<TableDto[]>;
-      pushMesasDebugLog("fetchTables: resposta crua", { tables: success.data });
       const freshTables = success.data.map(fromDto).sort((a, b) => a.name.localeCompare(b.name));
       setTables(freshTables);
       setDrawerTable((prev) => (prev ? (freshTables.find((t) => t.id === prev.id) ?? prev) : prev));
@@ -294,20 +238,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   // mesa no cliente. Chamada no mount e a cada (re)conexão do canal de
   // eventos (efeito logo abaixo), pelo mesmo motivo já documentado acima.
   const fetchTableEvents = useCallback(async () => {
-    // LOG — início da chamada, mesmo padrão de "fetchOperations: chamada iniciada".
-    pushMesasDebugLog("fetchTableEvents: chamada iniciada", {});
     try {
       const response = await fetch("/api/v1/tables/events?status=open");
       if (!response.ok) {
-        pushMesasDebugLog("fetchTableEvents: resposta não-ok", { status: response.status });
         return;
       }
       const body = (await response.json()) as ApiSuccess<TableEvent[]>;
-      // LOG — resposta bruta da API, mesmo padrão de "fetchOperations: resposta crua".
-      pushMesasDebugLog("fetchTableEvents: resposta crua", {
-        count: body.data.length,
-        events: body.data.map((e) => ({ id: e.id, table_id: e.table.id, type: e.type, status: e.status })),
-      });
 
       const map: Record<string, TableCardAlert[]> = {};
       for (const event of body.data) {
@@ -316,27 +252,15 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
         map[tableId].push({ id: event.id, type: event.type, createdAt: event.createdAt });
       }
 
-      // LOG — atualização do estado (setTableEvents), mesmo padrão de
-      // "setOperations: invocado com". `activeEventsCount` é a quantidade
-      // de eventos ativos recebidos (soma de todas as mesas), não o número
-      // de mesas com alerta.
-      pushMesasDebugLog("setTableEvents: invocado com", {
-        previousKeys: Object.keys(tableEventsRef.current),
-        nextKeys: Object.keys(map),
-        activeEventsCount: body.data.length,
-      });
-      tableEventsRef.current = map;
       setTableEvents(map);
-    } catch (err) {
-      // LOG — qualquer erro durante o fetch.
-      pushMesasDebugLog("fetchTableEvents: exceção", { err: String(err) });
+    } catch {
       // Mesmo raciocínio best-effort de `fetchTables`/`fetchOperations`: a
       // próxima reconexão do canal tenta de novo.
     }
   }, []);
 
   useEffect(() => {
-    void fetchOperations("mount");
+    void fetchOperations();
   }, [fetchOperations]);
 
   useEffect(() => {
@@ -390,28 +314,13 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   useEffect(() => {
     const previous = prevTonesRef.current;
 
-    // LOG 1 — currentTones mudou (o useMemo recalculou e este efeito rodou).
-    pushMesasDebugLog("currentTones: mudou", { previous, current: currentTones });
-
     const changedIds = Object.entries(currentTones)
       .filter(([id, tone]) => previous[id] !== undefined && previous[id] !== tone)
       .map(([id]) => id);
 
-    // LOG 2 — resultado da comparação prevTonesRef vs currentTones.
-    pushMesasDebugLog("prevTonesRef: comparado com currentTones", {
-      previousKeysCount: Object.keys(previous).length,
-      currentKeysCount: Object.keys(currentTones).length,
-      changedIds,
-    });
-
     prevTonesRef.current = currentTones;
 
     if (changedIds.length === 0) return;
-
-    const flashStartedAt = Date.now();
-
-    // LOG 3 — quais mesas entraram em flashingIds.
-    pushMesasDebugLog("flashingIds: mesas adicionadas", { changedIds, startedAt: new Date(flashStartedAt).toISOString() });
 
     setFlashingIds((prev) => new Set([...prev, ...changedIds]));
 
@@ -424,11 +333,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
       if (existingTimer) clearTimeout(existingTimer);
 
       const timer = setTimeout(() => {
-        // LOG 5 — quanto tempo esta mesa (e só esta) permaneceu em flashingIds.
-        pushMesasDebugLog("flashingIds: mesas removidas", {
-          tableId: id,
-          elapsedMs: Date.now() - flashStartedAt,
-        });
         setFlashingIds((prev) => {
           const next = new Set(prev);
           next.delete(id);
@@ -505,74 +409,25 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
     }
   }, [currentSoundSignals]);
 
-  // LOG 6 — verificação real no DOM: para cada mesa atualmente em
-  // `flashingIds`, confirma se o navegador de fato registrou a animação CSS
-  // no elemento (não só se a classe foi passada ao React). Se
-  // `animationName` vier "none", a classe não está sendo aplicada de
-  // verdade (ou foi removida do CSS gerado) — se vier "status-flash", a
-  // animação existe e deveria estar rodando.
   useEffect(() => {
-    if (flashingIds.size === 0) return;
-    for (const id of flashingIds) {
-      const el = document.querySelector(`[data-table-tile-id="${id}"]`);
-      if (!el) {
-        pushMesasDebugLog("DOM: elemento do tile não encontrado para verificar CSS", { tableId: id });
-        continue;
-      }
-      const computed = window.getComputedStyle(el);
-      pushMesasDebugLog("DOM: animação CSS computada no elemento", {
-        tableId: id,
-        animationName: computed.animationName,
-        animationDuration: computed.animationDuration,
-        className: el.className,
-      });
-    }
-  }, [flashingIds]);
-
-  useEffect(() => {
-    // LOG 1 (marco inicial) — canal sendo criado/assinado neste mount do
-    // componente. Serve de "linha zero" da linha do tempo: tudo que acontecer
-    // depois disso, até o cleanup, pertence a esta mesma assinatura.
-    pushMesasDebugLog("canal orders: assinando", { restaurantId, at: new Date().toISOString() });
-
     const supabase = createClient();
     const channel = supabase
       .channel(restaurantOrdersChannel(restaurantId))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` },
-        (payload) => {
-          const receivedAt = Date.now();
-          const row = (payload.new ?? payload.old) as { updated_at?: string; created_at?: string } | null;
-          const rowTimestamp = row?.updated_at ?? row?.created_at;
-          // LOG 1 — evento Realtime recebido no canal de pedidos. `latencyMs`
-          // compara o timestamp que o PRÓPRIO banco gravou na linha
-          // (created_at/updated_at) com o instante em que o navegador recebeu
-          // o evento — é a prova objetiva de "o evento chegou, e chegou em X ms".
-          pushMesasDebugLog("canal orders: evento recebido", {
-            eventType: payload.eventType,
-            new: payload.new,
-            old: payload.old,
-            rowTimestamp,
-            receivedAt: new Date(receivedAt).toISOString(),
-            latencyMsSinceRowTimestamp: rowTimestamp ? receivedAt - new Date(rowTimestamp).getTime() : null,
-          });
-          void fetchOperations("evento realtime canal orders");
+        () => {
+          void fetchOperations();
         },
       )
       .subscribe((subscriptionStatus) => {
-        // LOG 2 — callback do canal (status da subscrição).
-        pushMesasDebugLog("canal orders: subscriptionStatus", { subscriptionStatus, restaurantId });
         reportStatus("orders", subscriptionStatus);
         if (subscriptionStatus === "SUBSCRIBED") {
-          void fetchOperations("canal orders reconectou (SUBSCRIBED)");
+          void fetchOperations();
         }
       });
 
     return () => {
-      pushMesasDebugLog("canal orders: cleanup/removeChannel (componente desmontando ou restaurantId mudou)", {
-        restaurantId,
-      });
       void supabase.removeChannel(channel);
     };
   }, [restaurantId, fetchOperations, reportStatus]);
@@ -585,8 +440,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   // Drawer aberto no momento, se for a mesma mesa — senão o cabeçalho do
   // Drawer ficaria com o status antigo enquanto a grade já mostraria o novo.
   useEffect(() => {
-    pushMesasDebugLog("canal tables: assinando", { restaurantId, at: new Date().toISOString() });
-
     const supabase = createClient();
     const channel = supabase
       .channel(restaurantTablesChannel(restaurantId))
@@ -594,19 +447,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
         "postgres_changes",
         { event: "*", schema: "public", table: "tables", filter: `restaurant_id=eq.${restaurantId}` },
         (payload) => {
-          const receivedAt = Date.now();
-          const row = (payload.new ?? payload.old) as { updated_at?: string; created_at?: string } | null;
-          const rowTimestamp = row?.updated_at ?? row?.created_at;
-          // LOG 1 — evento Realtime recebido no canal de mesas.
-          pushMesasDebugLog("canal tables: evento recebido", {
-            eventType: payload.eventType,
-            new: payload.new,
-            old: payload.old,
-            rowTimestamp,
-            receivedAt: new Date(receivedAt).toISOString(),
-            latencyMsSinceRowTimestamp: rowTimestamp ? receivedAt - new Date(rowTimestamp).getTime() : null,
-          });
-
           if (payload.eventType === "DELETE") {
             const deletedId = (payload.old as { id?: string }).id;
             if (!deletedId) return;
@@ -616,8 +456,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           }
 
           const updated = fromDto(payload.new as TableDto);
-          // LOG 3 — estado React sendo atualizado (setTables).
-          pushMesasDebugLog("setTables: mesa atualizada via realtime", { updated });
           setTables((prev) => {
             const exists = prev.some((t) => t.id === updated.id);
             if (!exists) return [...prev, updated].sort((a, b) => a.name.localeCompare(b.name));
@@ -627,8 +465,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
         },
       )
       .subscribe((subscriptionStatus) => {
-        // LOG 2 — callback do canal (status da subscrição).
-        pushMesasDebugLog("canal tables: subscriptionStatus", { subscriptionStatus, restaurantId });
         reportStatus("tables", subscriptionStatus);
         if (subscriptionStatus === "SUBSCRIBED") {
           void fetchTables();
@@ -636,9 +472,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
       });
 
     return () => {
-      pushMesasDebugLog("canal tables: cleanup/removeChannel (componente desmontando ou restaurantId mudou)", {
-        restaurantId,
-      });
       void supabase.removeChannel(channel);
     };
   }, [restaurantId, reportStatus, fetchTables]);
@@ -650,22 +483,13 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   // mesma lacuna de eventos perdidos durante uma desconexão já corrigida
   // para `orders`/`tables`.
   useEffect(() => {
-    pushMesasDebugLog("canal table_events: assinando", { restaurantId, at: new Date().toISOString() });
-
     const supabase = createClient();
     const channel = supabase
       .channel(restaurantTableEventsChannel(restaurantId))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "table_events", filter: `restaurant_id=eq.${restaurantId}` },
-        (payload) => {
-          // LOG — evento Realtime recebido no canal de eventos de mesa,
-          // mesmo padrão de "canal orders/tables: evento recebido".
-          pushMesasDebugLog("canal table_events: evento recebido", {
-            eventType: payload.eventType,
-            new: payload.new,
-            old: payload.old,
-          });
+        () => {
           void fetchTableEvents();
         },
       )
@@ -677,9 +501,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
       });
 
     return () => {
-      pushMesasDebugLog("canal table_events: cleanup/removeChannel (componente desmontando ou restaurantId mudou)", {
-        restaurantId,
-      });
       void supabase.removeChannel(channel);
     };
   }, [restaurantId, reportStatus, fetchTableEvents]);
@@ -821,17 +642,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   }
 
   const drawerOperations = drawerTable ? operations[drawerTable.id] : undefined;
-  if (drawerTable) {
-    // LOG complementar — exatamente o dado que o Drawer recebe (onde aparece
-    // "Nenhum pedido em aberto" quando isso vem vazio).
-    pushMesasDebugLog("TableDrawer: openOrders calculado", {
-      drawerTableId: drawerTable.id,
-      drawerTableName: drawerTable.name,
-      hasOperationsEntry: drawerTable.id in operations,
-      openOrdersCount: drawerOperations?.orders.length ?? 0,
-      operationsKeysAvailable: Object.keys(operations),
-    });
-  }
 
   // Agregados derivados do que já está carregado (tables + operations) —
   // nenhum dado novo, só leitura do que o componente já tem em mãos.
@@ -888,39 +698,15 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
   ];
 
   // `focusRingClass`: aplicado por instância a elementos que não são
-  // `Button` (ex.: o link "Ver logs de debug") — `Button` já tem
-  // `focus-visible` nativo desde a migração DS2 do componente; onde este
-  // valor ainda é passado para um `<Button>`, é redundante (não incorreto,
-  // só duplicado) e pode ser retirado numa limpeza futura desses call
-  // sites específicos.
+  // `Button` — `Button` já tem `focus-visible` nativo desde a migração DS2
+  // do componente; onde este valor ainda é passado para um `<Button>`, é
+  // redundante (não incorreto, só duplicado) e pode ser retirado numa
+  // limpeza futura desses call sites específicos.
   const focusRingClass =
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background";
 
   return (
     <div className="flex flex-col gap-5">
-      {showQrDebugBox && (
-        <div className="flex flex-col gap-1.5 rounded-xl border-2 border-dashed border-destructive bg-destructive/5 p-3 font-mono text-[11px] leading-relaxed text-foreground">
-          <p className="font-sans text-xs font-bold uppercase tracking-wide text-destructive">
-            🐞 Debug temporário — origem da URL do QR Code
-          </p>
-          <p className="break-all">
-            <span className="text-muted-foreground">NEXT_PUBLIC_APP_URL:</span>{" "}
-            {process.env.NEXT_PUBLIC_APP_URL ?? "(não definida)"}
-          </p>
-          <p className="break-all">
-            <span className="text-muted-foreground">getAppOrigin():</span> {origin || "(vazio)"}
-          </p>
-          <p className="break-all">
-            <span className="text-muted-foreground">tableUrl() [1ª mesa da lista]:</span>{" "}
-            {tables[0] ? tableUrl(tables[0]) : "(nenhuma mesa cadastrada)"}
-          </p>
-          <p className="break-all">
-            <span className="text-muted-foreground">URL final enviada ao TableQrModal:</span>{" "}
-            {qrTable ? tableUrl(qrTable) : "(nenhum modal de QR Code aberto agora — toque em \"Ver QR Code\" de uma mesa)"}
-          </p>
-        </div>
-      )}
-
       {operationsError && (
         <Alert variant="warning">
           {operationsError} — os tiles mostram só o status da mesa, sem dado de pedido em aberto.
@@ -944,18 +730,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
         </div>
         <div className="flex items-center gap-3">
           <RealtimeStatusIndicator status={realtimeStatus} />
-          {/* INSTRUMENTAÇÃO TEMPORÁRIA — Sprint 2, investigação do bug de
-              agregação. Remover junto com `lib/debug/mesas-debug-log.ts` e a
-              rota `/admin/debug/mesas` assim que a causa raiz for corrigida. */}
-          <Link
-            href="/admin/debug/mesas"
-            className={cn(
-              "rounded-ds2-sm text-xs font-medium text-ds2-foreground-muted underline decoration-dotted underline-offset-4 hover:text-ds2-foreground",
-              focusRingClass,
-            )}
-          >
-            Ver logs de debug
-          </Link>
           <Button onClick={openCreateModal} className={focusRingClass}>
             <Plus className="h-4 w-4" />
             Nova mesa
@@ -1046,16 +820,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
             const data = operations[table.id] ?? null;
             const alerts = tableEvents[table.id] ?? [];
             const state = deriveTableCardState(table.status, data, alerts);
-            // LOG 5 — resultado de deriveTableCardState() para esta mesa, neste render.
-            pushMesasDebugLog("deriveTableCardState", {
-              tableId: table.id,
-              tableName: table.name,
-              tableStatus: table.status,
-              hasOperationsEntry: operations[table.id] !== undefined,
-              data,
-              tone: state.tone,
-              label: state.label,
-            });
             const isFilled = TABLE_CARD_FILLED_TONES.includes(state.tone);
             // Sprint UI-02 (2026-07-31): ver `TABLE_CARD_TONE_DARK_TEXT` —
             // `new_order` tem fundo claro (`ds2-warning`), então precisa de
@@ -1083,29 +847,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
             // muda ao clicar.
             const actionLabel = "Ver mesa";
             const toneClass = TABLE_CARD_TONE_CLASSES[state.tone];
-            // LOG 6 — classe de cor efetivamente aplicada ao card no render.
-            pushMesasDebugLog("render do card da mesa", {
-              tableId: table.id,
-              tableName: table.name,
-              tone: state.tone,
-              toneClass,
-            });
-
-            // LOG 4 — confirma, a partir do próprio React, se a classe
-            // "animate-status-flash" foi incluída no className desta mesa
-            // neste render (antes de qualquer verificação de CSS no DOM,
-            // que é o LOG 6, separado).
-            if (isFlashing) {
-              pushMesasDebugLog("render: animate-status-flash incluído no className?", {
-                tableId: table.id,
-                isFlashing,
-                classNameFinal: cn(
-                  "group relative flex h-full flex-col gap-2 overflow-hidden rounded-ds2-lg border p-2.5 shadow-ds2-sm transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-ds2-md",
-                  toneClass,
-                  isFlashing && "animate-status-flash",
-                ),
-              });
-            }
 
             return (
               <div
@@ -1432,7 +1173,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           openOrders={drawerOperations?.orders ?? []}
           alerts={tableEvents[drawerTable.id] ?? []}
           onClose={() => setDrawerTable(null)}
-          onOrdersChanged={() => void fetchOperations("ação manual no TableDrawer (enviar p/ cozinha, fechar conta, etc.)")}
+          onOrdersChanged={() => void fetchOperations()}
           onAlertsChanged={() => void fetchTableEvents()}
           onTableUpdated={(updated) => {
             setTables((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
