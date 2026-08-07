@@ -105,6 +105,25 @@ export async function getPendingOrdersCount(supabase: SupabaseClient<Database>, 
 }
 
 /**
+ * Contagem de pedidos `preparing` do restaurante inteiro — Sprint
+ * "Dashboard Executivo" (2026-08-07). Mesmo formato de
+ * `getPendingOrdersCount` (acima), só trocando o status filtrado; usado
+ * pelo item "Pedidos em Preparo" de `<TodaySummary>`.
+ */
+export async function getPreparingOrdersCount(
+  supabase: SupabaseClient<Database>,
+  restaurantId: string,
+): Promise<number> {
+  const { count } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("restaurant_id", restaurantId)
+    .eq("status", "preparing");
+
+  return count ?? 0;
+}
+
+/**
  * Contagem de eventos de mesa em aberto (`table_events.status = 'open'`),
  * por tipo — mesmo filtro de `GET /api/v1/tables/events?status=open`
  * (`api/v1/tables/events/route.ts`), a mesma consulta que já alimenta os
