@@ -29,3 +29,24 @@ export const cashierListQuerySchema = z
     path: ["start_date"],
   });
 export type CashierListQuery = z.infer<typeof cashierListQuerySchema>;
+
+/**
+ * Body de `POST /api/v1/cashier/close` (Sprint 2 "Persistência do
+ * Fechamento de Caixa", 2026-08-06). Mesmos campos de período de
+ * `cashierListQuerySchema` (sem `search`/`page`/`per_page`, que não fazem
+ * sentido para um fechamento) — o snapshot sempre reflete o período
+ * inteiro. `observations` é opcional; o limite de 2000 caracteres só
+ * evita um payload absurdo, sem impor nenhuma regra de negócio nova.
+ */
+export const closeCashierSchema = z
+  .object({
+    period: z.enum(CASHIER_PERIOD_VALUES),
+    start_date: z.string().trim().optional(),
+    end_date: z.string().trim().optional(),
+    observations: z.string().trim().max(2000).optional(),
+  })
+  .refine((data) => data.period !== "custom" || (data.start_date && data.end_date), {
+    message: "Informe a data inicial e final do período personalizado.",
+    path: ["start_date"],
+  });
+export type CloseCashierInput = z.infer<typeof closeCashierSchema>;

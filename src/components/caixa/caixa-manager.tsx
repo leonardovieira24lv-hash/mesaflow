@@ -64,18 +64,51 @@ export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) 
   // resposta da requisição mais recente é aplicada.
   const latestRequestId = useRef(0);
 
-  // Fechamento de Caixa (Sprint "Painel de Caixa" — etapa 1, fluxo visual):
-  // nesta etapa não há persistência nem histórico, só o modal de
-  // confirmação com os dados reais do período já carregado e um campo de
-  // observações local. `handleConfirmClosing` só fecha o modal e avisa via
-  // toast — a gravação em si fica para a próxima etapa.
+  // Fechamento de Caixa (Sprint 2 "Persistência do Fechamento de Caixa",
+  // 2026-08-06): confirmar o modal agora chama de fato
+  // `POST /api/v1/cashier/close`. `period`/`customStart`/`customEnd` são
+  // os mesmos filtros já aplicados na tela — o snapshot gravado sempre
+  // corresponde exatamente ao período que o usuário está vendo. `search`
+  // não entra no payload de propósito: é só filtro de navegação da
+  // tabela, o fechamento sempre cobre o período inteiro.
   const [isClosingModalOpen, setIsClosingModalOpen] = useState(false);
   const [closingObservations, setClosingObservations] = useState("");
+  const [isClosingCaixa, setIsClosingCaixa] = useState(false);
 
-  function handleConfirmClosing() {
-    setIsClosingModalOpen(false);
-    setClosingObservations("");
-    toast.success("Fluxo preparado. A persistência será implementada na próxima etapa.");
+  async function handleConfirmClosing() {
+    setIsClosingCaixa(true);
+    try {
+      const payload: Record<string, string> = { period };
+      if (period === "custom") {
+        payload.start_date = customStart;
+        payload.end_date = customEnd;
+      }
+      if (closingObservations.trim()) payload.observations = closingObservations.trim();
+
+      const response = await fetch("/api/v1/cashier/close", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = (await response.json()) as ApiSuccess<{ closingId: string }> | ApiError;
+
+      if (!response.ok) {
+        toast.error(
+          "Não foi possível fechar o caixa",
+          "error" in body ? (body.error?.message ?? "Tente novamente em instantes.") : "Tente novamente em instantes.",
+        );
+        return;
+      }
+
+      setIsClosingModalOpen(false);
+      setClosingObservations("");
+      toast.success("Caixa fechado com sucesso.");
+      void fetchData();
+    } catch {
+      toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
+    } finally {
+      setIsClosingCaixa(false);
+    }
   }
 
   const fetchData = useCallback(async () => {
@@ -277,7 +310,9 @@ export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) 
 
       <CaixaClosingModal
         open={isClosingModalOpen}
-        onClose={() => setIsClosingModalOpen(false)}
+        onClose={() => {
+          if (!isClosingCaixa) setIsClosingModalOpen(false);
+        }}
         revenue={summary.revenue}
         closedSessionsCount={summary.closedSessionsCount}
         averageTicket={summary.averageTicket}
@@ -285,6 +320,7 @@ export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) 
         observations={closingObservations}
         onObservationsChange={setClosingObservations}
         onConfirm={handleConfirmClosing}
+        isSubmitting={isClosingCaixa}
       />
     </div>
   );
@@ -316,23 +352,25 @@ interface CaixaClosingModalProps {
   observations: string;
   onObservationsChange: (value: string) => void;
   onConfirm: () => void;
+  isSubmitting: boolean;
 }
 
 /**
- * Modal de confirmação de Fechamento de Caixa (Sprint "Painel de Caixa" —
- * etapa 1, fluxo visual). Mostra só os 4 números que já vêm de
- * `getCashierData` (mesmo `summary` dos cards de resumo, já filtrado pelo
- * período/busca em uso) — nenhum dado inventado ou mockado.
+ * Modal de confirmação de Fechamento de Caixa. Mostra só os 4 números que
+ * já vêm de `getCashierData` (mesmo `summary` dos cards de resumo, já
+ * filtrado pelo período/busca em uso) — nenhum dado inventado ou
+ * mockado.
  *
- * "Resumo por forma de pagamento" fica de fora desta etapa de propósito:
+ * "Resumo por forma de pagamento" fica de fora de propósito:
  * `CashierSummary` (`lib/cashier/queries.ts`) ainda não tem esse
- * agregado, e mostrar valores fixos/zerados aqui seria dado falso numa
- * tela financeira — entra numa etapa futura, quando o backend passar a
- * fornecer o agregado real.
+ * agregado — entra numa etapa futura, quando o backend passar a fornecer
+ * o agregado real.
  *
- * Sem persistência: "Fechar Caixa" aqui só fecha o modal e dispara um
- * toast informativo. Gravar o fechamento (e o texto de `observations`)
- * fica para a próxima etapa.
+ * Sprint 2 "Persistência do Fechamento de Caixa" (2026-08-06): "Fechar
+ * Caixa" agora dispara uma escrita real (`POST /api/v1/cashier/close`,
+ * ver `handleConfirmClosing`) — `isSubmitting` desabilita o Cancelar e
+ * mostra o spinner do `Button` enquanto a requisição está em voo, evitando
+ * um segundo clique disparar dois fechamentos em paralelo.
  */
 function CaixaClosingModal({
   open,
@@ -344,6 +382,7 @@ function CaixaClosingModal({
   observations,
   onObservationsChange,
   onConfirm,
+  isSubmitting,
 }: CaixaClosingModalProps) {
   return (
     <Modal
@@ -354,10 +393,10 @@ function CaixaClosingModal({
       className="max-w-lg"
       footer={
         <>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </Button>
-          <Button type="button" onClick={onConfirm}>
+          <Button type="button" onClick={onConfirm} isLoading={isSubmitting}>
             Fechar Caixa
           </Button>
         </>
@@ -380,6 +419,8 @@ function CaixaClosingModal({
             value={observations}
             onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onObservationsChange(e.target.value)}
             placeholder="Ex.: retirada de R$ 50 às 14h, estorno da mesa 3..."
+            maxLength={2000}
+            disabled={isSubmitting}
           />
           <p className="text-xs text-ds2-foreground-muted">
             Registre aqui qualquer ocorrência importante deste caixa, como retiradas, diferenças, estornos ou outras
