@@ -18,6 +18,19 @@ export async function GET() {
       name: overview.name,
       slug: overview.slug,
       status: overview.status,
+      trade_name: overview.tradeName,
+      phone: overview.phone,
+      whatsapp: overview.whatsapp,
+      email: overview.email,
+      postal_code: overview.postalCode,
+      street: overview.street,
+      street_number: overview.streetNumber,
+      neighborhood: overview.neighborhood,
+      city: overview.city,
+      state: overview.state,
+      instagram: overview.instagram,
+      facebook: overview.facebook,
+      website: overview.website,
       checklist: {
         has_categories: overview.checklist.hasCategories,
         has_products: overview.checklist.hasProducts,
@@ -42,22 +55,55 @@ export async function PATCH(request: Request) {
   try {
     const { profile } = await requireOwner();
     const body = await request.json();
-    const { name, slug } = parseOrThrow(updateRestaurantSchema, body);
+    const {
+      name,
+      slug,
+      trade_name,
+      phone,
+      whatsapp,
+      email,
+      postal_code,
+      street,
+      street_number,
+      neighborhood,
+      city,
+      state,
+      instagram,
+      facebook,
+      website,
+    } = parseOrThrow(updateRestaurantSchema, body);
 
     const supabase = await createClient();
 
     // PATCH parcial: só entra no `update` o que foi de fato enviado —
     // mesmo espírito de `tables/[id]/route.ts` (7.3) e
-    // `menu/categories/[id]/route.ts` (5.3).
-    const updates: { name?: string; slug?: string } = {};
+    // `menu/categories/[id]/route.ts` (5.3). Os 12 campos cadastrais
+    // (Sprint "Gestão do Restaurante", 2026-08-07) seguem exatamente o
+    // mesmo padrão de `name`/`slug` abaixo.
+    const updates: Record<string, string> = {};
     if (name !== undefined) updates.name = name;
     if (slug !== undefined) updates.slug = slug;
+    if (trade_name !== undefined) updates.trade_name = trade_name;
+    if (phone !== undefined) updates.phone = phone;
+    if (whatsapp !== undefined) updates.whatsapp = whatsapp;
+    if (email !== undefined) updates.email = email;
+    if (postal_code !== undefined) updates.postal_code = postal_code;
+    if (street !== undefined) updates.street = street;
+    if (street_number !== undefined) updates.street_number = street_number;
+    if (neighborhood !== undefined) updates.neighborhood = neighborhood;
+    if (city !== undefined) updates.city = city;
+    if (state !== undefined) updates.state = state;
+    if (instagram !== undefined) updates.instagram = instagram;
+    if (facebook !== undefined) updates.facebook = facebook;
+    if (website !== undefined) updates.website = website;
 
     const { data: updated, error } = await supabase
       .from("restaurants")
       .update(updates)
       .eq("id", profile.restaurantId)
-      .select("id, name, slug, status")
+      .select(
+        "id, name, slug, status, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website",
+      )
       .maybeSingle();
 
     if (error) {
@@ -89,6 +135,19 @@ export async function PATCH(request: Request) {
       name: updated.name,
       slug: updated.slug,
       status: updated.status,
+      trade_name: updated.trade_name,
+      phone: updated.phone,
+      whatsapp: updated.whatsapp,
+      email: updated.email,
+      postal_code: updated.postal_code,
+      street: updated.street,
+      street_number: updated.street_number,
+      neighborhood: updated.neighborhood,
+      city: updated.city,
+      state: updated.state,
+      instagram: updated.instagram,
+      facebook: updated.facebook,
+      website: updated.website,
     });
   } catch (err) {
     return handleRouteError(err);

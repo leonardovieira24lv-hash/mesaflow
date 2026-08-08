@@ -8,6 +8,25 @@ export interface RestaurantOverview {
   name: string;
   slug: string;
   status: RestaurantStatus;
+  // Dados cadastrais (Sprint "Gestão do Restaurante", 2026-08-07) — todos
+  // `nullable`, refletindo as colunas recém-adicionadas em `restaurants`
+  // (`0025_restaurant_registration_fields.sql`). Não fazem parte do
+  // `checklist`/`counts` abaixo (que servem só onboarding/Dashboard); só
+  // são consumidos por `GET /api/v1/restaurant` para a tela de
+  // Configurações.
+  tradeName: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  email: string | null;
+  postalCode: string | null;
+  street: string | null;
+  streetNumber: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  website: string | null;
   checklist: {
     hasCategories: boolean;
     hasProducts: boolean;
@@ -50,7 +69,9 @@ export async function getRestaurantOverview(
   const [restaurantResult, categoriesResult, productsResult, tablesResult] = await Promise.all([
     supabase
       .from("restaurants")
-      .select("id, name, slug, status, qr_codes_printed_at")
+      .select(
+        "id, name, slug, status, qr_codes_printed_at, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website",
+      )
       .eq("id", restaurantId)
       .single(),
     supabase
@@ -74,6 +95,19 @@ export async function getRestaurantOverview(
     name: restaurant.name,
     slug: restaurant.slug,
     status: restaurant.status,
+    tradeName: restaurant.trade_name,
+    phone: restaurant.phone,
+    whatsapp: restaurant.whatsapp,
+    email: restaurant.email,
+    postalCode: restaurant.postal_code,
+    street: restaurant.street,
+    streetNumber: restaurant.street_number,
+    neighborhood: restaurant.neighborhood,
+    city: restaurant.city,
+    state: restaurant.state,
+    instagram: restaurant.instagram,
+    facebook: restaurant.facebook,
+    website: restaurant.website,
     checklist: {
       hasCategories: categoriesCount > 0,
       hasProducts: productsCount > 0,

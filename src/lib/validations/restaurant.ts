@@ -34,5 +34,31 @@ export const updateRestaurantSchema = z.object({
       "Use apenas letras minúsculas, números e hífen (ex.: meu-restaurante).",
     )
     .optional(),
+
+  // Dados cadastrais (Sprint "Gestão do Restaurante", 2026-08-07) — mesmo
+  // espírito do PATCH parcial já usado para `name`/`slug` acima: todos
+  // opcionais, só entra no `update` o que for de fato enviado.
+  trade_name: z.string().trim().min(2, "O nome fantasia deve ter pelo menos 2 caracteres.").max(120).optional(),
+  phone: z.string().trim().min(8, "Telefone inválido.").max(20).optional(),
+  whatsapp: z.string().trim().min(8, "WhatsApp inválido.").max(20).optional(),
+  email: z.string().trim().email("E-mail inválido.").max(160).optional(),
+  postal_code: z
+    .string()
+    .trim()
+    .regex(/^\d{5}-?\d{3}$/, "CEP inválido (use o formato 00000-000).")
+    .optional(),
+  street: z.string().trim().min(1, "Rua inválida.").max(160).optional(),
+  street_number: z.string().trim().min(1, "Número inválido.").max(20).optional(),
+  neighborhood: z.string().trim().min(1, "Bairro inválido.").max(120).optional(),
+  city: z.string().trim().min(1, "Cidade inválida.").max(120).optional(),
+  state: z
+    .string()
+    .trim()
+    .regex(/^[a-zA-Z]{2}$/, "Use a sigla do estado com 2 letras (ex.: SP).")
+    .transform((value) => value.toUpperCase())
+    .optional(),
+  instagram: z.string().trim().max(160).optional(),
+  facebook: z.string().trim().max(160).optional(),
+  website: z.string().trim().url("URL inválida (inclua http:// ou https://).").max(200).optional(),
 });
 export type UpdateRestaurantInput = z.infer<typeof updateRestaurantSchema>;
