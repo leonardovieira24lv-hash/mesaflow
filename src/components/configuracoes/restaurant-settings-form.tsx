@@ -15,7 +15,24 @@ import type { Restaurant } from "@/types/domain";
 import type { ApiError } from "@/types/api";
 
 interface RestaurantSettingsFormProps {
-  restaurant: Restaurant;
+  // Não altera `Restaurant` (`@/types/domain`) — os 13 campos cadastrais
+  // da GD-02 são acrescentados aqui, só para este componente, para não
+  // mexer em nenhum tipo compartilhado fora do escopo aprovado.
+  restaurant: Restaurant & {
+    tradeName: string | null;
+    phone: string | null;
+    whatsapp: string | null;
+    email: string | null;
+    postalCode: string | null;
+    street: string | null;
+    streetNumber: string | null;
+    neighborhood: string | null;
+    city: string | null;
+    state: string | null;
+    instagram: string | null;
+    facebook: string | null;
+    website: string | null;
+  };
 }
 
 interface RestaurantDto {
@@ -23,33 +40,108 @@ interface RestaurantDto {
   name: string;
   slug: string;
   status: string;
+  trade_name: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  email: string | null;
+  postal_code: string | null;
+  street: string | null;
+  street_number: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  website: string | null;
 }
 
+// Chave de cada campo = exatamente o nome aceito pelo PATCH
+// (`updateRestaurantSchema`/`route.ts`), evitando qualquer conversão
+// camelCase↔snake_case na hora de montar o payload ou ler erros do Zod.
+interface RegistrationFieldConfig {
+  key: string;
+  label: string;
+  placeholder?: string;
+  hint?: string;
+  className?: string;
+}
+
+const CONTACT_FIELDS: RegistrationFieldConfig[] = [
+  { key: "trade_name", label: "Nome fantasia", placeholder: "Ex.: Zé Burger" },
+  { key: "phone", label: "Telefone", placeholder: "(11) 3333-4444" },
+  { key: "whatsapp", label: "WhatsApp", placeholder: "(11) 99999-8888" },
+  { key: "email", label: "E-mail", placeholder: "contato@restaurante.com" },
+];
+
+const ADDRESS_FIELDS: RegistrationFieldConfig[] = [
+  { key: "postal_code", label: "CEP", placeholder: "00000-000", className: "font-mono" },
+  { key: "street", label: "Rua", placeholder: "Ex.: Av. Paulista" },
+  { key: "street_number", label: "Número", placeholder: "Ex.: 123" },
+  { key: "neighborhood", label: "Bairro", placeholder: "Ex.: Centro" },
+  { key: "city", label: "Cidade", placeholder: "Ex.: São Paulo" },
+  { key: "state", label: "Estado (UF)", placeholder: "Ex.: SP", className: "w-20 font-mono uppercase" },
+];
+
+const SOCIAL_FIELDS: RegistrationFieldConfig[] = [
+  { key: "instagram", label: "Instagram", placeholder: "@seurestaurante" },
+  { key: "facebook", label: "Facebook", placeholder: "facebook.com/seurestaurante" },
+  { key: "website", label: "Site", placeholder: "https://seurestaurante.com.br" },
+];
+
 /**
- * Tela de Configurações do Restaurante (contrato seção 4.2). Segue o mesmo
- * padrão de formulário já usado em `CategoriesManager`/`ProductForm`:
- * validação client-side com o mesmo schema Zod do Route Handler (feedback
- * imediato), envio via `fetch` direto para `/api/v1/restaurant`, e
- * `toast`/`FormField` para os estados de sucesso e erro.
+ * Tela de Configurações do Restaurante (contrato seção 4.2, estendido pela
+ * GD-01/GD-02 com os 13 campos cadastrais). Segue o mesmo padrão de
+ * formulário já usado em `CategoriesManager`/`ProductForm`: validação
+ * client-side com o mesmo schema Zod do Route Handler (feedback imediato),
+ * envio via `fetch` direto para `/api/v1/restaurant`, e `toast`/`FormField`
+ * para os estados de sucesso e erro.
  *
  * Só envia no PATCH os campos que de fato mudaram — preserva o
- * comportamento parcial do contrato 4.2 (permite alterar só o nome, só o
- * slug, ou os dois) e evita gerar um `409 CONFLICT` de slug por reenviar o
- * mesmo valor que já está salvo.
+ * comportamento parcial do contrato 4.2 (permite alterar só um campo, só
+ * outro, ou vários de uma vez) e evita gerar um `409 CONFLICT` de slug por
+ * reenviar o mesmo valor que já está salvo.
+ *
+ * Nome/Slug continuam com o fluxo próprio já existente (confirmação antes
+ * de mudar o slug, por causa de QR Codes/links já impressos). Os 13 campos
+ * cadastrais (GD-02) não têm esse risco — mudar telefone/endereço/redes
+ * sociais não invalida nada já impresso — então entram direto no mesmo
+ * `<form>`/mesmo botão "Salvar alterações", sem diálogo de confirmação.
  */
 export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormProps) {
   const [name, setName] = useState(restaurant.name);
   const [slug, setSlug] = useState(restaurant.slug);
-  const [errors, setErrors] = useState<{ name?: string; slug?: string }>({});
+
+  // Baseline dos 13 campos cadastrais, direto da prop (mesmo raciocínio já
+  // usado para `restaurant.name`/`restaurant.slug` no diff abaixo) — usado
+  // só para comparação, nunca mutado.
+  const initialFields: Record<string, string> = {
+    trade_name: restaurant.tradeName ?? "",
+    phone: restaurant.phone ?? "",
+    whatsapp: restaurant.whatsapp ?? "",
+    email: restaurant.email ?? "",
+    postal_code: restaurant.postalCode ?? "",
+    street: restaurant.street ?? "",
+    street_number: restaurant.streetNumber ?? "",
+    neighborhood: restaurant.neighborhood ?? "",
+    city: restaurant.city ?? "",
+    state: restaurant.state ?? "",
+    instagram: restaurant.instagram ?? "",
+    facebook: restaurant.facebook ?? "",
+    website: restaurant.website ?? "",
+  };
+  const [fields, setFields] = useState<Record<string, string>>(initialFields);
+
+  function updateField(key: string, value: string) {
+    setFields((prev) => ({ ...prev, [key]: value }));
+  }
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Diálogo de confirmação específico para mudança de slug — só aparece
   // quando o slug foi de fato alterado (ver `handleSubmit`), nunca para
   // uma edição só de nome.
-  const [pendingSlugChange, setPendingSlugChange] = useState<{
-    name?: string;
-    slug?: string;
-  } | null>(null);
+  const [pendingSlugChange, setPendingSlugChange] = useState<Record<string, string> | null>(null);
 
   // A URL pública depende do `origin` do navegador — gerada no cliente,
   // mesmo padrão já usado para os QR Codes (`table-qr-modal.tsx`,
@@ -63,29 +155,34 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
   const currentPublicUrl = origin ? `${origin}${ROUTES.clienteMenu(restaurant.slug)}` : null;
   const slugChanged = slug.trim() !== restaurant.slug;
 
-  function buildPayload(): { name?: string; slug?: string } | null {
+  function buildPayload(): Record<string, string> | null {
     setErrors({});
 
     const trimmedName = name.trim();
     const trimmedSlug = slug.trim();
 
-    const payload: { name?: string; slug?: string } = {};
+    const payload: Record<string, string> = {};
     if (trimmedName !== restaurant.name) payload.name = trimmedName;
     if (trimmedSlug !== restaurant.slug) payload.slug = trimmedSlug;
 
+    for (const [key, originalValue] of Object.entries(initialFields)) {
+      const trimmedValue = (fields[key] ?? "").trim();
+      if (trimmedValue !== originalValue) {
+        payload[key] = trimmedValue;
+      }
+    }
+
     if (Object.keys(payload).length === 0) {
-      toast.info("Nada para salvar", "Altere o nome ou o slug antes de salvar.");
+      toast.info("Nada para salvar", "Altere algum campo antes de salvar.");
       return null;
     }
 
     const result = updateRestaurantSchema.safeParse(payload);
     if (!result.success) {
-      const fieldErrors: { name?: string; slug?: string } = {};
+      const fieldErrors: Record<string, string> = {};
       for (const issue of result.error.issues) {
-        const field = issue.path[0];
-        if (field === "name" || field === "slug") {
-          fieldErrors[field] = issue.message;
-        }
+        const field = String(issue.path[0]);
+        fieldErrors[field] = issue.message;
       }
       setErrors(fieldErrors);
       return null;
@@ -104,7 +201,9 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
     // de prosseguir (item 4 desta sprint). Não há, nesta v1, nenhum
     // mecanismo de redirecionamento do slug antigo para o novo (mudaria o
     // contrato/arquitetura de resolução pública por slug — fora do escopo
-    // desta sprint), então o aviso é a proteção disponível hoje.
+    // desta sprint), então o aviso é a proteção disponível hoje. Os 13
+    // campos cadastrais (GD-02), mesmo que enviados junto no mesmo
+    // `payload`, não têm esse risco — só o slug aciona este diálogo.
     if (payload.slug !== undefined) {
       setPendingSlugChange(payload);
       return;
@@ -113,7 +212,7 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
     void submit(payload);
   }
 
-  async function submit(payload: { name?: string; slug?: string }) {
+  async function submit(payload: Record<string, string>) {
     setIsSubmitting(true);
     try {
       const response = await fetch("/api/v1/restaurant", {
@@ -142,6 +241,21 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
       const updated = body.data as RestaurantDto;
       setName(updated.name);
       setSlug(updated.slug);
+      setFields({
+        trade_name: updated.trade_name ?? "",
+        phone: updated.phone ?? "",
+        whatsapp: updated.whatsapp ?? "",
+        email: updated.email ?? "",
+        postal_code: updated.postal_code ?? "",
+        street: updated.street ?? "",
+        street_number: updated.street_number ?? "",
+        neighborhood: updated.neighborhood ?? "",
+        city: updated.city ?? "",
+        state: updated.state ?? "",
+        instagram: updated.instagram ?? "",
+        facebook: updated.facebook ?? "",
+        website: updated.website ?? "",
+      });
       toast.success("Configurações salvas");
       setIsSubmitting(false);
       setPendingSlugChange(null);
@@ -190,13 +304,13 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Editar restaurante</CardTitle>
-          <CardDescription>Altere o nome e/ou o slug usado nas URLs públicas e nos QR Codes.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Editar restaurante</CardTitle>
+            <CardDescription>Altere o nome e/ou o slug usado nas URLs públicas e nos QR Codes.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
             <FormField label="Nome do restaurante" error={errors.name} required>
               <Input
                 value={name}
@@ -228,16 +342,76 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
                 deixarão de funcionar e precisarão ser gerados/enviados de novo.
               </p>
             )}
+          </CardContent>
+        </Card>
 
-            <div className="flex justify-end">
-              <Button type="submit" isLoading={isSubmitting}>
-                <Save className="h-4 w-4" />
-                Salvar alterações
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Dados de contato</CardTitle>
+            <CardDescription>Nome fantasia e canais de contato do restaurante.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {CONTACT_FIELDS.map((field) => (
+              <FormField key={field.key} label={field.label} error={errors[field.key]}>
+                <Input
+                  value={fields[field.key]}
+                  onChange={(e) => updateField(field.key, e.target.value)}
+                  placeholder={field.placeholder}
+                  disabled={isSubmitting}
+                  className={field.className}
+                />
+              </FormField>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Endereço</CardTitle>
+            <CardDescription>Endereço físico do restaurante.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {ADDRESS_FIELDS.map((field) => (
+              <FormField key={field.key} label={field.label} error={errors[field.key]}>
+                <Input
+                  value={fields[field.key]}
+                  onChange={(e) => updateField(field.key, e.target.value)}
+                  placeholder={field.placeholder}
+                  disabled={isSubmitting}
+                  className={field.className}
+                />
+              </FormField>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Redes sociais</CardTitle>
+            <CardDescription>Links exibidos aos clientes, quando aplicável.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {SOCIAL_FIELDS.map((field) => (
+              <FormField key={field.key} label={field.label} error={errors[field.key]}>
+                <Input
+                  value={fields[field.key]}
+                  onChange={(e) => updateField(field.key, e.target.value)}
+                  placeholder={field.placeholder}
+                  disabled={isSubmitting}
+                  className={field.className}
+                />
+              </FormField>
+            ))}
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end">
+          <Button type="submit" isLoading={isSubmitting}>
+            <Save className="h-4 w-4" />
+            Salvar alterações
+          </Button>
+        </div>
+      </form>
 
       <ConfirmDialog
         open={Boolean(pendingSlugChange)}

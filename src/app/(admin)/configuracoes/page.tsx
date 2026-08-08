@@ -23,7 +23,7 @@ export default async function ConfiguracoesPage() {
       <div className="flex flex-col gap-1">
         <h1 className="font-display text-2xl font-semibold">Configurações</h1>
         <p className="text-sm text-muted-foreground">
-          Gerencie o nome e o slug do restaurante.
+          Gerencie os dados cadastrais do restaurante.
         </p>
       </div>
 
@@ -33,6 +33,19 @@ export default async function ConfiguracoesPage() {
           name: overview.name,
           slug: overview.slug,
           status: overview.status,
+          tradeName: overview.tradeName,
+          phone: overview.phone,
+          whatsapp: overview.whatsapp,
+          email: overview.email,
+          postalCode: overview.postalCode,
+          street: overview.street,
+          streetNumber: overview.streetNumber,
+          neighborhood: overview.neighborhood,
+          city: overview.city,
+          state: overview.state,
+          instagram: overview.instagram,
+          facebook: overview.facebook,
+          website: overview.website,
         }}
       />
     </div>
