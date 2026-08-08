@@ -95,10 +95,9 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
       }}
       aria-label={item?.name}
       className={cn(
-        "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88dvh] w-full overflow-hidden rounded-t-3xl border-t border-border bg-surface p-0 text-surface-foreground shadow-sheet",
+        "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88dvh] w-full overflow-hidden rounded-t-3xl border-t border-ds2-border bg-ds2-surface p-0 text-ds2-foreground shadow-xl",
         "sm:inset-0 sm:bottom-auto sm:m-auto sm:max-w-md sm:rounded-2xl sm:border sm:shadow-lg",
-        "backdrop:bg-foreground/50 backdrop:backdrop-blur-[2px]",
-        "open:animate-sheet-up sm:open:animate-scale-in",
+        "backdrop:bg-black/50 backdrop:backdrop-blur-[2px]",
       )}
     >
       {item && (
@@ -113,10 +112,10 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
         // — sempre visível, nunca depende de o cliente rolar até o fim.
         <div className="flex max-h-[88dvh] flex-col sm:max-h-[85dvh]">
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="relative h-56 w-full shrink-0 bg-muted sm:h-64 sm:rounded-t-2xl">
+            <div className="relative h-56 w-full shrink-0 bg-ds2-surface-hover sm:h-64 sm:rounded-t-2xl">
               {showImage ? (
                 <>
-                  {!imageLoaded && <div className="skeleton-shimmer absolute inset-0 animate-shimmer" aria-hidden />}
+                  {!imageLoaded && <div className="absolute inset-0 animate-pulse bg-ds2-surface-hover" aria-hidden />}
                   <Image
                     src={item.image_url as string}
                     alt=""
@@ -132,7 +131,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                 </>
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
-                  <UtensilsCrossed className="h-12 w-12 text-muted-foreground" aria-hidden />
+                  <UtensilsCrossed className="h-12 w-12 text-ds2-foreground-muted" aria-hidden />
                 </div>
               )}
               <div
@@ -145,7 +144,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                 size="icon"
                 onClick={onClose}
                 aria-label="Fechar"
-                className="absolute right-3 top-3 h-9 w-9 rounded-full bg-surface/80 text-surface-foreground shadow-md backdrop-blur hover:bg-surface"
+                className="absolute right-3 top-3 h-9 w-9 rounded-full bg-ds2-surface/80 text-ds2-foreground shadow-md backdrop-blur hover:bg-ds2-surface"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -153,16 +152,16 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
 
             <div className="flex flex-col gap-5 px-6 pb-6 pt-5">
               <div className="flex flex-col gap-1.5">
-                <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">{item.name}</h2>
-                {item.description && <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>}
-                <p className="pt-1 font-numeric text-lg font-bold tabular-nums text-primary">
+                <h2 className="text-2xl font-bold tracking-tight text-ds2-foreground">{item.name}</h2>
+                {item.description && <p className="text-sm leading-relaxed text-ds2-foreground-muted">{item.description}</p>}
+                <p className="pt-1 text-lg font-bold tabular-nums text-ds2-primary">
                   {formatCurrency(item.price)}
                 </p>
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl bg-muted px-4 py-3">
-                <span className="text-sm font-medium text-foreground">Quantidade</span>
-                <div className="flex items-center gap-1 rounded-full bg-surface p-1 shadow-card">
+              <div className="flex items-center justify-between rounded-2xl bg-ds2-surface-hover px-4 py-3">
+                <span className="text-sm font-medium text-ds2-foreground">Quantidade</span>
+                <div className="flex items-center gap-1 rounded-full bg-ds2-surface p-1 shadow-sm">
                   <Button
                     type="button"
                     variant="ghost"
@@ -174,7 +173,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
-                  <span aria-live="polite" className="w-7 text-center font-numeric text-base font-semibold">
+                  <span aria-live="polite" className="w-7 text-center text-base font-semibold">
                     {quantity}
                   </span>
                   <Button
@@ -201,10 +200,10 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
             </div>
           </div>
 
-          <div className="shrink-0 border-t border-border bg-surface px-6 py-4">
+          <div className="shrink-0 border-t border-ds2-border bg-ds2-surface px-6 py-4">
             <Button onClick={handleAdd} size="lg" className="w-full justify-between">
               <span>Adicionar ao carrinho</span>
-              <span className="font-numeric">{formatCurrency(item.price * quantity)}</span>
+              <span className="tabular-nums">{formatCurrency(item.price * quantity)}</span>
             </Button>
           </div>
         </div>

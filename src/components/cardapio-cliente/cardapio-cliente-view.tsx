@@ -53,6 +53,15 @@ interface CardapioClienteViewProps {
  * reaproveitam os mesmos componentes fora desta `<div>`, então continuam
  * no tema claro — só o Cardápio Público mudou.
  *
+ * Sprint de reconstrução visual (2026-08-08): a classe `menu-dark` e as
+ * variáveis de cor sem prefixo (`--background`, `--foreground`, etc.) de
+ * que ela dependia estavam quebradas/órfãs — provável causa raiz do
+ * Cardápio Público ter ficado praticamente sem estilo. Removida a classe
+ * `menu-dark`; todas as cores agora usam o namespace `ds2-*`, o mesmo já
+ * usado e comprovadamente funcional no restante do sistema. O Cardápio
+ * Público passa a usar o tema claro padrão do MesaFlow, igual ao resto do
+ * app — o modo escuro específico desta tela não foi recriado.
+ *
  * Sprint "Redesign Completo do Cardápio Público" (2026-07-29, seguinte): o
  * grid de 2 colunas virou uma lista de coluna única (`flex flex-col`) —
  * os novos cards são horizontais (foto quadrada + texto ao lado), então
@@ -90,7 +99,7 @@ export function CardapioClienteView({
 
   return (
     <CartProvider slug={slug} tableToken={tableToken}>
-      <div className="menu-dark mx-auto flex min-h-screen max-w-xl flex-col bg-background pb-24 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
+      <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-ds2-background pb-24 sm:border-x sm:border-ds2-border sm:shadow-sm">
         <RestaurantHeader
           restaurantName={restaurantName}
           tableName={tableName}
@@ -120,7 +129,7 @@ export function CardapioClienteView({
                 id={categorySectionId(category.id)}
                 className="flex scroll-mt-16 flex-col gap-3"
               >
-                <h2 className="font-display text-base font-semibold tracking-tight text-foreground">
+                <h2 className="text-base font-semibold tracking-tight text-ds2-foreground">
                   {category.name}
                 </h2>
 

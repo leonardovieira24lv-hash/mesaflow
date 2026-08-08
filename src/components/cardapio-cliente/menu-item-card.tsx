@@ -32,7 +32,7 @@ interface MenuItemCardProps {
  * para 144px — "a foto vende o produto", card mais alto é aceitável e
  * desejado se deixar a apresentação melhor. Sombra trocada de
  * `shadow-sm`/`shadow-md` genéricos do Tailwind para os tokens próprios do
- * tema (`shadow-card`/`shadow-card-hover`, os mesmos usados no resto do
+ * tema (`shadow-sm`/`shadow-sm-hover`, os mesmos usados no resto do
  * Cardápio Público) — mais consistentes com o Design System do que uma
  * sombra padrão não pensada pra fundo escuro. Preço maior (`text-lg`) e
  * botão "+" maior (40px) para ficar mais chamativo, sem introduzir verde
@@ -58,16 +58,16 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
       onClick={() => onSelect(item)}
       aria-label={isAvailable ? `Ver detalhes de ${item.name}` : `${item.name} — indisponível no momento`}
       className={cn(
-        "group flex w-full items-stretch gap-4 rounded-2xl border border-border/70 bg-surface p-3.5 text-left shadow-card transition-[border-color,box-shadow,transform] duration-300 ease-out",
+        "group flex w-full items-stretch gap-4 rounded-2xl border border-ds2-border/70 bg-ds2-surface p-3.5 text-left shadow-sm transition-[border-color,box-shadow,transform] duration-300 ease-out",
         isAvailable
-          ? "hover:-translate-y-1 hover:border-border hover:shadow-card-hover active:translate-y-0 active:scale-[0.99] active:shadow-card"
+          ? "hover:-translate-y-1 hover:border-ds2-border hover:shadow-md active:translate-y-0 active:scale-[0.99] active:shadow-sm"
           : "cursor-not-allowed opacity-60",
       )}
     >
-      <div className="relative h-36 w-36 shrink-0 overflow-hidden rounded-2xl bg-muted">
+      <div className="relative h-36 w-36 shrink-0 overflow-hidden rounded-2xl bg-ds2-surface-hover">
         {showImage ? (
           <>
-            {!imageLoaded && <div className="skeleton-shimmer absolute inset-0 z-10 animate-shimmer" aria-hidden />}
+            {!imageLoaded && <div className="absolute inset-0 z-10 animate-pulse bg-ds2-surface-hover" aria-hidden />}
             <Image
               src={item.image_url as string}
               alt=""
@@ -86,35 +86,35 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
           // Placeholder discreto: cinza liso e um ícone pequeno, sem
           // círculo/sombra própria — não deve competir com fotos reais nem
           // parecer um erro.
-          <div className="flex h-full w-full items-center justify-center bg-muted">
-            <ImageOff className="h-6 w-6 text-muted-foreground/40" strokeWidth={1.5} aria-hidden />
+          <div className="flex h-full w-full items-center justify-center bg-ds2-surface-hover">
+            <ImageOff className="h-6 w-6 text-ds2-foreground-muted/40" strokeWidth={1.5} aria-hidden />
           </div>
         )}
 
         {!isAvailable && (
-          <div className="absolute inset-0 flex items-center justify-center bg-surface/70 backdrop-blur-[1px]">
+          <div className="absolute inset-0 flex items-center justify-center bg-ds2-surface/70 backdrop-blur-[1px]">
             <Badge variant="muted">Indisponível</Badge>
           </div>
         )}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 py-1">
-        <p className="line-clamp-1 font-display text-lg font-bold leading-tight tracking-tight text-foreground">
+        <p className="line-clamp-1 text-lg font-bold leading-tight tracking-tight text-ds2-foreground">
           {item.name}
         </p>
         {item.description && (
-          <p className="line-clamp-2 text-[13px] leading-snug text-muted-foreground/80">{item.description}</p>
+          <p className="line-clamp-2 text-[13px] leading-snug text-ds2-foreground-muted/80">{item.description}</p>
         )}
 
         <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="font-numeric text-lg font-extrabold tabular-nums tracking-tight text-primary">
+          <span className="text-lg font-extrabold tabular-nums tracking-tight text-ds2-primary">
             {formatCurrency(item.price)}
           </span>
 
           {isAvailable && (
             <span
               aria-hidden
-              className="btn-primary-surface flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-primary-foreground shadow-glow transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ds2-primary text-ds2-primary-foreground shadow-md transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
             >
               <Plus className="h-5 w-5" strokeWidth={2.5} />
             </span>

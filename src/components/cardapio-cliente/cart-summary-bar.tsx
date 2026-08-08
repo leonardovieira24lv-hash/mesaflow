@@ -25,17 +25,17 @@ export function CartSummaryBar({ slug }: CartSummaryBarProps) {
   if (itemCount === 0) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md animate-sheet-up p-4">
+    <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl p-4">
       <Button
         size="lg"
-        className="w-full justify-between rounded-2xl shadow-bar"
+        className="w-full justify-between rounded-2xl shadow-md"
         onClick={() => router.push(withMesaQuery(ROUTES.clienteCarrinho(slug), tableToken))}
       >
         <span className="flex items-center gap-2">
           <ShoppingBag className="h-4 w-4" aria-hidden />
           {itemCount} {itemCount === 1 ? "item" : "itens"}
         </span>
-        <span className="font-numeric">{formatCurrency(subtotal)}</span>
+        <span className="tabular-nums">{formatCurrency(subtotal)}</span>
       </Button>
     </div>
   );

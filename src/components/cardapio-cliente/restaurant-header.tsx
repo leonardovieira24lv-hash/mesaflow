@@ -43,13 +43,13 @@ interface RestaurantHeaderProps {
 export function RestaurantHeader({ restaurantName, tableName, searchTerm, onSearchChange }: RestaurantHeaderProps) {
   const hasSearch = onSearchChange !== undefined;
   return (
-    <header className="relative flex flex-col gap-3 border-b border-border bg-surface px-4 pb-3.5 pt-4">
+    <header className="relative flex flex-col gap-3 border-b border-ds2-border bg-ds2-surface px-4 pb-3.5 pt-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="truncate font-display text-xl font-bold tracking-tight text-foreground">
+        <h1 className="truncate text-xl font-bold tracking-tight text-ds2-foreground">
           {restaurantName}
         </h1>
         {tableName && (
-          <span className="shrink-0 rounded-full border border-border bg-muted px-2.5 py-1 font-numeric text-[11px] font-medium text-muted-foreground">
+          <span className="shrink-0 rounded-full border border-ds2-border bg-ds2-surface-hover px-2.5 py-1 text-[11px] font-medium text-ds2-foreground-muted">
             Mesa {tableName}
           </span>
         )}
@@ -58,7 +58,7 @@ export function RestaurantHeader({ restaurantName, tableName, searchTerm, onSear
       {hasSearch && (
         <div className="relative">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ds2-foreground-muted"
             aria-hidden
           />
           <input
@@ -68,14 +68,14 @@ export function RestaurantHeader({ restaurantName, tableName, searchTerm, onSear
             onChange={(e) => onSearchChange?.(e.target.value)}
             placeholder="Buscar no cardápio..."
             aria-label="Buscar produtos no cardápio"
-            className="w-full rounded-full border border-border bg-muted/60 py-2.5 pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-full border border-ds2-border bg-ds2-surface-hover/60 py-2.5 pl-9 pr-9 text-sm text-ds2-foreground placeholder:text-ds2-foreground-muted focus:border-ds2-primary/40 focus:outline-none focus:ring-2 focus:ring-ds2-primary/20"
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => onSearchChange?.("")}
               aria-label="Limpar busca"
-              className="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-ds2-foreground-muted transition-colors hover:bg-ds2-surface-hover hover:text-ds2-foreground"
             >
               <X className="h-3.5 w-3.5" />
             </button>

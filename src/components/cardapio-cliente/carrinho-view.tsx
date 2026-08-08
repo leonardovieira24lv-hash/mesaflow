@@ -45,7 +45,7 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
   const menuHref = withMesaQuery(ROUTES.clienteMenu(slug), tableToken);
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-8 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
+    <div className="mx-auto flex min-h-dvh max-w-xl flex-col pb-8 sm:border-x sm:border-ds2-border sm:shadow-sm">
       <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
       <TableAssistanceActions slug={slug} tableToken={tableToken} />
 
@@ -60,7 +60,7 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
             type="button"
             variant="ghost"
             size="sm"
-            className="text-destructive hover:text-destructive"
+            className="text-ds2-danger hover:text-ds2-danger"
             onClick={() => setConfirmingClear(true)}
           >
             Limpar carrinho
@@ -69,7 +69,7 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
       </div>
 
       <main className="flex flex-1 flex-col gap-4 px-4 py-4 pb-40">
-        <h1 className="font-display text-xl font-semibold text-foreground">Seu carrinho</h1>
+        <h1 className="text-xl font-semibold text-ds2-foreground">Seu carrinho</h1>
 
         {items.length === 0 ? (
           <EmptyState
@@ -100,7 +100,7 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
           onAction={() => router.push(withMesaQuery(ROUTES.clienteCheckout(slug), tableToken))}
           actionSlot={
             tableToken ? undefined : (
-              <p className="text-center text-xs text-muted-foreground">
+              <p className="text-center text-xs text-ds2-foreground-muted">
                 Escaneie o QR Code da mesa para finalizar o pedido.
               </p>
             )
