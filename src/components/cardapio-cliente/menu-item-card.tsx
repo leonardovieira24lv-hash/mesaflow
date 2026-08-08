@@ -43,6 +43,13 @@ interface MenuItemCardProps {
 export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
   const isAvailable = item.is_available;
   const [imageLoaded, setImageLoaded] = useState(false);
+  // Sprint de manutenção do Cardápio Público (2026-08-08): sem isso, uma
+  // imagem que falha ao carregar (domínio não autorizado, link morto,
+  // etc.) ficava com `opacity-0` para sempre — `onLoad` nunca dispara em
+  // caso de erro — em vez de cair no placeholder `ImageOff` que já existe
+  // logo abaixo para quando `item.image_url` é nulo.
+  const [hasError, setHasError] = useState(false);
+  const showImage = Boolean(item.image_url) && !hasError;
 
   return (
     <button
@@ -58,15 +65,16 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
       )}
     >
       <div className="relative h-36 w-36 shrink-0 overflow-hidden rounded-2xl bg-muted">
-        {item.image_url ? (
+        {showImage ? (
           <>
             {!imageLoaded && <div className="skeleton-shimmer absolute inset-0 z-10 animate-shimmer" aria-hidden />}
             <Image
-              src={item.image_url}
+              src={item.image_url as string}
               alt=""
               fill
               sizes="144px"
               onLoad={() => setImageLoaded(true)}
+              onError={() => setHasError(true)}
               className={cn(
                 "object-cover transition-transform duration-500 ease-out",
                 isAvailable && "group-hover:scale-[1.06]",

@@ -41,6 +41,10 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   const [imageLoaded, setImageLoaded] = useState(false);
+  // Mesmo motivo de `menu-item-card.tsx`: sem `onError`, uma imagem que
+  // falha fica com `opacity-0` para sempre em vez de cair no placeholder
+  // `UtensilsCrossed` já existente.
+  const [hasError, setHasError] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -60,6 +64,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
     setQuantity(1);
     setNotes("");
     setImageLoaded(false);
+    setHasError(false);
   }, [item?.id]);
 
   function handleAdd() {
@@ -78,6 +83,8 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
     onClose();
   }
 
+  const showImage = Boolean(item?.image_url) && !hasError;
+
   return (
     <dialog
       ref={ref}
@@ -88,96 +95,113 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
       }}
       aria-label={item?.name}
       className={cn(
-        "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88vh] w-full overflow-hidden rounded-t-3xl border-t border-border bg-surface p-0 text-surface-foreground shadow-sheet",
+        "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88dvh] w-full overflow-hidden rounded-t-3xl border-t border-border bg-surface p-0 text-surface-foreground shadow-sheet",
         "sm:inset-0 sm:bottom-auto sm:m-auto sm:max-w-md sm:rounded-2xl sm:border sm:shadow-lg",
         "backdrop:bg-foreground/50 backdrop:backdrop-blur-[2px]",
         "open:animate-sheet-up sm:open:animate-scale-in",
       )}
     >
       {item && (
-        <div className="flex max-h-[88vh] flex-col overflow-y-auto sm:max-h-[85vh]">
-          <div className="relative h-56 w-full shrink-0 bg-muted sm:h-64 sm:rounded-t-2xl">
-            {item.image_url ? (
-              <>
-                {!imageLoaded && <div className="skeleton-shimmer absolute inset-0 animate-shimmer" aria-hidden />}
-                <Image
-                  src={item.image_url}
-                  alt=""
-                  fill
-                  sizes="448px"
-                  onLoad={() => setImageLoaded(true)}
-                  className={cn("object-cover transition-opacity duration-300", imageLoaded ? "opacity-100" : "opacity-0")}
-                />
-              </>
-            ) : (
-              <div className="flex h-full w-full items-center justify-center">
-                <UtensilsCrossed className="h-12 w-12 text-muted-foreground" aria-hidden />
+        // Sprint de manutenção do Cardápio Público (2026-08-08): antes, o
+        // botão "Adicionar ao carrinho" era o último elemento dentro da
+        // mesma área rolável da imagem/texto — em telas mobile mais curtas
+        // (ou com o teclado aberto, por causa do Textarea de observação),
+        // `vh` calculado sobre a viewport de layout (maior que a área
+        // realmente visível, por causa da barra de endereço do navegador)
+        // fazia o conjunto ultrapassar a tela, cortando a imagem e/ou o
+        // botão. Agora o botão fica num rodapé fixo, fora da área rolável
+        // — sempre visível, nunca depende de o cliente rolar até o fim.
+        <div className="flex max-h-[88dvh] flex-col sm:max-h-[85dvh]">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="relative h-56 w-full shrink-0 bg-muted sm:h-64 sm:rounded-t-2xl">
+              {showImage ? (
+                <>
+                  {!imageLoaded && <div className="skeleton-shimmer absolute inset-0 animate-shimmer" aria-hidden />}
+                  <Image
+                    src={item.image_url as string}
+                    alt=""
+                    fill
+                    sizes="448px"
+                    onLoad={() => setImageLoaded(true)}
+                    onError={() => setHasError(true)}
+                    className={cn(
+                      "object-cover transition-opacity duration-300",
+                      imageLoaded ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                </>
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <UtensilsCrossed className="h-12 w-12 text-muted-foreground" aria-hidden />
+                </div>
+              )}
+              <div
+                aria-hidden
+                className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/25 to-transparent"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                aria-label="Fechar"
+                className="absolute right-3 top-3 h-9 w-9 rounded-full bg-surface/80 text-surface-foreground shadow-md backdrop-blur hover:bg-surface"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex flex-col gap-5 px-6 pb-6 pt-5">
+              <div className="flex flex-col gap-1.5">
+                <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">{item.name}</h2>
+                {item.description && <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>}
+                <p className="pt-1 font-numeric text-lg font-bold tabular-nums text-primary">
+                  {formatCurrency(item.price)}
+                </p>
               </div>
-            )}
-            <div
-              aria-hidden
-              className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/25 to-transparent"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              aria-label="Fechar"
-              className="absolute right-3 top-3 h-9 w-9 rounded-full bg-surface/80 text-surface-foreground shadow-md backdrop-blur hover:bg-surface"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+
+              <div className="flex items-center justify-between rounded-2xl bg-muted px-4 py-3">
+                <span className="text-sm font-medium text-foreground">Quantidade</span>
+                <div className="flex items-center gap-1 rounded-full bg-surface p-1 shadow-card">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    aria-label="Diminuir quantidade"
+                    className="h-8 w-8 rounded-full"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span aria-live="polite" className="w-7 text-center font-numeric text-base font-semibold">
+                    {quantity}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setQuantity((q) => q + 1)}
+                    aria-label="Aumentar quantidade"
+                    className="h-8 w-8 rounded-full"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <FormField label="Observação" hint="Opcional — ex.: sem cebola, ponto da carne.">
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Alguma observação para a cozinha?"
+                  rows={2}
+                />
+              </FormField>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-5 px-6 pb-6 pt-5">
-            <div className="flex flex-col gap-1.5">
-              <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">{item.name}</h2>
-              {item.description && <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>}
-              <p className="pt-1 font-numeric text-lg font-bold tabular-nums text-primary">
-                {formatCurrency(item.price)}
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between rounded-2xl bg-muted px-4 py-3">
-              <span className="text-sm font-medium text-foreground">Quantidade</span>
-              <div className="flex items-center gap-1 rounded-full bg-surface p-1 shadow-card">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  disabled={quantity <= 1}
-                  aria-label="Diminuir quantidade"
-                  className="h-8 w-8 rounded-full"
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span aria-live="polite" className="w-7 text-center font-numeric text-base font-semibold">
-                  {quantity}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setQuantity((q) => q + 1)}
-                  aria-label="Aumentar quantidade"
-                  className="h-8 w-8 rounded-full"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <FormField label="Observação" hint="Opcional — ex.: sem cebola, ponto da carne.">
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Alguma observação para a cozinha?"
-                rows={2}
-              />
-            </FormField>
-
+          <div className="shrink-0 border-t border-border bg-surface px-6 py-4">
             <Button onClick={handleAdd} size="lg" className="w-full justify-between">
               <span>Adicionar ao carrinho</span>
               <span className="font-numeric">{formatCurrency(item.price * quantity)}</span>

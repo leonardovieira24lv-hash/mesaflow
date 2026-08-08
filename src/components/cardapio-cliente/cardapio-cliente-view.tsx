@@ -90,7 +90,7 @@ export function CardapioClienteView({
 
   return (
     <CartProvider slug={slug} tableToken={tableToken}>
-      <div className="menu-dark mx-auto flex min-h-screen max-w-xl flex-col bg-background pb-24 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
+      <div className="menu-dark mx-auto flex min-h-dvh max-w-xl flex-col bg-background pb-24 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
         <RestaurantHeader
           restaurantName={restaurantName}
           tableName={tableName}
