@@ -173,7 +173,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
         </ButtonLink>
       </div>
 
-      <main className="flex flex-1 flex-col gap-5 px-4 py-4 pb-40">
+      <main className="flex flex-1 flex-col gap-5 px-4 py-4">
         <h1 className="font-display text-xl font-semibold text-foreground">Confirmar pedido</h1>
 
         {!tableToken && (
@@ -210,12 +210,18 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
         {errorMessage && !staleItems && <Alert variant="destructive">{errorMessage}</Alert>}
       </main>
 
+      {/* Correção de manutenção (2026-08-08): antes ficava fora do <main>,
+          como uma barra `fixed` — ver o motivo detalhado no docstring de
+          `mode` em `OrderSummaryBar`. Agora faz parte do fluxo normal da
+          página (`mode="static"`), rola junto com o conteúdo e nunca fica
+          atrás do teclado virtual. */}
       <OrderSummaryBar
         total={subtotal}
         actionLabel="Confirmar pedido"
         onAction={handleSubmit}
         isLoading={status === "submitting"}
         disabled={!tableToken || status === "submitting"}
+        mode="static"
       />
     </div>
   );
