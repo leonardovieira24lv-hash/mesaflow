@@ -132,7 +132,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
 
   if (status === "success") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-5 p-6 text-center">
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
         <div className="flex h-20 w-20 animate-scale-in items-center justify-center rounded-full bg-success/10 shadow-glow-success">
           <CheckCircle2 className="h-10 w-10 text-success" aria-hidden />
         </div>
@@ -146,7 +146,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
 
   if (items.length === 0) {
     return (
-      <div className="mx-auto flex min-h-screen max-w-xl flex-col sm:border-x sm:border-border sm:shadow-card animate-fade-in">
+      <div className="mx-auto flex min-h-dvh max-w-xl flex-col sm:border-x sm:border-border sm:shadow-card animate-fade-in">
         <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
         <TableAssistanceActions slug={slug} tableToken={tableToken} />
         <main className="flex flex-1 items-center justify-center p-6">
@@ -162,7 +162,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-8 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
+    <div className="mx-auto flex min-h-dvh max-w-xl flex-col pb-8 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
       <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
       <TableAssistanceActions slug={slug} tableToken={tableToken} />
 

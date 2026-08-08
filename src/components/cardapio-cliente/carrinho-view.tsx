@@ -45,7 +45,7 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
   const menuHref = withMesaQuery(ROUTES.clienteMenu(slug), tableToken);
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-8 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
+    <div className="mx-auto flex min-h-dvh max-w-xl flex-col pb-8 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
       <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
       <TableAssistanceActions slug={slug} tableToken={tableToken} />
 

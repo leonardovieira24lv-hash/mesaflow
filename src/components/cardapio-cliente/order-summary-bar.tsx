@@ -41,7 +41,7 @@ export function OrderSummaryBar({
   return (
     <div
       className={cn(
-        "fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-md animate-sheet-up flex-col gap-3 p-4",
+        "fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-xl animate-sheet-up flex-col gap-3 p-4",
         className,
       )}
     >
