@@ -132,7 +132,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
 
   if (status === "success") {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-5 p-6 text-center">
         <div className="flex h-20 w-20 animate-scale-in items-center justify-center rounded-full bg-success/10 shadow-glow-success">
           <CheckCircle2 className="h-10 w-10 text-success" aria-hidden />
         </div>
@@ -146,7 +146,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
 
   if (items.length === 0) {
     return (
-      <div className="mx-auto flex min-h-dvh max-w-xl flex-col sm:border-x sm:border-border sm:shadow-card animate-fade-in">
+      <div className="mx-auto flex min-h-screen max-w-xl flex-col sm:border-x sm:border-border sm:shadow-card animate-fade-in">
         <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
         <TableAssistanceActions slug={slug} tableToken={tableToken} />
         <main className="flex flex-1 items-center justify-center p-6">
@@ -162,7 +162,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-xl flex-col pb-8 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
+    <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-8 sm:border-x sm:border-border sm:shadow-card animate-fade-in">
       <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
       <TableAssistanceActions slug={slug} tableToken={tableToken} />
 
@@ -173,7 +173,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
         </ButtonLink>
       </div>
 
-      <main className="flex flex-1 flex-col gap-5 px-4 py-4">
+      <main className="flex flex-1 flex-col gap-5 px-4 py-4 pb-40">
         <h1 className="font-display text-xl font-semibold text-foreground">Confirmar pedido</h1>
 
         {!tableToken && (
@@ -210,18 +210,12 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
         {errorMessage && !staleItems && <Alert variant="destructive">{errorMessage}</Alert>}
       </main>
 
-      {/* Correção de manutenção (2026-08-08): antes ficava fora do <main>,
-          como uma barra `fixed` — ver o motivo detalhado no docstring de
-          `mode` em `OrderSummaryBar`. Agora faz parte do fluxo normal da
-          página (`mode="static"`), rola junto com o conteúdo e nunca fica
-          atrás do teclado virtual. */}
       <OrderSummaryBar
         total={subtotal}
         actionLabel="Confirmar pedido"
         onAction={handleSubmit}
         isLoading={status === "submitting"}
         disabled={!tableToken || status === "submitting"}
-        mode="static"
       />
     </div>
   );

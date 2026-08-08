@@ -25,7 +25,7 @@ export function CartSummaryBar({ slug }: CartSummaryBarProps) {
   if (itemCount === 0) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl animate-sheet-up p-4">
+    <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md animate-sheet-up p-4">
       <Button
         size="lg"
         className="w-full justify-between rounded-2xl shadow-bar"
