@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Search, UtensilsCrossed, X } from "lucide-react";
 
 interface RestaurantHeaderProps {
@@ -43,13 +42,27 @@ interface RestaurantHeaderProps {
  * Estrutura/lógica de busca 100% preservadas.
  *
  * Sprint "Identidade do Restaurante no Cardápio Público" (2026-08-09,
- * seguinte): logo (`logoUrl`, com fallback discreto em ícone quando não
- * cadastrada) e descrição (`description`, só renderizada quando existe e
- * não é vazia) — mesmos dados já salvos pelo Perfil do Restaurante
+ * seguinte): logo (`logoUrl`, com fallback discreto em ícone+nome quando
+ * não cadastrada) e descrição (`description`, só renderizada quando existe
+ * e não é vazia) — mesmos dados já salvos pelo Perfil do Restaurante
  * (Configurações), nenhum campo/upload novo. `restaurantName` já vem
  * calculado pelo chamador (`getRestaurantDisplayName`, prioriza nome
  * fantasia sobre o nome de cadastro) — este componente só exibe o que
  * recebe, sem decidir qual nome usar.
+ *
+ * Sprint "Identidade Visual — Logo com Proporção Livre" (2026-08-09,
+ * seguinte): quando existe logo, ela vira o elemento principal — altura
+ * fixa (56px), largura livre (`w-auto`, respeitando a proporção real do
+ * arquivo, capada em `max-w-[70%]` para nunca empurrar o badge "Mesa X"
+ * para fora da tela), `object-contain` (nunca corta nem deforma) — e o
+ * nome em texto SOME (a logo já comunica a identidade sozinha). Sem logo,
+ * cai no layout anterior (ícone + nome), inalterado. `<img>` nativo em vez
+ * de `next/image` aqui de propósito: a logo pode ter qualquer proporção,
+ * e `next/image` exige `width`/`height` (ou `fill`, que por sua vez exige
+ * um contêiner com largura já definida) — nenhum dos dois é conhecido de
+ * antemão para um arquivo de proporção livre. `alt={restaurantName}`
+ * garante que o nome do restaurante continue acessível a leitor de tela
+ * mesmo sem o texto visível.
  */
 export function RestaurantHeader({
   restaurantName,
@@ -65,18 +78,19 @@ export function RestaurantHeader({
   return (
     <header className="flex flex-col gap-3 border-b border-zinc-800 bg-zinc-950/95 px-4 pb-3.5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/80">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-zinc-800 ring-1 ring-zinc-700">
-            {logoUrl ? (
-              <Image src={logoUrl} alt="" fill sizes="40px" className="object-cover" />
-            ) : (
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- proporção livre, ver docstring acima.
+          <img src={logoUrl} alt={restaurantName} className="h-14 w-auto max-w-[70%] shrink-0 object-contain object-left" />
+        ) : (
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-zinc-800 ring-1 ring-zinc-700">
               <div className="flex h-full w-full items-center justify-center">
                 <UtensilsCrossed className="h-4 w-4 text-zinc-500" aria-hidden />
               </div>
-            )}
+            </div>
+            <h1 className="truncate text-xl font-bold tracking-tight text-white">{restaurantName}</h1>
           </div>
-          <h1 className="truncate text-xl font-bold tracking-tight text-white">{restaurantName}</h1>
-        </div>
+        )}
         {tableName && (
           <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
             Mesa {tableName}

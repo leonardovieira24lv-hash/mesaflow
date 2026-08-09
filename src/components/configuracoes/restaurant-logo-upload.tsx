@@ -5,7 +5,6 @@ import Image from "next/image";
 import { ImageOff, Loader2, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
-import { ImageCropEditor } from "@/components/cardapio/image-crop-editor";
 import { uploadRestaurantLogo } from "@/lib/storage/restaurant-logo";
 import { validateProductImageFile, ProductImageError } from "@/lib/storage/product-images";
 
@@ -20,13 +19,24 @@ interface RestaurantLogoUploadProps {
 /**
  * Campo "Logo" da seção Identidade — Sprint "Perfil do Restaurante, Fase 1"
  * (2026-08-09). Isolado de `product-image-upload.tsx` de propósito (dono
- * diferente — restaurante, não produto — e caminho de Storage diferente),
- * mas segue exatamente o mesmo fluxo, sem inventar nada novo: seleciona →
- * valida o arquivo bruto (`validateProductImageFile`, reaproveitada de
- * `product-images.ts` sem duplicação — a checagem de tipo/tamanho não é
- * específica de produto) → abre `<ImageCropEditor>` (recorte quadrado,
- * inalterado nesta Sprint) → só ao salvar no editor é que o Blob final sobe
- * pro Storage (`uploadRestaurantLogo`).
+ * diferente — restaurante, não produto — e caminho de Storage diferente).
+ *
+ * Sprint "Identidade Visual — Logo com Proporção Livre" (2026-08-09,
+ * seguinte): removido o passo de recorte (`<ImageCropEditor>`) — a logo de
+ * um restaurante pode ser quadrada, horizontal (wordmark) ou vertical, e o
+ * editor de recorte só sabe cortar quadrado. Forçar 1:1 aqui deformaria ou
+ * cortaria logos que não são quadradas.
+ *
+ * `<ImageCropEditor>` e `product-image-upload.tsx` (foto de produto)
+ * **não foram tocados nesta mudança** — continuam exatamente como estavam,
+ * sempre quadrados, sem nenhum efeito colateral desta Sprint. O fluxo do
+ * logo agora é mais simples: seleciona → valida (`validateProductImageFile`,
+ * reaproveitada sem duplicação) → sobe direto (`uploadRestaurantLogo`), sem
+ * etapa de edição no meio.
+ *
+ * A prévia abaixo usa `object-contain` (não `object-cover`) numa caixa de
+ * altura fixa — para nunca cortar visualmente uma logo não-quadrada aqui,
+ * já que ela também não é cortada no upload.
  *
  * "Remover logo" só chama `onChange("")` — mesmo comportamento de
  * `product-image-upload.tsx`, não apaga o arquivo do Storage (ver
@@ -36,35 +46,28 @@ export function RestaurantLogoUpload({ restaurantId, value, onChange, disabled }
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     // Limpa o valor do input imediatamente — sem isso, selecionar o mesmo
-    // arquivo de novo (ex.: depois de cancelar o editor) não dispara `onChange`.
+    // arquivo de novo (ex.: depois de um erro) não dispara `onChange`.
     event.target.value = "";
     if (!file) return;
 
     setError(null);
     try {
       validateProductImageFile(file);
-      setPendingFile(file);
     } catch (err) {
       setError(err instanceof ProductImageError ? err.message : "Não foi possível abrir essa imagem.");
+      return;
     }
-  }
 
-  async function handleCropSave(blob: Blob) {
     setIsUploading(true);
-    setError(null);
     try {
-      const url = await uploadRestaurantLogo(restaurantId, blob);
+      const url = await uploadRestaurantLogo(restaurantId, file);
       onChange(url);
-      setPendingFile(null);
     } catch (err) {
-      setError(
-        err instanceof ProductImageError ? err.message : "Não foi possível enviar o logo. Tente novamente.",
-      );
+      setError(err instanceof ProductImageError ? err.message : "Não foi possível enviar o logo. Tente novamente.");
     } finally {
       setIsUploading(false);
     }
@@ -73,9 +76,9 @@ export function RestaurantLogoUpload({ restaurantId, value, onChange, disabled }
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-start gap-4">
-        <div className="relative aspect-square w-32 shrink-0 overflow-hidden rounded-ds2-md border border-ds2-border bg-ds2-surface-hover">
+        <div className="relative flex h-24 w-40 shrink-0 items-center justify-center overflow-hidden rounded-ds2-md border border-ds2-border bg-ds2-surface-hover">
           {value ? (
-            <Image src={value} alt="" fill sizes="128px" className="object-cover" />
+            <Image src={value} alt="" fill sizes="160px" className="object-contain p-2" />
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-ds2-surface-hover to-ds2-surface-hover/60">
               <ImageOff className="h-6 w-6 text-ds2-foreground-muted/40" strokeWidth={1.5} aria-hidden />
@@ -117,28 +120,13 @@ export function RestaurantLogoUpload({ restaurantId, value, onChange, disabled }
             </Button>
           )}
 
-          <p className="text-xs text-ds2-foreground-muted">JPG, PNG ou WEBP · até 5 MB</p>
+          <p className="text-xs text-ds2-foreground-muted">
+            JPG, PNG ou WEBP · até 5 MB · qualquer proporção (quadrada, horizontal ou vertical)
+          </p>
         </div>
       </div>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        onChange={handleFileChange}
-        className="sr-only"
-        aria-label="Selecionar logo do restaurante"
-      />
-
       {error && <Alert variant="destructive">{error}</Alert>}
-
-      <ImageCropEditor
-        open={pendingFile !== null}
-        file={pendingFile}
-        onCancel={() => setPendingFile(null)}
-        onSave={handleCropSave}
-        isSaving={isUploading}
-      />
     </div>
   );
 }

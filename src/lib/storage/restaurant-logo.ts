@@ -3,15 +3,23 @@ import { PRODUCT_IMAGES_BUCKET, productImageStoragePath, ProductImageError } fro
 
 /**
  * Upload do logo do restaurante (Sprint "Perfil do Restaurante, Fase 1",
- * 2026-08-09). Reaproveita o mesmo bucket, a mesma validação de arquivo
+ * 2026-08-09). Reaproveita o mesmo bucket e a mesma validação de arquivo
  * (`validateProductImageFile`, importada de `product-images.ts` sem
  * duplicação — a checagem de tipo/tamanho não é específica de produto,
- * apesar do nome) e o mesmo `ImageCropEditor` já usados pelo upload de foto
- * de produto. Nenhuma migration de bucket/policy nova é necessária: as
+ * apesar do nome). Nenhuma migration de bucket/policy nova é necessária: as
  * policies de `0013_product_images_storage.sql` autorizam qualquer caminho
  * dentro de `{restaurant_id}/...`, não só `{restaurant_id}/products/...`
  * (confirmado por auditoria antes desta Sprint) — só o padrão de caminho
  * muda, para `{restaurant_id}/logo/...`.
+ *
+ * Sprint "Identidade Visual — Logo com Proporção Livre" (2026-08-09,
+ * seguinte): o logo PAROU de passar pelo `ImageCropEditor` (que só sabe
+ * recortar quadrado, 1:1) — deliberado, para permitir logo horizontal,
+ * vertical ou quadrada, sem deformar. O `ImageCropEditor` continua
+ * inalterado, servindo só o upload de foto de produto (que continua sempre
+ * quadrado, sem nenhuma mudança). O arquivo agora sobe exatamente como o
+ * dono selecionou, sem recorte nem conversão — só a validação de
+ * tipo/tamanho já existente.
  *
  * `PRODUCT_IMAGES_BUCKET`/`productImageStoragePath` são importados, não
  * duplicados — o nome da constante é histórico (bucket já nasceu genérico,
@@ -20,23 +28,31 @@ import { PRODUCT_IMAGES_BUCKET, productImageStoragePath, ProductImageError } fro
  * não só `/products/`.
  */
 
-function buildLogoPath(restaurantId: string): string {
-  return `${restaurantId}/logo/${crypto.randomUUID()}.jpg`;
+const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+function buildLogoPath(restaurantId: string, mimeType: string): string {
+  const extension = EXTENSION_BY_MIME_TYPE[mimeType] ?? "jpg";
+  return `${restaurantId}/logo/${crypto.randomUUID()}.${extension}`;
 }
 
 /**
- * Envia o logo já recortado pelo `ImageCropEditor` (Blob JPEG, já no
- * tamanho/qualidade finais) e devolve a URL pública a ser salva em
- * `restaurants.logo_url`. Mesmo fluxo de `uploadCroppedProductImage`, só
- * trocando o padrão de caminho.
+ * Envia o arquivo de logo exatamente como selecionado (sem recorte, sem
+ * conversão de formato — ver docstring do arquivo) e devolve a URL pública
+ * a ser salva em `restaurants.logo_url`. `file.type` decide a extensão do
+ * caminho e o `contentType` do upload, para o arquivo servido pelo Storage
+ * bater com o que o dono realmente enviou (jpg/png/webp).
  */
-export async function uploadRestaurantLogo(restaurantId: string, blob: Blob): Promise<string> {
-  const path = buildLogoPath(restaurantId);
+export async function uploadRestaurantLogo(restaurantId: string, file: File): Promise<string> {
+  const path = buildLogoPath(restaurantId, file.type);
   const supabase = createClient();
 
   const { error } = await supabase.storage
     .from(PRODUCT_IMAGES_BUCKET)
-    .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+    .upload(path, file, { contentType: file.type, upsert: false });
 
   if (error) {
     throw new ProductImageError("Não foi possível enviar o logo. Verifique sua internet e tente novamente.");
