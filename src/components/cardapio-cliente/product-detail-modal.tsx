@@ -194,7 +194,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
           </div>
 
           {/* Botão principal — HTML nativo, fundo/contraste/hover/active próprios. */}
-          <div className="shrink-0 border-t border-zinc-800 bg-zinc-900 px-6 py-4">
+          <div className="shrink-0 border-t border-zinc-800 bg-zinc-900 px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
             <button
               type="button"
               onClick={handleAdd}
