@@ -52,14 +52,20 @@ interface RestaurantHeaderProps {
  *
  * Sprint "Identidade Visual — Logo com Proporção Livre" (2026-08-09,
  * seguinte): quando existe logo, ela vira o elemento principal — altura
- * fixa (88px), largura livre (`w-auto`, respeitando a proporção real do
+ * fixa (100px), largura livre (`w-auto`, respeitando a proporção real do
  * arquivo), `object-contain` (nunca corta nem deforma), **centralizada**
- * na largura total do cabeçalho via grid de 3 colunas (`1fr auto 1fr`) —
- * a coluna vazia à esquerda espelha a do badge "Mesa X" à direita, então a
- * logo fica centrada de verdade, com ou sem o badge presente. O nome em
- * texto SOME (a logo já comunica a identidade sozinha). Sem logo, cai no
- * layout anterior (ícone + nome, alinhado à esquerda), inalterado. `<img>`
- * nativo em vez de `next/image` aqui de propósito: a logo pode ter
+ * sozinha na primeira linha do cabeçalho. O nome em texto SOME (a logo já
+ * comunica a identidade sozinha). Sem logo, cai no layout anterior (ícone
+ * + nome, alinhado à esquerda, badge "Mesa X" na mesma linha), inalterado.
+ *
+ * "Mesa X" (2026-08-09, mesmo dia — ajuste de posição): com logo, o badge
+ * deixou de dividir linha com ela (estavam competindo pelo mesmo espaço
+ * visual) — desce para a linha seguinte, na mesma altura da descrição,
+ * mantendo o alinhamento à direita. Sem descrição cadastrada, o badge
+ * ainda desce sozinho para essa segunda linha (não volta a competir com a
+ * logo). Sem logo, o badge permanece onde sempre esteve, ao lado do nome.
+ *
+ * `<img>` nativo em vez de `next/image` aqui de propósito: a logo pode ter
  * qualquer proporção, e `next/image` exige `width`/`height` (ou `fill`,
  * que por sua vez exige um contêiner com largura já definida) — nenhum dos
  * dois é conhecido de antemão para um arquivo de proporção livre.
@@ -80,21 +86,9 @@ export function RestaurantHeader({
   return (
     <header className="flex flex-col gap-3 border-b border-zinc-800 bg-zinc-950/95 px-4 pb-3.5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/80">
       {logoUrl ? (
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <div aria-hidden />
+        <div className="flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element -- proporção livre, ver docstring acima. */}
-          <img
-            src={logoUrl}
-            alt={restaurantName}
-            className="h-[88px] w-auto max-w-full justify-self-center object-contain"
-          />
-          <div className="justify-self-end">
-            {tableName && (
-              <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
-                Mesa {tableName}
-              </span>
-            )}
-          </div>
+          <img src={logoUrl} alt={restaurantName} className="h-[100px] w-auto max-w-full object-contain" />
         </div>
       ) : (
         <div className="flex items-center justify-between gap-3">
@@ -114,7 +108,27 @@ export function RestaurantHeader({
         </div>
       )}
 
-      {hasDescription && <p className="line-clamp-2 text-xs text-zinc-400">{description}</p>}
+      {/* Com logo, "Mesa X" desce para esta linha (mesma altura da
+          descrição, lado direito) — deixa de competir com a logo pela
+          mesma linha/espaço. Sem logo, o badge já está na linha de cima,
+          junto do nome — nada aqui. */}
+      {logoUrl && (hasDescription || tableName) && (
+        <div className="flex items-center justify-between gap-3">
+          {hasDescription ? (
+            <p className="line-clamp-2 text-xs text-zinc-400">{description}</p>
+          ) : (
+            <span aria-hidden />
+          )}
+          {tableName && (
+            <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
+              Mesa {tableName}
+            </span>
+          )}
+        </div>
+      )}
+
+      {!logoUrl && hasDescription && <p className="line-clamp-2 text-xs text-zinc-400">{description}</p>}
+
 
       {hasSearch && (
         <div className="relative">
