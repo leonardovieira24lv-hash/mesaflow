@@ -1,18 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ShoppingBag } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, ShoppingBag } from "lucide-react";
 import { RestaurantHeader } from "@/components/cardapio-cliente/restaurant-header";
 import { CartProvider, useCart } from "@/components/cardapio-cliente/cart-context";
 import { CartLineItem } from "@/components/cardapio-cliente/cart-line-item";
 import { OrderSummaryBar } from "@/components/cardapio-cliente/order-summary-bar";
 import { TableAssistanceActions } from "@/components/cardapio-cliente/table-assistance-actions";
-import { ButtonLink } from "@/components/ui/button-link";
-import { Alert } from "@/components/ui/alert";
-import { EmptyState } from "@/components/ui/empty-state";
-import { FormField } from "@/components/ui/form-field";
-import { Textarea } from "@/components/ui/textarea";
 import { ROUTES } from "@/constants/routes";
 import { withMesaQuery } from "@/lib/cliente-url";
 import type { ApiError } from "@/types/api";
@@ -29,21 +25,21 @@ type SubmitStatus = "idle" | "submitting" | "success" | "error";
 /**
  * Tela de checkout (Fase 5, itens 8-12): revisão somente-leitura do
  * carrinho, observação geral do pedido, envio para
- * `POST /api/v1/public/{slug}/orders` (contrato 3.3, já implementado desde
- * a Fase 2 — nenhuma API nova aqui) e os três estados pedidos (carregando,
- * sucesso, erro). No sucesso: limpa o carrinho e redireciona ao
- * acompanhamento.
+ * `POST /api/v1/public/{slug}/orders` (contrato 3.3) e os três estados
+ * pedidos (carregando, sucesso, erro). No sucesso: limpa o carrinho e
+ * redireciona ao acompanhamento.
  *
- * Sprint de manutenção (2026-08-08): `OrderSummaryBar` (botão "Confirmar
- * pedido") deixou de ser `position: fixed` nesta tela — em Android, o
- * teclado virtual (por causa do campo de Observações) podia deixar um
- * elemento fixo fora da área realmente visível. Agora faz parte do fluxo
- * normal da página (`mode="static"`), sempre alcançável por scroll normal.
+ * Sprint de manutenção (2026-08-08): `OrderSummaryBar` deixou de ser
+ * `position: fixed` nesta tela (teclado virtual em Android).
  *
- * Sprint de reconstrução visual (2026-08-08, seguinte): reescrito para usar
- * só paleta padrão do Tailwind (fundo `zinc-50`, sucesso em `emerald-600`),
- * sem nenhum token do design system antigo. Nenhuma lógica de submissão,
- * idempotência ou navegação foi tocada.
+ * Sprint de autossuficiência visual (2026-08-08, seguinte): "Voltar ao
+ * carrinho", os avisos (mesa não identificada / preço desatualizado /
+ * erro de rede), o campo de Observações e o estado de carrinho vazio
+ * deixaram de depender de `ButtonLink`/`Alert`/`FormField`/`Textarea`/
+ * `EmptyState` (estavam renderizando sem nenhum estilo visível em
+ * produção, confirmado por captura de tela real) — agora são HTML nativo
+ * com classes Tailwind diretas. Nenhuma lógica de submissão, idempotência
+ * ou navegação foi tocada.
  */
 export function CheckoutView(props: CheckoutViewProps) {
   return (
@@ -64,16 +60,13 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
 
   // Sprint 1 de Correção (Fase de Estabilização): uma única chave por
   // tentativa de checkout — gerada uma vez quando esta tela monta, reusada
-  // em qualquer retry dentro da mesma visita a ela (ex.: erro de rede,
-  // cliente tenta de novo). O servidor usa isto para reconhecer um reenvio
-  // e devolver o pedido já criado em vez de duplicá-lo
-  // (`lib/orders/create-order.ts`). Uma nova visita a esta tela (novo mount)
-  // gera uma chave nova, então isto nunca impede um pedido novo legítimo.
+  // em qualquer retry dentro da mesma visita a ela. O servidor usa isto
+  // para reconhecer um reenvio e devolver o pedido já criado em vez de
+  // duplicá-lo (`lib/orders/create-order.ts`).
   const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
 
-  // Sprint 10 (auditoria): o `setTimeout` de `handleSubmit` (abaixo) não
-  // tinha cleanup — se o componente desmontasse antes dos 1200ms (ex.:
-  // cliente fecha a aba logo após o pedido ser aceito), o timer ainda
+  // Sprint 10 (auditoria): cleanup do `setTimeout` de `handleSubmit` —
+  // sem isso, se o componente desmontasse antes dos 1200ms, o timer ainda
   // disparava `clear()`/`router.push()` num componente já desmontado.
   useEffect(() => {
     return () => {
@@ -128,9 +121,6 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
       const createdOrder = (body.data as { order: { id: string } }).order;
       setStatus("success");
 
-      // 11 (limpar carrinho) antes de 12 (redirecionar) — nessa ordem, para
-      // que o carrinho já esteja vazio se o cliente voltar pelo histórico do
-      // navegador.
       redirectTimeoutRef.current = setTimeout(() => {
         clear();
         router.push(ROUTES.clienteAcompanharPedido(slug, createdOrder.id));
@@ -161,12 +151,19 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
         <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
         <TableAssistanceActions slug={slug} tableToken={tableToken} />
         <main className="flex flex-1 items-center justify-center p-6">
-          <EmptyState
-            icon={ShoppingBag}
-            title="Seu carrinho está vazio"
-            description="Volte ao cardápio para adicionar produtos antes de finalizar."
-            action={<ButtonLink href={menuHref}>Ver cardápio</ButtonLink>}
-          />
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-zinc-300 bg-white px-6 py-12 text-center">
+            <ShoppingBag className="h-10 w-10 text-zinc-300" aria-hidden />
+            <div className="flex flex-col gap-1">
+              <p className="font-semibold text-zinc-900">Seu carrinho está vazio</p>
+              <p className="text-sm text-zinc-500">Volte ao cardápio para adicionar produtos antes de finalizar.</p>
+            </div>
+            <Link
+              href={menuHref}
+              className="mt-1 flex min-h-11 items-center justify-center rounded-xl bg-emerald-500 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-emerald-600 active:scale-[0.98]"
+            >
+              Ver cardápio
+            </Link>
+          </div>
         </main>
       </div>
     );
@@ -178,19 +175,23 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
       <TableAssistanceActions slug={slug} tableToken={tableToken} />
 
       <div className="px-4 pt-4">
-        <ButtonLink href={cartHref} variant="ghost" size="sm">
+        <Link
+          href={cartHref}
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 active:scale-[0.98]"
+        >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Voltar ao carrinho
-        </ButtonLink>
+        </Link>
       </div>
 
       <main className="flex flex-1 flex-col gap-5 px-4 py-4">
         <h1 className="text-xl font-bold tracking-tight text-zinc-900">Confirmar pedido</h1>
 
         {!tableToken && (
-          <Alert variant="warning">
-            Não identificamos sua mesa. Escaneie novamente o QR Code para finalizar o pedido.
-          </Alert>
+          <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <p>Não identificamos sua mesa. Escaneie novamente o QR Code para finalizar o pedido.</p>
+          </div>
         )}
 
         <div className="flex flex-col gap-3">
@@ -199,26 +200,40 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
           ))}
         </div>
 
-        <FormField label="Observações do pedido" hint="Opcional — algo geral para a cozinha ou o atendente.">
-          <Textarea
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="checkout-notes" className="text-sm font-medium text-zinc-900">
+            Observações do pedido
+          </label>
+          <textarea
+            id="checkout-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Ex.: trazer talheres extras, entregar tudo junto..."
             rows={3}
             disabled={status === "submitting"}
+            className="w-full resize-none rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-60"
           />
-        </FormField>
+          <p className="text-xs text-zinc-500">Opcional — algo geral para a cozinha ou o atendente.</p>
+        </div>
 
         {staleItems && staleItems.length > 0 && (
-          <Alert variant="destructive" className="flex-col items-stretch gap-2">
+          <div className="flex flex-col gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <p>Estes itens mudaram desde que você montou o carrinho: {staleItems.join(", ")}.</p>
-            <ButtonLink href={cartHref} variant="outline" size="sm" className="self-start">
+            <Link
+              href={cartHref}
+              className="self-start rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+            >
               Voltar ao carrinho
-            </ButtonLink>
-          </Alert>
+            </Link>
+          </div>
         )}
 
-        {errorMessage && !staleItems && <Alert variant="destructive">{errorMessage}</Alert>}
+        {errorMessage && !staleItems && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <p>{errorMessage}</p>
+          </div>
+        )}
       </main>
 
       <OrderSummaryBar

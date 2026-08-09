@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -18,14 +17,9 @@ interface OrderSummaryBarProps {
    * texto na mesma tela.
    *
    * "static": renderizada dentro do fluxo normal da página (sem
-   * `position: fixed`) — usada no Checkout (`CheckoutView`). Correção de
-   * manutenção (2026-08-08): `position: fixed` é posicionado em relação à
-   * viewport de *layout*, não à visual — no Chrome for Android, o teclado
-   * virtual redimensiona a viewport visual sem necessariamente
-   * redimensionar a de layout, deixando um elemento `fixed` fora da área
-   * realmente visível enquanto o cliente digita na Observação do pedido.
-   * Tirar o botão de confirmação de `fixed` no Checkout elimina o
-   * problema pela raiz, sem depender de nenhum cálculo de viewport.
+   * `position: fixed`) — usada no Checkout (`CheckoutView`). O teclado
+   * virtual em Android podia deixar um elemento `fixed` fora da área
+   * realmente visível (ver histórico de correções em `checkout-view.tsx`).
    */
   mode?: "fixed" | "static";
 }
@@ -35,9 +29,12 @@ interface OrderSummaryBarProps {
  * de Carrinho ("Finalizar pedido", `mode="fixed"`) e na de Checkout
  * ("Confirmar pedido", `mode="static"`).
  *
- * Sprint de reconstrução visual (2026-08-08): reescrito para usar só
- * paleta padrão do Tailwind (card branco, borda `zinc-200`), sem nenhum
- * token do design system antigo. Nenhuma lógica/prop foi tocada.
+ * Sprint de autossuficiência visual (2026-08-08): trocado `<Button>` (que
+ * estava renderizando sem nenhum estilo visível em produção, confirmado
+ * por captura de tela real) por `<button>` nativo com classes Tailwind
+ * diretas — fundo `emerald-500`, contraste forte, estado de loading via
+ * texto simples (sem depender de spinner de nenhum componente
+ * compartilhado). Nenhuma prop/lógica foi tocada.
  */
 export function OrderSummaryBar({
   total,
@@ -58,16 +55,21 @@ export function OrderSummaryBar({
         className,
       )}
     >
-      <div className="flex flex-col gap-2 rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg">
+      <div className="flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-zinc-500">Total</span>
           <span className="text-lg font-bold tabular-nums text-zinc-900">{formatCurrency(total)}</span>
         </div>
 
         {actionSlot ?? (
-          <Button size="lg" className="w-full" onClick={onAction} disabled={disabled} isLoading={isLoading}>
-            {actionLabel}
-          </Button>
+          <button
+            type="button"
+            onClick={onAction}
+            disabled={disabled || isLoading}
+            className="flex min-h-11 w-full items-center justify-center rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-600 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+          >
+            {isLoading ? "Enviando..." : actionLabel}
+          </button>
         )}
       </div>
     </div>

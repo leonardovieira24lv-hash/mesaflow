@@ -3,9 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Minus, Plus, UtensilsCrossed, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { FormField } from "@/components/ui/form-field";
-import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/format";
 import { useCart } from "@/components/cardapio-cliente/cart-context";
 import { toast } from "@/components/ui/toast";
@@ -32,14 +29,18 @@ interface ProductDetailModalProps {
  * carrinho" já grava no `<CartProvider>` (Fase 3, item 8).
  *
  * Sprint de manutenção (2026-08-08): `onError`/fallback na imagem; botão
- * "Adicionar ao carrinho" movido para um rodapé fixo fora da área rolável
- * — antes era o último elemento dentro da mesma área da imagem/texto, e em
- * telas mobile mais curtas (ou com teclado aberto) podia ficar cortado.
+ * "Adicionar ao carrinho" movido para um rodapé fixo fora da área rolável.
  *
- * Sprint de reconstrução visual (2026-08-08, seguinte): reescrito para usar
- * só paleta padrão do Tailwind — fundo branco, overlay preto, textos em
- * `zinc-900`/`zinc-500`, preço em `emerald-600` — sem nenhum token do
- * design system antigo/`ds2-*`. Nenhuma lógica foi tocada.
+ * Sprint de reconstrução visual (2026-08-08, seguinte): paleta padrão do
+ * Tailwind, sem tokens do design system antigo.
+ *
+ * Sprint de autossuficiência visual (2026-08-08, seguinte): os componentes
+ * compartilhados `Button`/`FormField`/`Textarea` estavam renderizando sem
+ * nenhum estilo visível em produção (confirmado por captura de tela real)
+ * — todos os controles interativos deste modal (fechar, +/-, textarea de
+ * observação, "Adicionar ao carrinho") foram trocados por elementos HTML
+ * nativos com classes Tailwind diretas, sem depender de nenhum componente
+ * de UI compartilhado. Nenhuma lógica foi tocada.
  */
 export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
   const { addItem } = useCart();
@@ -103,9 +104,6 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
       )}
     >
       {item && (
-        // Botão "Adicionar ao carrinho" num rodapé fixo, fora da área
-        // rolável — sempre visível, nunca depende de o cliente rolar até
-        // o fim (ver docstring acima).
         <div className="flex max-h-[88dvh] flex-col sm:max-h-[85dvh]">
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="relative h-56 w-full shrink-0 bg-zinc-100 sm:h-64 sm:rounded-t-2xl">
@@ -134,16 +132,15 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                 aria-hidden
                 className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent"
               />
-              <Button
+              {/* Botão fechar — HTML nativo, não depende de <Button>. */}
+              <button
                 type="button"
-                variant="ghost"
-                size="icon"
                 onClick={onClose}
                 aria-label="Fechar"
-                className="absolute right-3 top-3 h-9 w-9 rounded-full bg-white/90 text-zinc-700 shadow-md backdrop-blur hover:bg-white"
+                className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-zinc-700 shadow-md ring-1 ring-zinc-200 transition hover:bg-zinc-50 active:scale-95"
               >
                 <X className="h-4 w-4" />
-              </Button>
+              </button>
             </div>
 
             <div className="flex flex-col gap-5 px-6 pb-6 pt-5">
@@ -155,50 +152,59 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
 
               <div className="flex items-center justify-between rounded-2xl bg-zinc-100 px-4 py-3">
                 <span className="text-sm font-medium text-zinc-900">Quantidade</span>
-                <div className="flex items-center gap-1 rounded-full bg-white p-1 shadow-sm">
-                  <Button
+                {/* Controles +/- — HTML nativo, área de toque 40x40, com fundo/borda/estado ativo próprios. */}
+                <div className="flex items-center gap-1 rounded-full bg-white p-1 shadow-sm ring-1 ring-zinc-200">
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="icon"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                     disabled={quantity <= 1}
                     aria-label="Diminuir quantidade"
-                    className="h-8 w-8 rounded-full"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-700 transition hover:bg-zinc-100 active:scale-90 disabled:pointer-events-none disabled:opacity-30"
                   >
                     <Minus className="h-4 w-4" />
-                  </Button>
+                  </button>
                   <span aria-live="polite" className="w-7 text-center text-base font-semibold text-zinc-900">
                     {quantity}
                   </span>
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="icon"
                     onClick={() => setQuantity((q) => q + 1)}
                     aria-label="Aumentar quantidade"
-                    className="h-8 w-8 rounded-full"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-700 transition hover:bg-zinc-100 active:scale-90"
                   >
                     <Plus className="h-4 w-4" />
-                  </Button>
+                  </button>
                 </div>
               </div>
 
-              <FormField label="Observação" hint="Opcional — ex.: sem cebola, ponto da carne.">
-                <Textarea
+              {/* Campo de observação — label/textarea/hint em HTML nativo, sem depender de FormField/Textarea. */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="product-notes" className="text-sm font-medium text-zinc-900">
+                  Observação
+                </label>
+                <textarea
+                  id="product-notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Alguma observação para a cozinha?"
                   rows={2}
+                  className="w-full resize-none rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 />
-              </FormField>
+                <p className="text-xs text-zinc-500">Opcional — ex.: sem cebola, ponto da carne.</p>
+              </div>
             </div>
           </div>
 
+          {/* Botão principal — HTML nativo, fundo/contraste/hover/active próprios. */}
           <div className="shrink-0 border-t border-zinc-200 bg-white px-6 py-4">
-            <Button onClick={handleAdd} size="lg" className="w-full justify-between">
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="flex min-h-11 w-full items-center justify-between rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-600 active:scale-[0.98]"
+            >
               <span>Adicionar ao carrinho</span>
               <span className="tabular-nums">{formatCurrency(item.price * quantity)}</span>
-            </Button>
+            </button>
           </div>
         </div>
       )}

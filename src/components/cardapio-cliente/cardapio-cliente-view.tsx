@@ -9,7 +9,6 @@ import { ProductDetailModal } from "@/components/cardapio-cliente/product-detail
 import { CartProvider } from "@/components/cardapio-cliente/cart-context";
 import { CartSummaryBar } from "@/components/cardapio-cliente/cart-summary-bar";
 import { TableAssistanceActions } from "@/components/cardapio-cliente/table-assistance-actions";
-import { EmptyState } from "@/components/ui/empty-state";
 import type { PublicMenuCategory, PublicMenuItem } from "@/lib/orders/public-menu";
 
 interface CardapioClienteViewProps {
@@ -40,6 +39,12 @@ interface CardapioClienteViewProps {
  * `zinc-900`), sem nenhum token do design system antigo nem `ds2-*`.
  * Busca, categorias, listagem e todo o resto da estrutura/lógica
  * continuam exatamente iguais — só `className` mudou.
+ *
+ * Sprint de autossuficiência visual (2026-08-08, seguinte): os dois
+ * estados vazios deixaram de depender de `<EmptyState>` (estava
+ * renderizando sem nenhum estilo visível em produção, confirmado por
+ * captura de tela real) — agora são HTML nativo com classes Tailwind
+ * diretas.
  */
 export function CardapioClienteView({
   slug,
@@ -84,17 +89,23 @@ export function CardapioClienteView({
 
         <main className="flex flex-1 flex-col gap-7 px-4 py-5">
           {!hasCategories ? (
-            <EmptyState
-              icon={UtensilsCrossed}
-              title="Cardápio ainda não disponível"
-              description="Este restaurante ainda não cadastrou categorias ou produtos."
-            />
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
+              <UtensilsCrossed className="h-10 w-10 text-zinc-300" aria-hidden />
+              <div className="flex flex-col gap-1">
+                <p className="font-semibold text-zinc-900">Cardápio ainda não disponível</p>
+                <p className="text-sm text-zinc-500">Este restaurante ainda não cadastrou categorias ou produtos.</p>
+              </div>
+            </div>
           ) : !hasResults ? (
-            <EmptyState
-              icon={SearchX}
-              title="Nenhum produto encontrado"
-              description={`Não encontramos nada para "${searchTerm.trim()}". Tente buscar por outro termo.`}
-            />
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
+              <SearchX className="h-10 w-10 text-zinc-300" aria-hidden />
+              <div className="flex flex-col gap-1">
+                <p className="font-semibold text-zinc-900">Nenhum produto encontrado</p>
+                <p className="text-sm text-zinc-500">
+                  Não encontramos nada para &quot;{searchTerm.trim()}&quot;. Tente buscar por outro termo.
+                </p>
+              </div>
+            </div>
           ) : (
             visibleCategories.map((category) => (
               <section

@@ -3,7 +3,6 @@ import Image from "next/image";
 import { ImageOff, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
-import { Badge } from "@/components/ui/badge";
 import type { PublicMenuItem } from "@/lib/orders/public-menu";
 
 interface MenuItemCardProps {
@@ -76,7 +75,9 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
 
         {!isAvailable && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
-            <Badge variant="muted">Indisponível</Badge>
+            <span className="rounded-full bg-zinc-900 px-2.5 py-1 text-xs font-semibold text-white">
+              Indisponível
+            </span>
           </div>
         )}
       </div>
