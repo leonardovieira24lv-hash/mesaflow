@@ -5,10 +5,12 @@ import { Save, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { RestaurantStatusBadge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
+import { RestaurantLogoUpload } from "@/components/configuracoes/restaurant-logo-upload";
 import { updateRestaurantSchema } from "@/lib/validations/restaurant";
 import { ROUTES } from "@/constants/routes";
 import type { Restaurant } from "@/types/domain";
@@ -32,6 +34,9 @@ interface RestaurantSettingsFormProps {
     instagram: string | null;
     facebook: string | null;
     website: string | null;
+    // Identidade — Sprint "Perfil do Restaurante, Fase 1" (2026-08-09).
+    logoUrl: string | null;
+    description: string | null;
   };
 }
 
@@ -53,6 +58,8 @@ interface RestaurantDto {
   instagram: string | null;
   facebook: string | null;
   website: string | null;
+  logo_url: string | null;
+  description: string | null;
 }
 
 // Chave de cada campo = exatamente o nome aceito pelo PATCH
@@ -66,8 +73,10 @@ interface RegistrationFieldConfig {
   className?: string;
 }
 
+// `trade_name` saiu daqui na Sprint "Perfil do Restaurante, Fase 1" —
+// passou a fazer parte da seção Identidade (junto com logo/nome/descrição),
+// não mais de Contato (que agora é só telefone/whatsapp/e-mail).
 const CONTACT_FIELDS: RegistrationFieldConfig[] = [
-  { key: "trade_name", label: "Nome fantasia", placeholder: "Ex.: Zé Burger" },
   { key: "phone", label: "Telefone", placeholder: "(11) 3333-4444" },
   { key: "whatsapp", label: "WhatsApp", placeholder: "(11) 99999-8888" },
   { key: "email", label: "E-mail", placeholder: "contato@restaurante.com" },
@@ -89,12 +98,19 @@ const SOCIAL_FIELDS: RegistrationFieldConfig[] = [
 ];
 
 /**
- * Tela de Configurações do Restaurante (contrato seção 4.2, estendido pela
- * GD-01/GD-02 com os 13 campos cadastrais). Segue o mesmo padrão de
+ * Tela de "Perfil do Restaurante" (contrato seção 4.2, estendido pela
+ * GD-01/GD-02 com os 13 campos cadastrais, e pela Sprint "Perfil do
+ * Restaurante, Fase 1" com logo/descrição). Segue o mesmo padrão de
  * formulário já usado em `CategoriesManager`/`ProductForm`: validação
  * client-side com o mesmo schema Zod do Route Handler (feedback imediato),
  * envio via `fetch` direto para `/api/v1/restaurant`, e `toast`/`FormField`
  * para os estados de sucesso e erro.
+ *
+ * Reorganizado em 4 seções (Sprint "Perfil do Restaurante, Fase 1",
+ * 2026-08-09): Identidade (logo, nome, slug, nome fantasia, descrição),
+ * Contato, Endereço, Redes sociais — mesma lógica de sempre, só reagrupada
+ * visualmente. `trade_name` migrou do card de Contato para o de Identidade
+ * nesta Sprint; nenhum outro campo mudou de lugar.
  *
  * Só envia no PATCH os campos que de fato mudaram — preserva o
  * comportamento parcial do contrato 4.2 (permite alterar só um campo, só
@@ -102,10 +118,11 @@ const SOCIAL_FIELDS: RegistrationFieldConfig[] = [
  * reenviar o mesmo valor que já está salvo.
  *
  * Nome/Slug continuam com o fluxo próprio já existente (confirmação antes
- * de mudar o slug, por causa de QR Codes/links já impressos). Os 13 campos
- * cadastrais (GD-02) não têm esse risco — mudar telefone/endereço/redes
- * sociais não invalida nada já impresso — então entram direto no mesmo
- * `<form>`/mesmo botão "Salvar alterações", sem diálogo de confirmação.
+ * de mudar o slug, por causa de QR Codes/links já impressos). Os demais
+ * campos cadastrais (GD-02) e os novos de identidade (logo, descrição) não
+ * têm esse risco — mudar telefone/endereço/redes sociais/logo/descrição não
+ * invalida nada já impresso — então entram direto no mesmo `<form>`/mesmo
+ * botão "Salvar alterações", sem diálogo de confirmação.
  */
 export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormProps) {
   const [name, setName] = useState(restaurant.name);
@@ -128,6 +145,8 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
     instagram: restaurant.instagram ?? "",
     facebook: restaurant.facebook ?? "",
     website: restaurant.website ?? "",
+    logo_url: restaurant.logoUrl ?? "",
+    description: restaurant.description ?? "",
   };
   const [fields, setFields] = useState<Record<string, string>>(initialFields);
 
@@ -255,6 +274,8 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
         instagram: updated.instagram ?? "",
         facebook: updated.facebook ?? "",
         website: updated.website ?? "",
+        logo_url: updated.logo_url ?? "",
+        description: updated.description ?? "",
       });
       toast.success("Configurações salvas");
       setIsSubmitting(false);
@@ -307,10 +328,19 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Editar restaurante</CardTitle>
-            <CardDescription>Altere o nome e/ou o slug usado nas URLs públicas e nos QR Codes.</CardDescription>
+            <CardTitle>Identidade</CardTitle>
+            <CardDescription>Logo, nome e descrição do restaurante.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
+            <FormField label="Logo" error={errors.logo_url} hint="Imagem quadrada — JPG, PNG ou WEBP, até 5 MB.">
+              <RestaurantLogoUpload
+                restaurantId={restaurant.id}
+                value={fields.logo_url ?? ""}
+                onChange={(url) => updateField("logo_url", url)}
+                disabled={isSubmitting}
+              />
+            </FormField>
+
             <FormField label="Nome do restaurante" error={errors.name} required>
               <Input
                 value={name}
@@ -342,13 +372,36 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
                 deixarão de funcionar e precisarão ser gerados/enviados de novo.
               </p>
             )}
+
+            <FormField label="Nome fantasia" error={errors.trade_name}>
+              <Input
+                value={fields.trade_name}
+                onChange={(e) => updateField("trade_name", e.target.value)}
+                placeholder="Ex.: Zé Burger"
+                disabled={isSubmitting}
+              />
+            </FormField>
+
+            <FormField
+              label="Descrição"
+              error={errors.description}
+              hint="Uma breve apresentação do restaurante. Até 1000 caracteres."
+            >
+              <Textarea
+                value={fields.description}
+                onChange={(e) => updateField("description", e.target.value)}
+                placeholder="Ex.: Hambúrgueres artesanais em ambiente descontraído, desde 2018."
+                disabled={isSubmitting}
+                rows={4}
+              />
+            </FormField>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Dados de contato</CardTitle>
-            <CardDescription>Nome fantasia e canais de contato do restaurante.</CardDescription>
+            <CardTitle>Contato</CardTitle>
+            <CardDescription>Canais de contato do restaurante.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             {CONTACT_FIELDS.map((field) => (

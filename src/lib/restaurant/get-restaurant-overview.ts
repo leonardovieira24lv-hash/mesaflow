@@ -27,6 +27,12 @@ export interface RestaurantOverview {
   instagram: string | null;
   facebook: string | null;
   website: string | null;
+  // Identidade — Sprint "Perfil do Restaurante, Fase 1" (2026-08-09),
+  // colunas de `0026_restaurant_logo_and_description.sql`. Mesmo raciocínio
+  // dos campos acima: só para a tela de Configurações, fora do
+  // `checklist`/`counts`.
+  logoUrl: string | null;
+  description: string | null;
   checklist: {
     hasCategories: boolean;
     hasProducts: boolean;
@@ -70,7 +76,7 @@ export async function getRestaurantOverview(
     supabase
       .from("restaurants")
       .select(
-        "id, name, slug, status, qr_codes_printed_at, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website",
+        "id, name, slug, status, qr_codes_printed_at, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description",
       )
       .eq("id", restaurantId)
       .single(),
@@ -108,6 +114,8 @@ export async function getRestaurantOverview(
     instagram: restaurant.instagram,
     facebook: restaurant.facebook,
     website: restaurant.website,
+    logoUrl: restaurant.logo_url,
+    description: restaurant.description,
     checklist: {
       hasCategories: categoriesCount > 0,
       hasProducts: productsCount > 0,

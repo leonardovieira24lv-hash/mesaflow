@@ -31,6 +31,8 @@ export async function GET() {
       instagram: overview.instagram,
       facebook: overview.facebook,
       website: overview.website,
+      logo_url: overview.logoUrl,
+      description: overview.description,
       checklist: {
         has_categories: overview.checklist.hasCategories,
         has_products: overview.checklist.hasProducts,
@@ -71,6 +73,8 @@ export async function PATCH(request: Request) {
       instagram,
       facebook,
       website,
+      description,
+      logo_url,
     } = parseOrThrow(updateRestaurantSchema, body);
 
     const supabase = await createClient();
@@ -96,13 +100,15 @@ export async function PATCH(request: Request) {
     if (instagram !== undefined) updates.instagram = instagram;
     if (facebook !== undefined) updates.facebook = facebook;
     if (website !== undefined) updates.website = website;
+    if (description !== undefined) updates.description = description;
+    if (logo_url !== undefined) updates.logo_url = logo_url;
 
     const { data: updated, error } = await supabase
       .from("restaurants")
       .update(updates)
       .eq("id", profile.restaurantId)
       .select(
-        "id, name, slug, status, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website",
+        "id, name, slug, status, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description",
       )
       .maybeSingle();
 
@@ -148,6 +154,8 @@ export async function PATCH(request: Request) {
       instagram: updated.instagram,
       facebook: updated.facebook,
       website: updated.website,
+      logo_url: updated.logo_url,
+      description: updated.description,
     });
   } catch (err) {
     return handleRouteError(err);

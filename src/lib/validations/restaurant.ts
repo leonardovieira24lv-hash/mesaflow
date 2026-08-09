@@ -35,6 +35,16 @@ export const updateRestaurantSchema = z.object({
     )
     .optional(),
 
+  // Identidade — Sprint "Perfil do Restaurante, Fase 1" (2026-08-09).
+  // `logo_url` aceita string vazia (`""`) além de URL válida: é como o
+  // upload zera o campo ao remover o logo (`RestaurantLogoUpload`) — as
+  // demais URLs do formulário (`website`) não têm essa necessidade porque
+  // nunca são preenchidas/limpas por um botão de remoção dedicado.
+  description: z.string().trim().max(1000, "A descrição deve ter no máximo 1000 caracteres.").optional(),
+  logo_url: z
+    .union([z.string().trim().url("URL do logo inválida."), z.literal("")])
+    .optional(),
+
   // Dados cadastrais (Sprint "Gestão do Restaurante", 2026-08-07) — mesmo
   // espírito do PATCH parcial já usado para `name`/`slug` acima: todos
   // opcionais, só entra no `update` o que for de fato enviado.
