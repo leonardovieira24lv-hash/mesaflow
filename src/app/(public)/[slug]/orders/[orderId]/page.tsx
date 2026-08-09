@@ -1,7 +1,7 @@
 import { Frown } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppError } from "@/lib/api/errors";
-import { resolveRestaurantBySlug } from "@/lib/orders/resolve-public-context";
+import { resolveRestaurantBySlug, getRestaurantDisplayName } from "@/lib/orders/resolve-public-context";
 import { getPublicOrderStatus } from "@/lib/orders/get-public-order-status";
 import { getPublicSessionOrders } from "@/lib/orders/get-public-session-orders";
 import { getOrderTableContext } from "@/lib/orders/get-order-table-context";
@@ -71,7 +71,8 @@ export default async function AcompanharPedidoPage({
       <OrderTrackingView
         slug={slug}
         orderId={orderId}
-        restaurantName={restaurant.name}
+        restaurantName={getRestaurantDisplayName(restaurant)}
+        restaurantLogoUrl={restaurant.logoUrl}
         initialOrders={sessionOrders ?? [{ id: order.id, status: order.status, items: order.items, totalAmount: 0, createdAt: new Date().toISOString() }]}
         tableToken={tableContext?.isSessionOpen ? tableContext.tableToken : null}
       />

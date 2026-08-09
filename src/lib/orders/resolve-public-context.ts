@@ -7,6 +7,14 @@ export interface PublicRestaurantContext {
   id: string;
   name: string;
   slug: string;
+  // Identidade — Sprint "Identidade do Restaurante no Cardápio Público"
+  // (2026-08-09). Colunas já existentes desde a Sprint "Perfil do
+  // Restaurante" (`0025_restaurant_registration_fields.sql`,
+  // `0026_restaurant_logo_and_description.sql`) — nenhuma migration nova
+  // aqui, só passaram a ser selecionadas por esta função.
+  tradeName: string | null;
+  logoUrl: string | null;
+  description: string | null;
 }
 
 export interface PublicTableContext {
@@ -31,7 +39,7 @@ export async function resolveRestaurantBySlug(
 ): Promise<PublicRestaurantContext> {
   const { data, error } = await admin
     .from("restaurants")
-    .select("id, name, slug")
+    .select("id, name, slug, trade_name, logo_url, description")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -42,7 +50,29 @@ export async function resolveRestaurantBySlug(
     throw new AppError("NOT_FOUND", "Restaurante não encontrado.");
   }
 
-  return data;
+  return {
+    id: data.id,
+    name: data.name,
+    slug: data.slug,
+    tradeName: data.trade_name,
+    logoUrl: data.logo_url,
+    description: data.description,
+  };
+}
+
+/**
+ * Nome de exibição do restaurante nas 4 telas públicas (Cardápio, Carrinho,
+ * Checkout, Acompanhamento) — Sprint "Identidade do Restaurante no Cardápio
+ * Público" (2026-08-09). Centralizado aqui, único lugar, para as 4 páginas
+ * nunca divergirem entre si na prioridade do nome.
+ *
+ * `trade_name` (nome fantasia, se o proprietário preencheu no Perfil) tem
+ * prioridade sobre `name` (razão social/nome de cadastro, usado como
+ * fallback). `slug` nunca entra nessa conta — continua exclusivamente como
+ * identificador da URL pública, nunca como nome visual.
+ */
+export function getRestaurantDisplayName(restaurant: Pick<PublicRestaurantContext, "name" | "tradeName">): string {
+  return restaurant.tradeName?.trim() || restaurant.name;
 }
 
 /**

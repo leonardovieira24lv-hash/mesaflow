@@ -15,6 +15,10 @@ interface CardapioClienteViewProps {
   slug: string;
   tableToken: string | null;
   restaurantName: string;
+  // Identidade — Sprint "Identidade do Restaurante no Cardápio Público"
+  // (2026-08-09). Só passagem até `<RestaurantHeader>`.
+  restaurantLogoUrl?: string | null;
+  restaurantDescription?: string | null;
   tableName?: string;
   categories: PublicMenuCategory[];
 }
@@ -59,6 +63,8 @@ export function CardapioClienteView({
   slug,
   tableToken,
   restaurantName,
+  restaurantLogoUrl,
+  restaurantDescription,
   tableName,
   categories,
 }: CardapioClienteViewProps) {
@@ -89,6 +95,8 @@ export function CardapioClienteView({
       <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-24 sm:border-x sm:border-zinc-800 sm:shadow-sm">
         <RestaurantHeader
           restaurantName={restaurantName}
+          logoUrl={restaurantLogoUrl}
+          description={restaurantDescription}
           tableName={tableName}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}

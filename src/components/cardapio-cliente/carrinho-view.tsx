@@ -17,6 +17,9 @@ interface CarrinhoViewProps {
   slug: string;
   tableToken: string | null;
   restaurantName: string;
+  // Identidade — Sprint "Identidade do Restaurante no Cardápio Público"
+  // (2026-08-09). Sem descrição aqui, por escopo (só o Cardápio mostra).
+  restaurantLogoUrl?: string | null;
   tableName?: string;
 }
 
@@ -46,15 +49,21 @@ interface CarrinhoViewProps {
  * - `<TableAssistanceActions>` ("Chamar garçom"/"Pedir a conta").
  * Os três precisam do arquivo real para serem corrigidos com segurança.
  */
-export function CarrinhoView({ slug, tableToken, restaurantName, tableName }: CarrinhoViewProps) {
+export function CarrinhoView({ slug, tableToken, restaurantName, restaurantLogoUrl, tableName }: CarrinhoViewProps) {
   return (
     <CartProvider slug={slug} tableToken={tableToken}>
-      <CarrinhoContent slug={slug} tableToken={tableToken} restaurantName={restaurantName} tableName={tableName} />
+      <CarrinhoContent
+        slug={slug}
+        tableToken={tableToken}
+        restaurantName={restaurantName}
+        restaurantLogoUrl={restaurantLogoUrl}
+        tableName={tableName}
+      />
     </CartProvider>
   );
 }
 
-function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: CarrinhoViewProps) {
+function CarrinhoContent({ slug, tableToken, restaurantName, restaurantLogoUrl, tableName }: CarrinhoViewProps) {
   const router = useRouter();
   const { items, subtotal, updateQuantity, removeItem, clear } = useCart();
   const [confirmingClear, setConfirmingClear] = useState(false);
@@ -63,7 +72,7 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800 sm:shadow-sm">
-      <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
+      <RestaurantHeader restaurantName={restaurantName} logoUrl={restaurantLogoUrl} tableName={tableName} />
       <TableAssistanceActions slug={slug} tableToken={tableToken} />
 
       <div className="flex items-center justify-between px-4 pt-4">

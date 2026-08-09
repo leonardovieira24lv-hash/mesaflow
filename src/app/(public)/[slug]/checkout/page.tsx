@@ -1,7 +1,7 @@
 import { Frown } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppError } from "@/lib/api/errors";
-import { resolveRestaurantBySlug, resolveTableByToken } from "@/lib/orders/resolve-public-context";
+import { resolveRestaurantBySlug, resolveTableByToken, getRestaurantDisplayName } from "@/lib/orders/resolve-public-context";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckoutView } from "@/components/cardapio-cliente/checkout-view";
 
@@ -47,7 +47,8 @@ export default async function CheckoutPage({
       <CheckoutView
         slug={slug}
         tableToken={tableToken ?? null}
-        restaurantName={restaurant.name}
+        restaurantName={getRestaurantDisplayName(restaurant)}
+        restaurantLogoUrl={restaurant.logoUrl}
         tableName={tableName}
       />
     );

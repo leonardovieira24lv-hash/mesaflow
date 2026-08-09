@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import Image from "next/image";
+import { Search, UtensilsCrossed, X } from "lucide-react";
 
 interface RestaurantHeaderProps {
   restaurantName: string;
@@ -8,6 +9,16 @@ interface RestaurantHeaderProps {
   /** Opcionais: só o Cardápio (`<CardapioClienteView>`) passa isso — Carrinho, Checkout e Acompanhamento de Pedido continuam sem busca, pois não fazem sentido nessas telas. */
   searchTerm?: string;
   onSearchChange?: (value: string) => void;
+  /**
+   * Identidade — Sprint "Identidade do Restaurante no Cardápio Público"
+   * (2026-08-09). `logoUrl` renderizado nas 4 telas públicas (Cardápio,
+   * Carrinho, Checkout, Acompanhamento); `description` só passada pelo
+   * Cardápio (`menu/page.tsx`) — nas outras 3 o prop simplesmente não é
+   * passado, então nada é renderizado, sem precisar de uma flag separada
+   * tipo `showDescription`.
+   */
+  logoUrl?: string | null;
+  description?: string | null;
 }
 
 /**
@@ -30,19 +41,50 @@ interface RestaurantHeaderProps {
  * busca elevado em `zinc-900` (hierarquia visual: superfície mais clara que
  * o fundo), sem nenhum token do design system antigo nem `ds2-*`.
  * Estrutura/lógica de busca 100% preservadas.
+ *
+ * Sprint "Identidade do Restaurante no Cardápio Público" (2026-08-09,
+ * seguinte): logo (`logoUrl`, com fallback discreto em ícone quando não
+ * cadastrada) e descrição (`description`, só renderizada quando existe e
+ * não é vazia) — mesmos dados já salvos pelo Perfil do Restaurante
+ * (Configurações), nenhum campo/upload novo. `restaurantName` já vem
+ * calculado pelo chamador (`getRestaurantDisplayName`, prioriza nome
+ * fantasia sobre o nome de cadastro) — este componente só exibe o que
+ * recebe, sem decidir qual nome usar.
  */
-export function RestaurantHeader({ restaurantName, tableName, searchTerm, onSearchChange }: RestaurantHeaderProps) {
+export function RestaurantHeader({
+  restaurantName,
+  tableName,
+  searchTerm,
+  onSearchChange,
+  logoUrl,
+  description,
+}: RestaurantHeaderProps) {
   const hasSearch = onSearchChange !== undefined;
+  const hasDescription = Boolean(description?.trim());
+
   return (
     <header className="flex flex-col gap-3 border-b border-zinc-800 bg-zinc-950/95 px-4 pb-3.5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/80">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="truncate text-xl font-bold tracking-tight text-white">{restaurantName}</h1>
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-zinc-800 ring-1 ring-zinc-700">
+            {logoUrl ? (
+              <Image src={logoUrl} alt="" fill sizes="40px" className="object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <UtensilsCrossed className="h-4 w-4 text-zinc-500" aria-hidden />
+              </div>
+            )}
+          </div>
+          <h1 className="truncate text-xl font-bold tracking-tight text-white">{restaurantName}</h1>
+        </div>
         {tableName && (
           <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
             Mesa {tableName}
           </span>
         )}
       </div>
+
+      {hasDescription && <p className="line-clamp-2 text-xs text-zinc-400">{description}</p>}
 
       {hasSearch && (
         <div className="relative">

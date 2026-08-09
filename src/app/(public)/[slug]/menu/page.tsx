@@ -1,7 +1,7 @@
 import { Frown } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppError } from "@/lib/api/errors";
-import { resolveRestaurantBySlug, resolveTableByToken } from "@/lib/orders/resolve-public-context";
+import { resolveRestaurantBySlug, resolveTableByToken, getRestaurantDisplayName } from "@/lib/orders/resolve-public-context";
 import { getPublicMenu } from "@/lib/orders/public-menu";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardapioClienteView } from "@/components/cardapio-cliente/cardapio-cliente-view";
@@ -63,7 +63,9 @@ export default async function CardapioClientePage({
       <CardapioClienteView
         slug={slug}
         tableToken={tableToken ?? null}
-        restaurantName={restaurant.name}
+        restaurantName={getRestaurantDisplayName(restaurant)}
+        restaurantLogoUrl={restaurant.logoUrl}
+        restaurantDescription={restaurant.description}
         tableName={tableName}
         categories={categories}
       />

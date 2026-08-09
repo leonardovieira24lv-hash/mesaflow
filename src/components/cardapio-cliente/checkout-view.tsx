@@ -17,6 +17,9 @@ interface CheckoutViewProps {
   slug: string;
   tableToken: string | null;
   restaurantName: string;
+  // Identidade — Sprint "Identidade do Restaurante no Cardápio Público"
+  // (2026-08-09). Sem descrição aqui, por escopo (só o Cardápio mostra).
+  restaurantLogoUrl?: string | null;
   tableName?: string;
 }
 
@@ -58,7 +61,7 @@ export function CheckoutView(props: CheckoutViewProps) {
   );
 }
 
-function CheckoutContent({ slug, tableToken, restaurantName, tableName }: CheckoutViewProps) {
+function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, tableName }: CheckoutViewProps) {
   const router = useRouter();
   const { items, subtotal, clear } = useCart();
   const [notes, setNotes] = useState("");
@@ -157,7 +160,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
   if (items.length === 0) {
     return (
       <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 sm:border-x sm:border-zinc-800 sm:shadow-sm">
-        <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
+        <RestaurantHeader restaurantName={restaurantName} logoUrl={restaurantLogoUrl} tableName={tableName} />
         <TableAssistanceActions slug={slug} tableToken={tableToken} />
         <main className="flex flex-1 items-center justify-center p-6">
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-zinc-700 bg-zinc-900 px-6 py-12 text-center">
@@ -180,7 +183,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800 sm:shadow-sm">
-      <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
+      <RestaurantHeader restaurantName={restaurantName} logoUrl={restaurantLogoUrl} tableName={tableName} />
       <TableAssistanceActions slug={slug} tableToken={tableToken} />
 
       <div className="px-4 pt-4">
