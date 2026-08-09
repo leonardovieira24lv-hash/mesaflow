@@ -1,6 +1,5 @@
 import Image from "next/image";
 import { Minus, Plus, Trash2, UtensilsCrossed } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import type { CartItem } from "@/components/cardapio-cliente/cart-context";
 
@@ -21,66 +20,89 @@ interface CartLineItemProps {
  * Marco 2: ganhou miniatura (quando o item tem `imageUrl`) — o cliente
  * revisa o pedido reconhecendo visualmente o prato, não só pelo nome — e
  * alvos de toque de 40px nos controles de quantidade (eram 32px).
+ *
+ * Sprint "Cardápio Dark/Premium" (2026-08-09): este era o último card
+ * branco do fluxo público — aparecia isolado no meio do Carrinho/Checkout
+ * já escuros (confirmado por captura de tela real), porque dependia de
+ * tokens do design system antigo (`bg-surface`, `border-border`,
+ * `shadow-card`, `bg-muted`, `text-foreground`, `text-primary`) que não
+ * resolvem mais, e do componente `<Button>` (que renderiza sem estilo
+ * visível em produção).
+ *
+ * Reconstrução visual, alinhada ao `<MenuItemCard>` do cardápio para as
+ * duas telas parecerem o mesmo produto:
+ * - superfície `zinc-900` sobre o fundo `zinc-950` da página (elevação por
+ *   diferença de tom, não por sombra forte);
+ * - miniatura maior (64px) com cantos arredondados e fundo próprio, para a
+ *   foto do prato ter presença mesmo em lista;
+ * - hierarquia tipográfica: nome branco semibold, observação em
+ *   `zinc-500` menor, preço da linha em `emerald-400` — mesma cor de preço
+ *   do cardápio, criando continuidade entre as telas;
+ * - controles de quantidade agrupados num pill `zinc-800` (mais claro que o
+ *   card = parece um controle real, tocável), com o número em destaque
+ *   entre `-` e `+`;
+ * - excluir separado do pill de quantidade por um divisor, em `zinc-500`
+ *   que vira vermelho no hover — visualmente secundário e destrutivo, não
+ *   competindo com os controles de quantidade;
+ * - alvos de toque de 40px mantidos (`h-10 w-10`), como no Marco 2.
+ *
+ * Nenhuma prop, handler, cálculo (`lineTotal`) ou comportamento foi
+ * alterado — `onUpdateQuantity`/`onRemove`/`editable` seguem idênticos.
  */
 export function CartLineItem({ item, editable = false, onUpdateQuantity, onRemove }: CartLineItemProps) {
   const lineTotal = item.price * item.quantity;
 
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3 shadow-card">
-      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-muted">
+    <div className="flex items-center gap-3.5 rounded-2xl border border-zinc-800 bg-zinc-900 p-3">
+      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-zinc-800">
         {item.imageUrl ? (
-          <Image src={item.imageUrl} alt="" fill sizes="56px" className="object-cover" />
+          <Image src={item.imageUrl} alt="" fill sizes="64px" className="object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <UtensilsCrossed className="h-5 w-5 text-muted-foreground" aria-hidden />
+            <UtensilsCrossed className="h-5 w-5 text-zinc-500" aria-hidden />
           </div>
         )}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <p className="truncate font-medium text-foreground">{item.name}</p>
-        {item.notes && <p className="truncate text-sm text-muted-foreground">Obs.: {item.notes}</p>}
-        <span className="font-numeric text-sm font-semibold tabular-nums text-primary">
-          {formatCurrency(lineTotal)}
-        </span>
+        <p className="truncate font-semibold text-white">{item.name}</p>
+        {item.notes && <p className="truncate text-xs text-zinc-500">Obs.: {item.notes}</p>}
+        <span className="text-sm font-bold tabular-nums text-emerald-400">{formatCurrency(lineTotal)}</span>
       </div>
 
       {editable ? (
-        <div className="flex shrink-0 items-center gap-1 rounded-full bg-muted p-1">
-          <Button
+        <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-zinc-800 p-1">
+          <button
             type="button"
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 rounded-full active:scale-90"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition hover:bg-zinc-700 hover:text-white active:scale-90"
             onClick={() => onUpdateQuantity?.(item.quantity - 1)}
             aria-label={`Diminuir quantidade de ${item.name}`}
           >
-            <Minus className="h-3.5 w-3.5" />
-          </Button>
-          <span className="w-5 text-center font-numeric text-sm tabular-nums">{item.quantity}</span>
-          <Button
+            <Minus className="h-3.5 w-3.5" strokeWidth={2.5} />
+          </button>
+          <span className="w-5 text-center text-sm font-bold tabular-nums text-white">{item.quantity}</span>
+          <button
             type="button"
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 rounded-full active:scale-90"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition hover:bg-zinc-700 hover:text-white active:scale-90"
             onClick={() => onUpdateQuantity?.(item.quantity + 1)}
             aria-label={`Aumentar quantidade de ${item.name}`}
           >
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
-          <Button
+            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+          </button>
+
+          <span aria-hidden className="mx-0.5 h-5 w-px bg-zinc-700" />
+
+          <button
             type="button"
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 rounded-full text-muted-foreground hover:text-destructive active:scale-90"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 transition hover:bg-red-500/15 hover:text-red-400 active:scale-90"
             onClick={onRemove}
             aria-label={`Remover ${item.name} do carrinho`}
           >
             <Trash2 className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       ) : (
-        <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 font-numeric text-xs font-medium text-muted-foreground">
+        <span className="shrink-0 rounded-full bg-zinc-800 px-3 py-1.5 text-xs font-semibold tabular-nums text-zinc-300">
           Qtd. {item.quantity}
         </span>
       )}

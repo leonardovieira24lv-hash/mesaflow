@@ -186,7 +186,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
       <div className="px-4 pt-4">
         <Link
           href={cartHref}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 active:scale-[0.98]"
+          className="flex min-h-9 w-fit items-center gap-1.5 rounded-xl bg-zinc-800 px-3 py-1.5 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-700 active:scale-[0.97]"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Voltar ao carrinho
