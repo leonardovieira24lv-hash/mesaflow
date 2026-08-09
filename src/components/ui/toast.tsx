@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, type CSSProperties } from "react";
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -92,12 +92,43 @@ const VARIANT_CONFIG: Record<
  *
  * Monta o container global de toasts. Incluir uma única vez, no root layout.
  */
+/**
+ * Correção (2026-08-09, mesmo dia da remoção de `ds2-dark` do container):
+ * `.ds2-dark` (`app/globals.css`) fazia DUAS coisas ao mesmo tempo — pintava
+ * `background-color`/`color` diretamente em quem a carregava (a causa da
+ * faixa preta global) E era a ÚNICA fonte, em toda a árvore, das variáveis
+ * `--ds2-surface`/`--ds2-border`/`--ds2-foreground`/etc. que o toast
+ * individual usa (`bg-ds2-surface`, `border-ds2-border`, `shadow-ds2-md`...).
+ * Remover a classe inteira tirou a faixa, mas também tirou essas variáveis —
+ * sem elas, cada classe `ds2-*` resolvia contra uma variável inexistente, e
+ * o toast ficava sem fundo/borda/sombra/raio nenhum (aparência de HTML cru).
+ *
+ * Esta declaração recria só as variáveis que o toast individual realmente
+ * consome (conferido por grep no arquivo, não suposição) — sem o
+ * `background-color`/`color` que causava o problema original. Valores
+ * idênticos aos de `.ds2-dark` em `globals.css`, só copiados para não
+ * depender da classe.
+ */
+const toasterVars = {
+  "--ds2-surface": "0 0% 10%",
+  "--ds2-border": "0 0% 18%",
+  "--ds2-foreground": "0 0% 98%",
+  "--ds2-foreground-muted": "0 0% 68%",
+  "--ds2-success": "152 60% 45%",
+  "--ds2-warning": "38 92% 55%",
+  "--ds2-danger": "0 72% 56%",
+  "--ds2-info": "210 80% 60%",
+  "--ds2-shadow-md": "0 8px 20px -6px rgb(0 0 0 / 0.55), 0 2px 8px -2px rgb(0 0 0 / 0.4)",
+  "--ds2-radius-md": "0.75rem",
+} as CSSProperties;
+
 export function Toaster() {
   const items = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   return (
     <div
       className="pointer-events-none fixed inset-x-0 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-50 flex flex-col items-center gap-2 p-4 sm:items-end"
+      style={toasterVars}
       role="region"
       aria-label="Notificações"
     >
