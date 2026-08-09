@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { RestaurantHeader } from "@/components/cardapio-cliente/restaurant-header";
-import { OrderStatusBadge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button-link";
 import { ROUTES } from "@/constants/routes";
 import { withMesaQuery } from "@/lib/cliente-url";
 import { formatCurrency } from "@/lib/format";
@@ -32,6 +31,28 @@ interface OrderTrackingViewProps {
 const POLL_INTERVAL_MS = 5_000;
 const TERMINAL_STATUSES: OrderStatus[] = ["delivered", "cancelled"];
 
+/** Rótulo em português de cada status de pedido, para o cliente final. */
+const STATUS_LABELS: Record<OrderStatus, string> = {
+  pending: "Pedido realizado",
+  preparing: "Em preparo",
+  ready: "Pronto",
+  delivered: "Entregue",
+  cancelled: "Cancelado",
+};
+
+/**
+ * Cor de cada status no tema dark do Cardápio Público. Substitui o
+ * `<OrderStatusBadge>` compartilhado (que renderizava sem estilo visível em
+ * produção) — mesmos status, mesmos rótulos, só com aparência própria.
+ */
+const STATUS_STYLES: Record<OrderStatus, string> = {
+  pending: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
+  preparing: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
+  ready: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
+  delivered: "bg-zinc-700/60 text-zinc-300 ring-zinc-600",
+  cancelled: "bg-red-500/15 text-red-300 ring-red-500/30",
+};
+
 /**
  * Tela "Sua comanda" — Sprint "Evolução da Área do Cliente (Comanda)"
  * (2026-07-31). Antes representava UM pedido; passa a representar a
@@ -53,6 +74,29 @@ const TERMINAL_STATUSES: OrderStatus[] = ["delivered", "cancelled"];
  * status terminal — uma comanda pode ganhar pedidos novos a qualquer
  * momento ("Continuar comprando"), então "só este pedido terminou" não é
  * mais motivo suficiente pra parar de atualizar a tela toda.
+ *
+ * Sprint "Cardápio Dark/Premium" (2026-08-09): esta era a última tela do
+ * fluxo público inteiramente CLARA (confirmado por captura de tela real) —
+ * fundo branco, card branco e "Continuar comprando" como texto solto, no
+ * meio de um produto já todo escuro. Causa: dependia dos tokens do design
+ * system antigo (`bg-surface`, `border-border`, `text-foreground`,
+ * `text-muted-foreground`, `font-numeric`, `animate-fade-in`) e dos
+ * componentes compartilhados `<ButtonLink>`/`<OrderStatusBadge>`, que não
+ * entregam aparência nenhuma em produção.
+ *
+ * Reconstrução visual, na mesma linguagem das outras telas:
+ * - fundo `zinc-950` contínuo (`min-h-dvh`, era `min-h-screen`);
+ * - card de "Total parcial" como peça premium: superfície `zinc-900`,
+ *   rótulo em maiúsculas `zinc-500`, valor em 3xl branco (é a informação
+ *   mais importante da tela), divisor e metadados abaixo;
+ * - "Continuar comprando" virou PRIMARY BUTTON verde de verdade — é a
+ *   única ação da tela, então merece o peso máximo;
+ * - cada pedido virou card `zinc-900` com badge de status colorido por
+ *   estado (verde/âmbar/azul/cinza/vermelho), em vez do badge sem estilo;
+ * - itens do pedido em `zinc-400`, com o "N×" em branco para leitura rápida.
+ *
+ * Nenhuma lógica foi tocada: polling, `isTerminal`, `totalAmount`,
+ * `itemCount`, `orderNumberById` e `formatTime` são idênticos.
  */
 export function OrderTrackingView({ slug, orderId, restaurantName, initialOrders, tableToken }: OrderTrackingViewProps) {
   const [orders, setOrders] = useState<PublicSessionOrder[]>(initialOrders);
@@ -97,25 +141,27 @@ export function OrderTrackingView({ slug, orderId, restaurantName, initialOrders
   }, [orders]);
 
   return (
-    <div className="flex min-h-screen flex-col animate-fade-in">
+    <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800">
       <RestaurantHeader restaurantName={restaurantName} />
 
       <main className="flex flex-1 flex-col gap-6 px-4 py-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="font-display text-xl font-semibold text-foreground">Sua comanda</h1>
-        </div>
+        <h1 className="text-xl font-bold tracking-tight text-white">Sua comanda</h1>
 
         {/* Resumo da comanda (Fase 4) — total parcial, quantidade de
             pedidos e de itens, tudo derivado dos mesmos `orders` que
             alimentam a timeline abaixo, sem consulta própria. */}
-        <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4">
-          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total parcial</span>
-          <span className="font-numeric text-2xl font-bold text-foreground">{formatCurrency(totalAmount)}</span>
-          <div className="mt-1 flex items-center gap-2 border-t border-border pt-2 text-xs text-muted-foreground">
+        <div className="flex flex-col gap-1.5 rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Total parcial</span>
+          <span className="text-3xl font-extrabold tabular-nums tracking-tight text-white">
+            {formatCurrency(totalAmount)}
+          </span>
+          <div className="mt-2.5 flex items-center gap-2 border-t border-zinc-800 pt-2.5 text-xs text-zinc-400">
             <span>
               {orders.length} {orders.length === 1 ? "pedido" : "pedidos"}
             </span>
-            <span aria-hidden>·</span>
+            <span aria-hidden className="text-zinc-600">
+              ·
+            </span>
             <span>
               {itemCount} {itemCount === 1 ? "item" : "itens"}
             </span>
@@ -123,15 +169,18 @@ export function OrderTrackingView({ slug, orderId, restaurantName, initialOrders
         </div>
 
         {tableToken && (
-          <ButtonLink href={withMesaQuery(ROUTES.clienteMenu(slug), tableToken)} className="w-full justify-center">
-            <Sparkles className="h-4 w-4" />
+          <Link
+            href={withMesaQuery(ROUTES.clienteMenu(slug), tableToken)}
+            className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600 active:scale-[0.98]"
+          >
+            <Sparkles className="h-4.5 w-4.5" strokeWidth={2.5} />
             Continuar comprando
-          </ButtonLink>
+          </Link>
         )}
 
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-foreground">Pedidos desta comanda</h2>
-          <ul className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2.5">
+          <h2 className="text-sm font-semibold text-zinc-400">Pedidos desta comanda</h2>
+          <ul className="flex flex-col gap-2.5">
             {orders.map((order) => {
               // Fase 4 ("destaque visual quando acabou de ser enviado"):
               // critério é `status === "pending"` — literalmente "ainda não
@@ -145,24 +194,31 @@ export function OrderTrackingView({ slug, orderId, restaurantName, initialOrders
                 <li
                   key={order.id}
                   className={cn(
-                    "flex flex-col gap-2 rounded-lg border p-3 text-sm transition-colors",
-                    isUnprocessed ? "border-primary/50 bg-primary/5" : "border-border bg-surface",
+                    "flex flex-col gap-2.5 rounded-2xl border p-4 text-sm transition-colors",
+                    isUnprocessed ? "border-emerald-500/30 bg-emerald-500/[0.07]" : "border-zinc-800 bg-zinc-900",
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5 font-medium text-foreground">
+                    <span className="flex items-baseline gap-1.5 font-semibold text-white">
                       Pedido #{orderNumberById.get(order.id)}
-                      <span className="font-numeric text-xs font-normal text-muted-foreground">
+                      <span className="text-xs font-normal tabular-nums text-zinc-500">
                         · {formatTime(order.createdAt)}
                       </span>
                     </span>
-                    <OrderStatusBadge status={order.status} />
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset",
+                        STATUS_STYLES[order.status],
+                      )}
+                    >
+                      {STATUS_LABELS[order.status]}
+                    </span>
                   </div>
 
-                  <ul className="flex flex-col gap-0.5">
+                  <ul className="flex flex-col gap-1 border-t border-zinc-800/80 pt-2.5">
                     {order.items.map((item, index) => (
-                      <li key={`${order.id}-${item.name}-${index}`} className="text-xs text-muted-foreground">
-                        {item.quantity}× {item.name}
+                      <li key={`${order.id}-${item.name}-${index}`} className="text-xs text-zinc-400">
+                        <span className="font-semibold text-zinc-200">{item.quantity}×</span> {item.name}
                       </li>
                     ))}
                   </ul>
