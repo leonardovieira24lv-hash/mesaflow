@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins, Inter, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/toast";
 import "@/app/globals.css";
@@ -45,6 +45,32 @@ export const metadata: Metadata = {
     template: "%s · MesaFlow",
   },
   description: "Pedidos via QR Code para restaurantes — cardápio digital e painel em tempo real.",
+};
+
+/**
+ * Sprint "Cardápio Dark/Premium" (2026-08-09): `viewportFit: "cover"` existe
+ * por um motivo específico e único — eliminar a faixa preta que o Chrome no
+ * Android desenhava no rodapé do Cardápio Público, por cima da barra do
+ * carrinho e do botão "Finalizar pedido" (confirmado por captura de tela
+ * real).
+ *
+ * Sem `viewport-fit=cover`, o navegador RESERVA a faixa da barra de gestos e
+ * a pinta com a cor padrão dele (preta), em vez de deixar a página desenhar
+ * ali. Como efeito colateral, `env(safe-area-inset-bottom)` — já usado nas
+ * barras fixas do Cardápio (`cart-summary-bar.tsx`,
+ * `order-summary-bar.tsx`) — resolvia para zero, tornando aquele padding
+ * inútil. Com `cover`, o fundo da página se estende por baixo da barra de
+ * gestos (fim da faixa preta) e o `env()` passa a devolver a altura real,
+ * fazendo os botões respeitarem a área segura de verdade.
+ *
+ * Declaração puramente estática: não há lógica, dado, hook ou chamada de API
+ * envolvida. As telas administrativas não usam barra fixa no rodapé, então
+ * não são afetadas visualmente.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
