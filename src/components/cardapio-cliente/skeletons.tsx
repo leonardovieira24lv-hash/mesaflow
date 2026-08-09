@@ -30,10 +30,21 @@ import { Skeleton } from "@/components/ui/skeleton";
  * `MenuSkeleton` ganhou a classe `menu-dark` (mesma de
  * `cardapio-cliente-view.tsx`) — evita um flash claro→escuro enquanto os
  * dados carregam. `CartSkeleton`/`CheckoutSkeleton`/`OrderTrackingSkeleton`
- * continuam sem a classe, porque as telas que eles representam continuam
- * no tema claro.
+ * continuavam sem a classe, porque as telas que eles representam continuavam
+ * no tema claro naquele momento.
  *
- * Sprint "Redesign Completo do Cardápio Público" (2026-07-29, seguinte): os
+ * Sprint "Cardápio Dark/Premium" (2026-08-09, correção): as três telas
+ * (`carrinho-view.tsx`, `checkout-view.tsx`, `order-tracking-view.tsx`)
+ * passaram para o tema escuro numa sprint anterior, mas os skeletons
+ * correspondentes ficaram esquecidos no tema claro — resultado: um flash
+ * branco visível bem no meio de qualquer transição para essas três telas,
+ * mesmo com o resto do Cardápio já todo escuro (confirmado por captura de
+ * tela real). `menu-dark` adicionado às três, mesmo mecanismo que já
+ * funcionava só em `MenuSkeleton` — nenhuma classe nova, nenhum tema novo,
+ * só extensão do que já existia. `min-h-screen` → `min-h-dvh` nos quatro,
+ * mesma correção de viewport já aplicada nas telas reais.
+ *
+ * Sprint "Redesign Completo do Cardápio Público" (2026-07-29): os
  * placeholders de produto viraram linhas horizontais (foto quadrada +
  * texto ao lado), espelhando o novo `MenuItemCard` em vez do grid antigo.
  */
@@ -52,7 +63,7 @@ function RestaurantHeaderSkeleton({ withSearch = false }: { withSearch?: boolean
 /** Skeleton do Cardápio (`/{slug}/menu`) — espelha `RestaurantHeader` + `CategoryNav` + `MenuItemCard`. */
 export function MenuSkeleton() {
   return (
-    <div className="menu-dark mx-auto flex min-h-screen max-w-xl flex-col bg-background pb-24 sm:border-x sm:border-border sm:shadow-card">
+    <div className="menu-dark mx-auto flex min-h-dvh max-w-xl flex-col bg-background pb-24 sm:border-x sm:border-border sm:shadow-card">
       <RestaurantHeaderSkeleton withSearch />
 
       <div className="flex gap-2 border-b border-border px-4 py-3">
@@ -86,7 +97,7 @@ export function MenuSkeleton() {
 /** Skeleton do Carrinho (`/{slug}/carrinho`) — espelha `carrinho-view.tsx`. */
 export function CartSkeleton() {
   return (
-    <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-8 sm:border-x sm:border-border sm:shadow-card">
+    <div className="menu-dark mx-auto flex min-h-dvh max-w-xl flex-col bg-background pb-8 sm:border-x sm:border-border sm:shadow-card">
       <RestaurantHeaderSkeleton />
 
       <div className="flex items-center justify-between px-4 pt-4">
@@ -112,7 +123,7 @@ export function CartSkeleton() {
 /** Skeleton do Checkout (`/{slug}/checkout`) — espelha `checkout-view.tsx`. */
 export function CheckoutSkeleton() {
   return (
-    <div className="mx-auto flex min-h-screen max-w-xl flex-col pb-8 sm:border-x sm:border-border sm:shadow-card">
+    <div className="menu-dark mx-auto flex min-h-dvh max-w-xl flex-col bg-background pb-8 sm:border-x sm:border-border sm:shadow-card">
       <RestaurantHeaderSkeleton />
 
       <div className="px-4 pt-4">
@@ -139,7 +150,7 @@ export function CheckoutSkeleton() {
 /** Skeleton do Acompanhamento do Pedido (`/{slug}/orders/{orderId}`) — espelha `order-tracking-view.tsx`. */
 export function OrderTrackingSkeleton() {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="menu-dark min-h-dvh bg-background flex flex-col">
       <RestaurantHeaderSkeleton />
 
       <main className="flex flex-1 flex-col gap-6 px-4 py-6">

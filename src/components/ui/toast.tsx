@@ -105,13 +105,19 @@ const VARIANT_CONFIG: Record<
  *
  * Esta declaração recria só as variáveis que o toast individual realmente
  * consome (conferido por grep no arquivo, não suposição) — sem o
- * `background-color`/`color` que causava o problema original. Valores
- * idênticos aos de `.ds2-dark` em `globals.css`, só copiados para não
- * depender da classe.
+ * `background-color`/`color` que causava o problema original.
+ *
+ * `--ds2-surface`/`--ds2-border` (2026-08-09, ajuste seguinte): propositalmente
+ * *mais claros* que o valor original de `.ds2-dark` (`0 0% 10%`/`0 0% 18%`) —
+ * o Cardápio Público em tema escuro usa fundo `zinc-950` (bem próximo do
+ * preto puro), e o valor original ficava quase indistinguível dele. `16%`/
+ * `26%` dão contraste discreto o suficiente pra o toast se destacar sem
+ * "brilhar" fora de contexto. As demais variáveis mantêm os valores
+ * originais de `.ds2-dark`.
  */
 const toasterVars = {
-  "--ds2-surface": "0 0% 10%",
-  "--ds2-border": "0 0% 18%",
+  "--ds2-surface": "0 0% 16%",
+  "--ds2-border": "0 0% 26%",
   "--ds2-foreground": "0 0% 98%",
   "--ds2-foreground-muted": "0 0% 68%",
   "--ds2-success": "152 60% 45%",
