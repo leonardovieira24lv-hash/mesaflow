@@ -127,6 +127,15 @@ export function RestaurantLogoUpload({ restaurantId, value, onChange, disabled }
       </div>
 
       {error && <Alert variant="destructive">{error}</Alert>}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={handleFileChange}
+        className="sr-only"
+        aria-label="Selecionar logo do restaurante"
+      />
     </div>
   );
 }
