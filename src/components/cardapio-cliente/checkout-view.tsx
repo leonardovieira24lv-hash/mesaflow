@@ -40,6 +40,15 @@ type SubmitStatus = "idle" | "submitting" | "success" | "error";
  * produção, confirmado por captura de tela real) — agora são HTML nativo
  * com classes Tailwind diretas. Nenhuma lógica de submissão, idempotência
  * ou navegação foi tocada.
+ *
+ * Sprint "Cardápio Dark/Premium" (2026-08-09): fundo `zinc-950` em todas
+ * as três variantes desta tela (sucesso, vazio, principal); avisos de
+ * âmbar/vermelho ajustados para tons escuros translúcidos
+ * (`amber-950/40`, `red-950/40`) mantendo o texto legível.
+ *
+ * RISCO AINDA NÃO RESOLVIDO: `<CartLineItem>` e `<TableAssistanceActions>`
+ * são importados aqui mas eu nunca recebi o código-fonte deles — não
+ * posso garantir que já estão no dark theme.
  */
 export function CheckoutView(props: CheckoutViewProps) {
   return (
@@ -133,12 +142,12 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
 
   if (status === "success") {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-5 bg-zinc-50 p-6 text-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
-          <CheckCircle2 className="h-10 w-10 text-emerald-600" aria-hidden />
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-5 bg-zinc-950 p-6 text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15">
+          <CheckCircle2 className="h-10 w-10 text-emerald-400" aria-hidden />
         </div>
         <div className="flex flex-col gap-1.5">
-          <p className="text-xl font-bold text-zinc-900">Pedido realizado!</p>
+          <p className="text-xl font-bold text-white">Pedido realizado!</p>
           <p className="text-sm text-zinc-500">Levando você para o acompanhamento...</p>
         </div>
       </div>
@@ -147,14 +156,14 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
 
   if (items.length === 0) {
     return (
-      <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-50 sm:border-x sm:border-zinc-200 sm:shadow-sm">
+      <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 sm:border-x sm:border-zinc-800 sm:shadow-sm">
         <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
         <TableAssistanceActions slug={slug} tableToken={tableToken} />
         <main className="flex flex-1 items-center justify-center p-6">
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-zinc-300 bg-white px-6 py-12 text-center">
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-zinc-700 bg-zinc-900 px-6 py-12 text-center">
             <ShoppingBag className="h-10 w-10 text-zinc-300" aria-hidden />
             <div className="flex flex-col gap-1">
-              <p className="font-semibold text-zinc-900">Seu carrinho está vazio</p>
+              <p className="font-semibold text-white">Seu carrinho está vazio</p>
               <p className="text-sm text-zinc-500">Volte ao cardápio para adicionar produtos antes de finalizar.</p>
             </div>
             <Link
@@ -170,14 +179,14 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-50 pb-8 sm:border-x sm:border-zinc-200 sm:shadow-sm">
+    <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800 sm:shadow-sm">
       <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
       <TableAssistanceActions slug={slug} tableToken={tableToken} />
 
       <div className="px-4 pt-4">
         <Link
           href={cartHref}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 active:scale-[0.98]"
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 active:scale-[0.98]"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Voltar ao carrinho
@@ -185,10 +194,10 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
       </div>
 
       <main className="flex flex-1 flex-col gap-5 px-4 py-4">
-        <h1 className="text-xl font-bold tracking-tight text-zinc-900">Confirmar pedido</h1>
+        <h1 className="text-xl font-bold tracking-tight text-white">Confirmar pedido</h1>
 
         {!tableToken && (
-          <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="flex items-start gap-2.5 rounded-xl border border-amber-800/50 bg-amber-950/40 px-4 py-3 text-sm text-amber-300">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <p>Não identificamos sua mesa. Escaneie novamente o QR Code para finalizar o pedido.</p>
           </div>
@@ -201,7 +210,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="checkout-notes" className="text-sm font-medium text-zinc-900">
+          <label htmlFor="checkout-notes" className="text-sm font-medium text-white">
             Observações do pedido
           </label>
           <textarea
@@ -211,17 +220,17 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
             placeholder="Ex.: trazer talheres extras, entregar tudo junto..."
             rows={3}
             disabled={status === "submitting"}
-            className="w-full resize-none rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-60"
+            className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-60"
           />
           <p className="text-xs text-zinc-500">Opcional — algo geral para a cozinha ou o atendente.</p>
         </div>
 
         {staleItems && staleItems.length > 0 && (
-          <div className="flex flex-col gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="flex flex-col gap-2 rounded-xl border border-red-800/50 bg-red-950/40 px-4 py-3 text-sm text-red-300">
             <p>Estes itens mudaram desde que você montou o carrinho: {staleItems.join(", ")}.</p>
             <Link
               href={cartHref}
-              className="self-start rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+              className="self-start rounded-lg border border-red-700/60 bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-500/15"
             >
               Voltar ao carrinho
             </Link>
@@ -229,7 +238,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
         )}
 
         {errorMessage && !staleItems && (
-          <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="flex items-start gap-2.5 rounded-xl border border-red-800/50 bg-red-950/40 px-4 py-3 text-sm text-red-300">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <p>{errorMessage}</p>
           </div>

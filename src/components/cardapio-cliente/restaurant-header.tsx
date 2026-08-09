@@ -26,19 +26,19 @@ interface RestaurantHeaderProps {
  * anteriores. Ficam como candidatos a uma sprint futura que adicione esses
  * campos de verdade ao contrato/banco.
  *
- * Sprint de reconstrução visual (2026-08-08): reescrito para usar só
- * paleta padrão do Tailwind (zinc/emerald/white), sem nenhum token do
- * design system antigo nem `ds2-*` — mesmo objetivo de sempre (hierarquia
- * clara, mobile-first), estrutura/lógica de busca 100% preservadas.
+ * Sprint "Cardápio Dark/Premium" (2026-08-09): fundo `zinc-950`, campo de
+ * busca elevado em `zinc-900` (hierarquia visual: superfície mais clara que
+ * o fundo), sem nenhum token do design system antigo nem `ds2-*`.
+ * Estrutura/lógica de busca 100% preservadas.
  */
 export function RestaurantHeader({ restaurantName, tableName, searchTerm, onSearchChange }: RestaurantHeaderProps) {
   const hasSearch = onSearchChange !== undefined;
   return (
-    <header className="flex flex-col gap-3 border-b border-zinc-200 bg-white/95 px-4 pb-3.5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+    <header className="flex flex-col gap-3 border-b border-zinc-800 bg-zinc-950/95 px-4 pb-3.5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/80">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="truncate text-xl font-bold tracking-tight text-zinc-900">{restaurantName}</h1>
+        <h1 className="truncate text-xl font-bold tracking-tight text-white">{restaurantName}</h1>
         {tableName && (
-          <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+          <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
             Mesa {tableName}
           </span>
         )}
@@ -47,7 +47,7 @@ export function RestaurantHeader({ restaurantName, tableName, searchTerm, onSear
       {hasSearch && (
         <div className="relative">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
             aria-hidden
           />
           <input
@@ -57,14 +57,14 @@ export function RestaurantHeader({ restaurantName, tableName, searchTerm, onSear
             onChange={(e) => onSearchChange?.(e.target.value)}
             placeholder="Buscar no cardápio..."
             aria-label="Buscar produtos no cardápio"
-            className="w-full rounded-full border border-zinc-200 bg-zinc-50 py-2.5 pl-9 pr-9 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            className="w-full rounded-full border border-zinc-700 bg-zinc-900 py-2.5 pl-9 pr-9 text-sm text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => onSearchChange?.("")}
               aria-label="Limpar busca"
-              className="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-200 hover:text-zinc-700"
+              className="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
             >
               <X className="h-3.5 w-3.5" />
             </button>

@@ -31,12 +31,20 @@ interface CarrinhoViewProps {
  * estilo visível em produção, confirmado por captura de tela real) —
  * agora são HTML nativo com classes Tailwind diretas.
  *
- * `<ConfirmDialog>` (confirmação de "Limpar carrinho") continua em uso:
- * é um modal inteiro, não um simples botão, e eu nunca recebi o código
- * fonte dele para reescrever seu interior com segurança — se os botões
- * "Cancelar"/"Limpar" *dentro* desse modal também estiverem sem estilo,
- * isso ainda precisa ser corrigido separadamente, com o arquivo real de
- * `components/ui/confirm-dialog.tsx` em mãos.
+ * Sprint "Cardápio Dark/Premium" (2026-08-09): fundo `zinc-950`, estado
+ * vazio em card `zinc-900`, "Limpar carrinho" ganhou borda própria
+ * (`border-red-800/50`) para não parecer texto solto.
+ *
+ * RISCOS AINDA NÃO RESOLVIDOS NESTE ARQUIVO — componentes importados aqui
+ * cujo código-fonte eu nunca recebi, então não posso garantir (nem
+ * corrigir) a aparência deles:
+ * - `<ConfirmDialog>` (confirmação de "Limpar carrinho") — modal inteiro.
+ * - `<CartLineItem>` (cada linha de produto do carrinho: imagem, nome,
+ *   preço, +/-, remover) — é bem provável que sofra do mesmo problema dos
+ *   componentes já corrigidos, mas eu não tenho o arquivo para confirmar
+ *   ou consertar.
+ * - `<TableAssistanceActions>` ("Chamar garçom"/"Pedir a conta").
+ * Os três precisam do arquivo real para serem corrigidos com segurança.
  */
 export function CarrinhoView({ slug, tableToken, restaurantName, tableName }: CarrinhoViewProps) {
   return (
@@ -54,14 +62,14 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
   const menuHref = withMesaQuery(ROUTES.clienteMenu(slug), tableToken);
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-50 pb-8 sm:border-x sm:border-zinc-200 sm:shadow-sm">
+    <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800 sm:shadow-sm">
       <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
       <TableAssistanceActions slug={slug} tableToken={tableToken} />
 
       <div className="flex items-center justify-between px-4 pt-4">
         <Link
           href={menuHref}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 active:scale-[0.98]"
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 active:scale-[0.98]"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Voltar ao cardápio
@@ -71,7 +79,7 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
           <button
             type="button"
             onClick={() => setConfirmingClear(true)}
-            className="rounded-lg px-2 py-1.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 active:scale-[0.98]"
+            className="rounded-lg border border-red-800/50 px-2.5 py-1.5 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 active:scale-[0.98]"
           >
             Limpar carrinho
           </button>
@@ -79,13 +87,13 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
       </div>
 
       <main className="flex flex-1 flex-col gap-4 px-4 py-4 pb-40">
-        <h1 className="text-xl font-bold tracking-tight text-zinc-900">Seu carrinho</h1>
+        <h1 className="text-xl font-bold tracking-tight text-white">Seu carrinho</h1>
 
         {items.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-300 bg-white px-6 py-12 text-center">
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-700 bg-zinc-900 px-6 py-12 text-center">
             <ShoppingBag className="h-10 w-10 text-zinc-300" aria-hidden />
             <div className="flex flex-col gap-1">
-              <p className="font-semibold text-zinc-900">Seu carrinho está vazio</p>
+              <p className="font-semibold text-white">Seu carrinho está vazio</p>
               <p className="text-sm text-zinc-500">Volte ao cardápio para adicionar produtos.</p>
             </div>
             <Link

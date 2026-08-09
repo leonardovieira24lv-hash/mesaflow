@@ -29,12 +29,10 @@ interface OrderSummaryBarProps {
  * de Carrinho ("Finalizar pedido", `mode="fixed"`) e na de Checkout
  * ("Confirmar pedido", `mode="static"`).
  *
- * Sprint de autossuficiência visual (2026-08-08): trocado `<Button>` (que
- * estava renderizando sem nenhum estilo visível em produção, confirmado
- * por captura de tela real) por `<button>` nativo com classes Tailwind
- * diretas — fundo `emerald-500`, contraste forte, estado de loading via
- * texto simples (sem depender de spinner de nenhum componente
- * compartilhado). Nenhuma prop/lógica foi tocada.
+ * Sprint "Cardápio Dark/Premium" (2026-08-09): card `zinc-900`/borda
+ * `zinc-800` sobre fundo `zinc-950`, "Total" em `zinc-500`, valor em
+ * branco, botão continua `emerald-500` sólido. Nenhuma prop/lógica
+ * tocada.
  */
 export function OrderSummaryBar({
   total,
@@ -55,10 +53,10 @@ export function OrderSummaryBar({
         className,
       )}
     >
-      <div className="flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg">
+      <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-zinc-500">Total</span>
-          <span className="text-lg font-bold tabular-nums text-zinc-900">{formatCurrency(total)}</span>
+          <span className="text-lg font-bold tabular-nums text-white">{formatCurrency(total)}</span>
         </div>
 
         {actionSlot ?? (

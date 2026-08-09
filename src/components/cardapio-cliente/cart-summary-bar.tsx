@@ -14,11 +14,8 @@ interface CartSummaryBarProps {
 /**
  * Resumo fixo do carrinho, no rodapé do cardápio.
  *
- * Sprint de autossuficiência visual (2026-08-08): trocado `<Button>` (que
- * estava renderizando sem nenhum estilo visível em produção, confirmado
- * por captura de tela real) por `<button>` nativo com classes Tailwind
- * diretas. Mesmo comportamento de navegação, `pb-[env(safe-area-inset-
- * bottom)]` mantido.
+ * Sprint "Cardápio Dark/Premium" (2026-08-09): sem mudança necessária aqui
+ * — já era `bg-emerald-500` sólido, sem nenhum tom claro/branco residual.
  */
 export function CartSummaryBar({ slug }: CartSummaryBarProps) {
   const router = useRouter();

@@ -36,6 +36,10 @@ export function categorySectionId(categoryId: string): string {
  * inativa em `zinc-100`), sem nenhum token do design system antigo. Nenhuma
  * linha de lógica (estado, `IntersectionObserver`, clique/scroll, refs) foi
  * tocada — só `className`.
+ *
+ * Sprint "Cardápio Dark/Premium" (2026-08-09): fundo `zinc-950`, pill
+ * inativa `zinc-900`/borda `zinc-700` (visível contra o fundo), pill ativa
+ * continua `emerald-500` sólido. Lógica intocada.
  */
 export function CategoryNav({ categories }: CategoryNavProps) {
   const [activeId, setActiveId] = useState(categories[0]?.id);
@@ -77,7 +81,7 @@ export function CategoryNav({ categories }: CategoryNavProps) {
   return (
     <nav
       aria-label="Categorias do cardápio"
-      className="sticky top-0 z-20 flex gap-2 overflow-x-auto border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/85 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="sticky top-0 z-20 flex gap-2 overflow-x-auto border-b border-zinc-800 bg-zinc-950/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/85 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {categories.map((category) => (
         <button
@@ -89,7 +93,7 @@ export function CategoryNav({ categories }: CategoryNavProps) {
             "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-[background-color,color,transform,box-shadow] duration-150 active:scale-[0.96]",
             activeId === category.id
               ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30"
-              : "border border-zinc-200 bg-zinc-100 text-zinc-600 hover:border-zinc-300 hover:text-zinc-900",
+              : "border border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-zinc-600 hover:text-white",
           )}
         >
           {category.name}
