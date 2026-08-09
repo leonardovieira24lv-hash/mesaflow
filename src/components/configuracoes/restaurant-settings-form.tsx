@@ -332,7 +332,7 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
             <CardDescription>Logo, nome e descrição do restaurante.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <FormField label="Logo" error={errors.logo_url} hint="Imagem quadrada — JPG, PNG ou WEBP, até 5 MB.">
+            <FormField label="Logo" error={errors.logo_url}>
               <RestaurantLogoUpload
                 restaurantId={restaurant.id}
                 value={fields.logo_url ?? ""}
