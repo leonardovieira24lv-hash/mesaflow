@@ -97,7 +97,7 @@ export function Toaster() {
 
   return (
     <div
-      className="ds2-dark pointer-events-none fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 p-4 sm:items-end"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 p-4 sm:items-end"
       role="region"
       aria-label="Notificações"
     >
