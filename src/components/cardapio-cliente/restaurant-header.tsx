@@ -52,7 +52,7 @@ interface RestaurantHeaderProps {
  *
  * Sprint "Identidade Visual — Logo com Proporção Livre" (2026-08-09,
  * seguinte): quando existe logo, ela vira o elemento principal — altura
- * fixa (100px), largura livre (`w-auto`, respeitando a proporção real do
+ * fixa (88px), largura livre (`w-auto`, respeitando a proporção real do
  * arquivo), `object-contain` (nunca corta nem deforma), **centralizada**
  * sozinha na primeira linha do cabeçalho. O nome em texto SOME (a logo já
  * comunica a identidade sozinha). Sem logo, cai no layout anterior (ícone
@@ -88,7 +88,7 @@ export function RestaurantHeader({
       {logoUrl ? (
         <div className="flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element -- proporção livre, ver docstring acima. */}
-          <img src={logoUrl} alt={restaurantName} className="h-[100px] w-auto max-w-full object-contain" />
+          <img src={logoUrl} alt={restaurantName} className="h-[88px] w-auto max-w-full object-contain" />
         </div>
       ) : (
         <div className="flex items-center justify-between gap-3">
