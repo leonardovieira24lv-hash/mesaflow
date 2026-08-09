@@ -66,11 +66,20 @@ export const metadata: Metadata = {
  * Declaração puramente estática: não há lógica, dado, hook ou chamada de API
  * envolvida. As telas administrativas não usam barra fixa no rodapé, então
  * não são afetadas visualmente.
+ *
+ * `themeColor` (2026-08-09, mesmo dia — correção): `viewportFit: "cover"`
+ * sozinho não pinta nada — só permite que o conteúdo da página chegue até
+ * embaixo da área de gestos. Quem definia a cor daquela faixa continuava
+ * sendo o padrão do próprio Chrome (preto), por não haver `theme-color`
+ * declarado. `#09090b` = `zinc-950`, a mesma cor de fundo do Cardápio
+ * Público — com isso a faixa deixa de aparecer como um bloco preto
+ * "estranho" e passa a se confundir com o fundo da própria página.
  */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#09090b",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
