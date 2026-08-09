@@ -25,9 +25,12 @@ interface CarrinhoViewProps {
 /**
  * Página completa do carrinho (Fase 5, itens 1-7): listagem dos itens,
  * alteração de quantidade, remoção, "limpar carrinho" e resumo financeiro,
- * terminando no botão "Finalizar pedido" que leva ao Checkout. O estado em
- * si já existia desde a Fase 3 (`<CartProvider>`) — esta tela é a primeira a
- * de fato lê-lo e editá-lo por completo.
+ * terminando no botão "Finalizar pedido" que leva ao Checkout.
+ *
+ * Sprint de reconstrução visual (2026-08-08): reescrito para usar só
+ * paleta padrão do Tailwind (fundo `zinc-50`, "Limpar carrinho" em
+ * `red-600`), sem nenhum token do design system antigo. Nenhuma lógica de
+ * carrinho foi tocada.
  */
 export function CarrinhoView({ slug, tableToken, restaurantName, tableName }: CarrinhoViewProps) {
   return (
@@ -45,7 +48,7 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
   const menuHref = withMesaQuery(ROUTES.clienteMenu(slug), tableToken);
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-xl flex-col pb-8 sm:border-x sm:border-ds2-border sm:shadow-sm">
+    <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-50 pb-8 sm:border-x sm:border-zinc-200 sm:shadow-sm">
       <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
       <TableAssistanceActions slug={slug} tableToken={tableToken} />
 
@@ -60,7 +63,7 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
             type="button"
             variant="ghost"
             size="sm"
-            className="text-ds2-danger hover:text-ds2-danger"
+            className="text-red-600 hover:bg-red-50 hover:text-red-700"
             onClick={() => setConfirmingClear(true)}
           >
             Limpar carrinho
@@ -69,7 +72,7 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
       </div>
 
       <main className="flex flex-1 flex-col gap-4 px-4 py-4 pb-40">
-        <h1 className="text-xl font-semibold text-ds2-foreground">Seu carrinho</h1>
+        <h1 className="text-xl font-bold tracking-tight text-zinc-900">Seu carrinho</h1>
 
         {items.length === 0 ? (
           <EmptyState
@@ -100,7 +103,7 @@ function CarrinhoContent({ slug, tableToken, restaurantName, tableName }: Carrin
           onAction={() => router.push(withMesaQuery(ROUTES.clienteCheckout(slug), tableToken))}
           actionSlot={
             tableToken ? undefined : (
-              <p className="text-center text-xs text-ds2-foreground-muted">
+              <p className="text-center text-xs text-zinc-500">
                 Escaneie o QR Code da mesa para finalizar o pedido.
               </p>
             )

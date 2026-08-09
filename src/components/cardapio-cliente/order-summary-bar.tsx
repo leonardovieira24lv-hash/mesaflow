@@ -24,8 +24,6 @@ interface OrderSummaryBarProps {
    * virtual redimensiona a viewport visual sem necessariamente
    * redimensionar a de layout, deixando um elemento `fixed` fora da área
    * realmente visível enquanto o cliente digita na Observação do pedido.
-   * Trocar `vh`→`dvh` (sprint anterior) não resolve esse caso específico —
-   * é um mecanismo diferente do de barra de endereço aparecendo/sumindo.
    * Tirar o botão de confirmação de `fixed` no Checkout elimina o
    * problema pela raiz, sem depender de nenhum cálculo de viewport.
    */
@@ -33,19 +31,13 @@ interface OrderSummaryBarProps {
 }
 
 /**
- * Barra fixa de rodapé com o total do pedido e a ação principal — usada na
- * tela de Carrinho ("Finalizar pedido") e na de Checkout ("Confirmar
- * pedido").
+ * Barra de rodapé com o total do pedido e a ação principal — usada na tela
+ * de Carrinho ("Finalizar pedido", `mode="fixed"`) e na de Checkout
+ * ("Confirmar pedido", `mode="static"`).
  *
- * Marco 2: extraído a partir de duas implementações quase idênticas
- * (`CarrinhoView` e `CheckoutView` tinham cada uma sua própria barra fixa,
- * com o estilo antigo, pré-Marco 1). Essas duas telas são o mesmo tipo de
- * momento — revisar um total e confirmar uma decisão — então passam a
- * compartilhar este componente. Não inclui o `CartSummaryBar` do cardápio
- * (Marco 1): aquele é deliberadamente um botão único ("3 itens · R$ 42,00")
- * porque ali o cliente está navegando, não decidindo — juntar os três num
- * só componente forçaria um momento de navegação a parecer um momento de
- * confirmação.
+ * Sprint de reconstrução visual (2026-08-08): reescrito para usar só
+ * paleta padrão do Tailwind (card branco, borda `zinc-200`), sem nenhum
+ * token do design system antigo. Nenhuma lógica/prop foi tocada.
  */
 export function OrderSummaryBar({
   total,
@@ -61,15 +53,15 @@ export function OrderSummaryBar({
     <div
       className={cn(
         mode === "fixed"
-          ? "fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-xl flex-col gap-3 p-4"
+          ? "fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-xl flex-col gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
           : "flex w-full flex-col gap-3 p-4",
         className,
       )}
     >
-      <div className="flex flex-col gap-2 rounded-2xl border border-ds2-border bg-ds2-surface p-4 shadow-md">
+      <div className="flex flex-col gap-2 rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-ds2-foreground-muted">Total</span>
-          <span className="text-lg font-bold tabular-nums text-ds2-foreground">{formatCurrency(total)}</span>
+          <span className="text-sm font-medium text-zinc-500">Total</span>
+          <span className="text-lg font-bold tabular-nums text-zinc-900">{formatCurrency(total)}</span>
         </div>
 
         {actionSlot ?? (

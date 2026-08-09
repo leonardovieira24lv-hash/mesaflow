@@ -13,10 +13,13 @@ interface CartSummaryBarProps {
 }
 
 /**
- * Resumo fixo do carrinho, no rodapé do cardápio. Até a Fase 5, o botão só
- * avisava que o carrinho estava a caminho (Fase 3, item 8: "estrutura
- * preparada"); agora que a página de Carrinho existe, ele navega de verdade
- * para lá.
+ * Resumo fixo do carrinho, no rodapé do cardápio.
+ *
+ * Sprint de reconstrução visual (2026-08-08): reescrito para usar só
+ * paleta padrão do Tailwind — sem nenhum token do design system antigo.
+ * `pb-[env(safe-area-inset-bottom)]` soma a área segura do celular (barra
+ * de gestos/home indicator) ao padding, para o botão nunca ficar colado
+ * na borda física da tela. Nenhuma lógica de navegação foi tocada.
  */
 export function CartSummaryBar({ slug }: CartSummaryBarProps) {
   const router = useRouter();
@@ -25,10 +28,10 @@ export function CartSummaryBar({ slug }: CartSummaryBarProps) {
   if (itemCount === 0) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl p-4">
+    <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <Button
         size="lg"
-        className="w-full justify-between rounded-2xl shadow-md"
+        className="w-full justify-between rounded-2xl shadow-lg shadow-emerald-500/20"
         onClick={() => router.push(withMesaQuery(ROUTES.clienteCarrinho(slug), tableToken))}
       >
         <span className="flex items-center gap-2">

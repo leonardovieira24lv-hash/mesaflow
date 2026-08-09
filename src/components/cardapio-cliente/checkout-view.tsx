@@ -32,7 +32,18 @@ type SubmitStatus = "idle" | "submitting" | "success" | "error";
  * `POST /api/v1/public/{slug}/orders` (contrato 3.3, já implementado desde
  * a Fase 2 — nenhuma API nova aqui) e os três estados pedidos (carregando,
  * sucesso, erro). No sucesso: limpa o carrinho e redireciona ao
- * acompanhamento — mesma ordem descrita na Sprint (11 antes de 12).
+ * acompanhamento.
+ *
+ * Sprint de manutenção (2026-08-08): `OrderSummaryBar` (botão "Confirmar
+ * pedido") deixou de ser `position: fixed` nesta tela — em Android, o
+ * teclado virtual (por causa do campo de Observações) podia deixar um
+ * elemento fixo fora da área realmente visível. Agora faz parte do fluxo
+ * normal da página (`mode="static"`), sempre alcançável por scroll normal.
+ *
+ * Sprint de reconstrução visual (2026-08-08, seguinte): reescrito para usar
+ * só paleta padrão do Tailwind (fundo `zinc-50`, sucesso em `emerald-600`),
+ * sem nenhum token do design system antigo. Nenhuma lógica de submissão,
+ * idempotência ou navegação foi tocada.
  */
 export function CheckoutView(props: CheckoutViewProps) {
   return (
@@ -132,13 +143,13 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
 
   if (status === "success") {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-ds2-success/10">
-          <CheckCircle2 className="h-10 w-10 text-ds2-success" aria-hidden />
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-5 bg-zinc-50 p-6 text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
+          <CheckCircle2 className="h-10 w-10 text-emerald-600" aria-hidden />
         </div>
         <div className="flex flex-col gap-1.5">
-          <p className="text-xl font-bold text-ds2-foreground">Pedido realizado!</p>
-          <p className="text-sm text-ds2-foreground-muted">Levando você para o acompanhamento...</p>
+          <p className="text-xl font-bold text-zinc-900">Pedido realizado!</p>
+          <p className="text-sm text-zinc-500">Levando você para o acompanhamento...</p>
         </div>
       </div>
     );
@@ -146,7 +157,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
 
   if (items.length === 0) {
     return (
-      <div className="mx-auto flex min-h-dvh max-w-xl flex-col sm:border-x sm:border-ds2-border sm:shadow-sm">
+      <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-50 sm:border-x sm:border-zinc-200 sm:shadow-sm">
         <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
         <TableAssistanceActions slug={slug} tableToken={tableToken} />
         <main className="flex flex-1 items-center justify-center p-6">
@@ -162,7 +173,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-xl flex-col pb-8 sm:border-x sm:border-ds2-border sm:shadow-sm">
+    <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-50 pb-8 sm:border-x sm:border-zinc-200 sm:shadow-sm">
       <RestaurantHeader restaurantName={restaurantName} tableName={tableName} />
       <TableAssistanceActions slug={slug} tableToken={tableToken} />
 
@@ -174,7 +185,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
       </div>
 
       <main className="flex flex-1 flex-col gap-5 px-4 py-4">
-        <h1 className="text-xl font-semibold text-ds2-foreground">Confirmar pedido</h1>
+        <h1 className="text-xl font-bold tracking-tight text-zinc-900">Confirmar pedido</h1>
 
         {!tableToken && (
           <Alert variant="warning">
@@ -210,11 +221,6 @@ function CheckoutContent({ slug, tableToken, restaurantName, tableName }: Checko
         {errorMessage && !staleItems && <Alert variant="destructive">{errorMessage}</Alert>}
       </main>
 
-      {/* Correção de manutenção (2026-08-08): antes ficava fora do <main>,
-          como uma barra `fixed` — ver o motivo detalhado no docstring de
-          `mode` em `OrderSummaryBar`. Agora faz parte do fluxo normal da
-          página (`mode="static"`), rola junto com o conteúdo e nunca fica
-          atrás do teclado virtual. */}
       <OrderSummaryBar
         total={subtotal}
         actionLabel="Confirmar pedido"

@@ -28,9 +28,14 @@ export function categorySectionId(categoryId: string): string {
  *
  * Sprint "Refinamento Premium do Cardápio" (2026-07-28, seguinte): verde
  * mantido só na categoria ativa (um dos poucos pontos de destaque pedidos
- * pelo dono) — a sombra dela ficou um pouco mais discreta para não
- * competir com o verde do preço/botão "+" nos cards logo abaixo. Estrutura
- * de chips e toda a lógica de clique/scroll inalteradas.
+ * pelo dono). Estrutura de chips e toda a lógica de clique/scroll
+ * inalteradas.
+ *
+ * Sprint de reconstrução visual (2026-08-08, seguinte): reescrito para usar
+ * só paleta padrão do Tailwind (fundo branco, pill ativa em `emerald-500`,
+ * inativa em `zinc-100`), sem nenhum token do design system antigo. Nenhuma
+ * linha de lógica (estado, `IntersectionObserver`, clique/scroll, refs) foi
+ * tocada — só `className`.
  */
 export function CategoryNav({ categories }: CategoryNavProps) {
   const [activeId, setActiveId] = useState(categories[0]?.id);
@@ -72,7 +77,7 @@ export function CategoryNav({ categories }: CategoryNavProps) {
   return (
     <nav
       aria-label="Categorias do cardápio"
-      className="sticky top-0 z-20 flex gap-2 overflow-x-auto border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/85 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="sticky top-0 z-20 flex gap-2 overflow-x-auto border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/85 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {categories.map((category) => (
         <button
@@ -83,8 +88,8 @@ export function CategoryNav({ categories }: CategoryNavProps) {
           className={cn(
             "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-[background-color,color,transform,box-shadow] duration-150 active:scale-[0.96]",
             activeId === category.id
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "border border-border bg-surface text-muted-foreground hover:border-foreground/20 hover:text-foreground",
+              ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30"
+              : "border border-zinc-200 bg-zinc-100 text-zinc-600 hover:border-zinc-300 hover:text-zinc-900",
           )}
         >
           {category.name}

@@ -26,30 +26,19 @@ interface RestaurantHeaderProps {
  * anteriores. Ficam como candidatos a uma sprint futura que adicione esses
  * campos de verdade ao contrato/banco.
  *
- * Sprint "Refinamento Premium do Cardápio" (2026-07-28, seguinte): o
- * banner verde cheio (`bg-gradient-to-r from-primary...`) foi trocado por
- * um fundo neutro (branco/`--surface`) com uma borda inferior sutil —
- * pedido explícito do dono de reduzir o verde a poucos pontos de destaque
- * (preço, botão "+", categoria ativa). Como este componente é reaproveitado
- * por Carrinho/Checkout/Acompanhamento de Pedido, a mudança de cor também
- * aparece nessas telas — nenhuma delas teve estrutura ou lógica alterada,
- * só essa cor de fundo compartilhada.
- *
- * Sprint "Redesign Completo do Cardápio Público" (2026-07-29, seguinte):
- * nome do restaurante ganhou mais peso tipográfico (`text-xl`, era
- * `text-lg`) — parte da mesma sprint que redesenhou os cards de produto e
- * a paleta; estrutura do cabeçalho em si não mudou.
+ * Sprint de reconstrução visual (2026-08-08): reescrito para usar só
+ * paleta padrão do Tailwind (zinc/emerald/white), sem nenhum token do
+ * design system antigo nem `ds2-*` — mesmo objetivo de sempre (hierarquia
+ * clara, mobile-first), estrutura/lógica de busca 100% preservadas.
  */
 export function RestaurantHeader({ restaurantName, tableName, searchTerm, onSearchChange }: RestaurantHeaderProps) {
   const hasSearch = onSearchChange !== undefined;
   return (
-    <header className="relative flex flex-col gap-3 border-b border-ds2-border bg-ds2-surface px-4 pb-3.5 pt-4">
+    <header className="flex flex-col gap-3 border-b border-zinc-200 bg-white/95 px-4 pb-3.5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-white/80">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="truncate text-xl font-bold tracking-tight text-ds2-foreground">
-          {restaurantName}
-        </h1>
+        <h1 className="truncate text-xl font-bold tracking-tight text-zinc-900">{restaurantName}</h1>
         {tableName && (
-          <span className="shrink-0 rounded-full border border-ds2-border bg-ds2-surface-hover px-2.5 py-1 text-[11px] font-medium text-ds2-foreground-muted">
+          <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
             Mesa {tableName}
           </span>
         )}
@@ -58,7 +47,7 @@ export function RestaurantHeader({ restaurantName, tableName, searchTerm, onSear
       {hasSearch && (
         <div className="relative">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ds2-foreground-muted"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
             aria-hidden
           />
           <input
@@ -68,14 +57,14 @@ export function RestaurantHeader({ restaurantName, tableName, searchTerm, onSear
             onChange={(e) => onSearchChange?.(e.target.value)}
             placeholder="Buscar no cardápio..."
             aria-label="Buscar produtos no cardápio"
-            className="w-full rounded-full border border-ds2-border bg-ds2-surface-hover/60 py-2.5 pl-9 pr-9 text-sm text-ds2-foreground placeholder:text-ds2-foreground-muted focus:border-ds2-primary/40 focus:outline-none focus:ring-2 focus:ring-ds2-primary/20"
+            className="w-full rounded-full border border-zinc-200 bg-zinc-50 py-2.5 pl-9 pr-9 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => onSearchChange?.("")}
               aria-label="Limpar busca"
-              className="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-ds2-foreground-muted transition-colors hover:bg-ds2-surface-hover hover:text-ds2-foreground"
+              className="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-200 hover:text-zinc-700"
             >
               <X className="h-3.5 w-3.5" />
             </button>
