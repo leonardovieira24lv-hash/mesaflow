@@ -52,17 +52,19 @@ interface RestaurantHeaderProps {
  *
  * Sprint "Identidade Visual — Logo com Proporção Livre" (2026-08-09,
  * seguinte): quando existe logo, ela vira o elemento principal — altura
- * fixa (56px), largura livre (`w-auto`, respeitando a proporção real do
- * arquivo, capada em `max-w-[70%]` para nunca empurrar o badge "Mesa X"
- * para fora da tela), `object-contain` (nunca corta nem deforma) — e o
- * nome em texto SOME (a logo já comunica a identidade sozinha). Sem logo,
- * cai no layout anterior (ícone + nome), inalterado. `<img>` nativo em vez
- * de `next/image` aqui de propósito: a logo pode ter qualquer proporção,
- * e `next/image` exige `width`/`height` (ou `fill`, que por sua vez exige
- * um contêiner com largura já definida) — nenhum dos dois é conhecido de
- * antemão para um arquivo de proporção livre. `alt={restaurantName}`
- * garante que o nome do restaurante continue acessível a leitor de tela
- * mesmo sem o texto visível.
+ * fixa (88px), largura livre (`w-auto`, respeitando a proporção real do
+ * arquivo), `object-contain` (nunca corta nem deforma), **centralizada**
+ * na largura total do cabeçalho via grid de 3 colunas (`1fr auto 1fr`) —
+ * a coluna vazia à esquerda espelha a do badge "Mesa X" à direita, então a
+ * logo fica centrada de verdade, com ou sem o badge presente. O nome em
+ * texto SOME (a logo já comunica a identidade sozinha). Sem logo, cai no
+ * layout anterior (ícone + nome, alinhado à esquerda), inalterado. `<img>`
+ * nativo em vez de `next/image` aqui de propósito: a logo pode ter
+ * qualquer proporção, e `next/image` exige `width`/`height` (ou `fill`,
+ * que por sua vez exige um contêiner com largura já definida) — nenhum dos
+ * dois é conhecido de antemão para um arquivo de proporção livre.
+ * `alt={restaurantName}` garante que o nome do restaurante continue
+ * acessível a leitor de tela mesmo sem o texto visível.
  */
 export function RestaurantHeader({
   restaurantName,
@@ -77,11 +79,25 @@ export function RestaurantHeader({
 
   return (
     <header className="flex flex-col gap-3 border-b border-zinc-800 bg-zinc-950/95 px-4 pb-3.5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/80">
-      <div className="flex items-center justify-between gap-3">
-        {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- proporção livre, ver docstring acima.
-          <img src={logoUrl} alt={restaurantName} className="h-14 w-auto max-w-[70%] shrink-0 object-contain object-left" />
-        ) : (
+      {logoUrl ? (
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+          <div aria-hidden />
+          {/* eslint-disable-next-line @next/next/no-img-element -- proporção livre, ver docstring acima. */}
+          <img
+            src={logoUrl}
+            alt={restaurantName}
+            className="h-[88px] w-auto max-w-full justify-self-center object-contain"
+          />
+          <div className="justify-self-end">
+            {tableName && (
+              <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
+                Mesa {tableName}
+              </span>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-zinc-800 ring-1 ring-zinc-700">
               <div className="flex h-full w-full items-center justify-center">
@@ -90,13 +106,13 @@ export function RestaurantHeader({
             </div>
             <h1 className="truncate text-xl font-bold tracking-tight text-white">{restaurantName}</h1>
           </div>
-        )}
-        {tableName && (
-          <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
-            Mesa {tableName}
-          </span>
-        )}
-      </div>
+          {tableName && (
+            <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
+              Mesa {tableName}
+            </span>
+          )}
+        </div>
+      )}
 
       {hasDescription && <p className="line-clamp-2 text-xs text-zinc-400">{description}</p>}
 
