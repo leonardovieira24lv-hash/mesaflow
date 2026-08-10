@@ -1,14 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireSession } from "@/lib/api/auth";
+import { requireOwner } from "@/lib/api/auth";
 import { apiSuccess } from "@/lib/api/response";
 import { AppError, handleRouteError } from "@/lib/api/errors";
 import { parseOrThrow } from "@/lib/api/validation";
 import { reorderCategoriesSchema } from "@/lib/validations/menu";
 
 // PATCH /api/v1/menu/categories/order — contrato seção 5.5 (reordenação)
+// Fase 3 (Gestão de Equipe, 2026-08-09): requireSession() -> requireOwner()
+// — é escrita (muda `position`), mesma regra do resto do CRUD de categorias.
 export async function PATCH(request: Request) {
   try {
-    const { profile } = await requireSession();
+    const { profile } = await requireOwner();
     const body = await request.json();
     const { ordered_ids: orderedIds } = parseOrThrow(reorderCategoriesSchema, body);
 

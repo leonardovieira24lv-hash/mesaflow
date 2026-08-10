@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireSession, requireOwner } from "@/lib/api/auth";
+import { requireOwner } from "@/lib/api/auth";
 import { getRestaurantOverview } from "@/lib/restaurant/get-restaurant-overview";
 import { apiSuccess } from "@/lib/api/response";
 import { AppError, handleRouteError } from "@/lib/api/errors";
@@ -7,9 +7,12 @@ import { parseOrThrow } from "@/lib/api/validation";
 import { updateRestaurantSchema } from "@/lib/validations/restaurant";
 
 // GET /api/v1/restaurant — contrato seção 4.1
+// Fase 3 (Gestão de Equipe, 2026-08-09): requireSession() -> requireOwner().
+// Configurações/Perfil é dado administrativo — staff não deve ver nem por
+// leitura (o PATCH abaixo já era requireOwner() desde a Sprint 9).
 export async function GET() {
   try {
-    const { profile } = await requireSession();
+    const { profile } = await requireOwner();
     const supabase = await createClient();
     const overview = await getRestaurantOverview(supabase, profile.restaurantId);
 

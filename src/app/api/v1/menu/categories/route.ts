@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireSession } from "@/lib/api/auth";
+import { requireSession, requireOwner } from "@/lib/api/auth";
 import { apiSuccess, apiCreated } from "@/lib/api/response";
 import { AppError, handleRouteError } from "@/lib/api/errors";
 import { parseOrThrow } from "@/lib/api/validation";
@@ -28,9 +28,17 @@ export async function GET() {
 }
 
 // POST /api/v1/menu/categories — contrato seção 5.2
+//
+// Fase 3 (Gestão de Equipe, 2026-08-09): `requireSession()` → `requireOwner()`.
+// A auditoria da Fase 3 encontrou que toda a escrita do Cardápio estava
+// aberta a qualquer profile autenticado do restaurante, sem diferenciar
+// owner/staff — decisão correta quando só existia um papel (Sprint 6), mas
+// incompatível com o modelo agora aprovado ("staff não pode criar/editar/
+// excluir categorias ou produtos"). Leitura (`GET`, acima) continua aberta —
+// staff precisa ver o cardápio pra operar, só não editá-lo.
 export async function POST(request: Request) {
   try {
-    const { profile } = await requireSession();
+    const { profile } = await requireOwner();
     const body = await request.json();
     const { name } = parseOrThrow(createCategorySchema, body);
 

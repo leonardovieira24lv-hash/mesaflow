@@ -11,9 +11,15 @@ import { AdminHeader } from "@/components/layout/admin-header";
  * (complementar ao `middleware.ts`, que já redireciona antes disso rodar).
  * Como é envolvida em `cache()`, páginas filhas (ex.: o Dashboard) podem
  * chamá-la de novo sem custo extra de consulta ao banco no mesmo request.
+ *
+ * Fase 3 — Gestão de Equipe (2026-08-09): `profile.role` repassado à
+ * `AdminSidebar`, que usa isso só para decidir quais itens do menu mostrar
+ * (hoje, só "Configurações" é `owner`-only) — proteção de interface, não a
+ * real (essa está em `requireOwner()`/`requirePageSession()` + redirect nas
+ * páginas administrativas correspondentes).
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user } = await requirePageSession();
+  const { user, profile } = await requirePageSession();
 
   return (
     <AdminShellProvider>
@@ -25,7 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           wrapper próprio. Cardápio público, Onboarding e Autenticação
           continuam de fora, no tema claro original. */}
       <div className="dark ds2-dark flex min-h-screen bg-background">
-        <AdminSidebar />
+        <AdminSidebar isOwner={profile.role === "owner"} />
         {/* `min-w-0` é a correção real do overflow horizontal no mobile: um
             item flex tem `min-width: auto` por padrão, então sem isso ele
             nunca encolhe abaixo da largura do seu conteúdo mais largo (ex.:

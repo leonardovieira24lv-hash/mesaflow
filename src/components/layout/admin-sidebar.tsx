@@ -13,7 +13,11 @@ const NAV_ITEMS = [
   { href: ROUTES.cardapioCategorias, label: "Cardápio", icon: UtensilsCrossed },
   { href: ROUTES.mesas, label: "Mesas", icon: LayoutGrid },
   { href: ROUTES.caixa, label: "Caixa", icon: Wallet },
-  { href: ROUTES.configuracoes, label: "Configurações", icon: Settings },
+  // Fase 3 — Gestão de Equipe (2026-08-09): `ownerOnly` — só aparece pra
+  // quem tem `role = 'owner'` (ver `AdminSidebar`, abaixo). Cardápio
+  // continua visível pra `staff` (tem leitura liberada, só a escrita virou
+  // `requireOwner()` nos Route Handlers) — não é um item `ownerOnly`.
+  { href: ROUTES.configuracoes, label: "Configurações", icon: Settings, ownerOnly: true },
 ] as const;
 
 /**
@@ -39,13 +43,19 @@ function BrandMark() {
 /**
  * Item ativo usa `ds2-primary`/`ds2-primary/10` — nunca dourado. Foco
  * visível nativo, mesmo padrão de anel usado no `Button`.
+ *
+ * Fase 3 — Gestão de Equipe (2026-08-09): `items` já vem filtrado por quem
+ * chama (`AdminSidebar`, abaixo) — "Configurações" só aparece pra `owner`.
+ * Isto é só a interface; a proteção real está em `requireOwner()`
+ * (`GET/PATCH /api/v1/restaurant`) e no redirect de `configuracoes/page.tsx`
+ * — esconder o link aqui não substitui nenhum dos dois.
  */
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({ items, onNavigate }: { items: (typeof NAV_ITEMS)[number][]; onNavigate?: () => void }) {
   const pathname = usePathname();
 
   return (
     <nav className="flex flex-1 flex-col gap-1 px-3">
-      {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+      {items.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname?.startsWith(`${href}/`);
         return (
           <Link
@@ -76,16 +86,23 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-/** Sidebar de navegação: chrome escuro fixo em telas médias+, drawer deslizante em mobile. */
-export function AdminSidebar() {
+/**
+ * Sidebar de navegação: chrome escuro fixo em telas médias+, drawer deslizante em mobile.
+ *
+ * Fase 3 — Gestão de Equipe (2026-08-09): `isOwner` (repassado por
+ * `(admin)/layout.tsx`, a partir de `profile.role`) filtra os itens
+ * `ownerOnly` antes de renderizar — hoje só "Configurações".
+ */
+export function AdminSidebar({ isOwner }: { isOwner: boolean }) {
   const { mobileNavOpen, setMobileNavOpen } = useAdminShell();
+  const items = NAV_ITEMS.filter((item) => !("ownerOnly" in item && item.ownerOnly) || isOwner);
 
   return (
     <>
       {/* Desktop / tablet */}
       <aside className="hidden w-64 shrink-0 flex-col border-r border-ds2-border bg-ds2-background md:flex">
         <BrandMark />
-        <NavLinks />
+        <NavLinks items={items} />
         <div className="border-t border-ds2-border px-6 py-4 text-xs text-ds2-foreground-muted">
           MesaFlow © {new Date().getFullYear()}
         </div>
@@ -110,7 +127,7 @@ export function AdminSidebar() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <NavLinks onNavigate={() => setMobileNavOpen(false)} />
+            <NavLinks items={items} onNavigate={() => setMobileNavOpen(false)} />
           </div>
         </div>
       )}

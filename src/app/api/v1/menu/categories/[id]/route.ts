@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireSession } from "@/lib/api/auth";
+import { requireOwner } from "@/lib/api/auth";
 import { apiSuccess, apiNoContent } from "@/lib/api/response";
 import { AppError, handleRouteError } from "@/lib/api/errors";
 import { parseOrThrow } from "@/lib/api/validation";
@@ -10,10 +10,12 @@ interface RouteParams {
 }
 
 // PATCH /api/v1/menu/categories/{id} — contrato seção 5.3
+// Fase 3 (Gestão de Equipe, 2026-08-09): requireSession() -> requireOwner()
+// — ver nota em menu/categories/route.ts.
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const { profile } = await requireSession();
+    const { profile } = await requireOwner();
     const body = await request.json();
     const { name } = parseOrThrow(updateCategorySchema, body);
 
@@ -49,10 +51,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 // DELETE /api/v1/menu/categories/{id} — contrato seção 5.4
+// Fase 3 (Gestão de Equipe, 2026-08-09): requireSession() -> requireOwner().
 export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const { profile } = await requireSession();
+    const { profile } = await requireOwner();
 
     const supabase = await createClient();
 

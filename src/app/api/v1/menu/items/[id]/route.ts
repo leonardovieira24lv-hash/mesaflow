@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireSession } from "@/lib/api/auth";
+import { requireSession, requireOwner } from "@/lib/api/auth";
 import { apiSuccess, apiNoContent } from "@/lib/api/response";
 import { AppError, handleRouteError } from "@/lib/api/errors";
 import { parseOrThrow } from "@/lib/api/validation";
@@ -61,10 +61,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
 }
 
 // PATCH /api/v1/menu/items/{id} — contrato seção 6.4 (edição completa e toggle de disponibilidade)
+// Fase 3 (Gestão de Equipe, 2026-08-09): requireSession() -> requireOwner().
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const { profile } = await requireSession();
+    const { profile } = await requireOwner();
     const body = await request.json();
     const input = parseOrThrow(updateMenuItemSchema, body);
 
@@ -148,7 +149,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const { profile } = await requireSession();
+    const { profile } = await requireOwner();
 
     const supabase = await createClient();
 

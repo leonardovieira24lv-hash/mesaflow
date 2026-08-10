@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireSession } from "@/lib/api/auth";
+import { requireSession, requireOwner } from "@/lib/api/auth";
 import { apiSuccess, apiCreated } from "@/lib/api/response";
 import { AppError, handleRouteError } from "@/lib/api/errors";
 import { parseOrThrow } from "@/lib/api/validation";
@@ -76,9 +76,11 @@ export async function GET(request: Request) {
 }
 
 // POST /api/v1/menu/items — contrato seção 6.2
+// Fase 3 (Gestão de Equipe, 2026-08-09): requireSession() -> requireOwner()
+// — ver nota em menu/categories/route.ts.
 export async function POST(request: Request) {
   try {
-    const { profile } = await requireSession();
+    const { profile } = await requireOwner();
     const body = await request.json();
     const input = parseOrThrow(createMenuItemSchema, body);
 
