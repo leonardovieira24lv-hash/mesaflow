@@ -41,6 +41,8 @@ interface TableDrawerProps {
   openOrders: OrderListRow[];
   /** "Chamar garçom" / "Solicitar conta" em aberto nesta mesa (docs/table-events-roadmap.md). */
   alerts: TableCardAlert[];
+  /** Fase 4B.1 (2026-08-10) — já normalizado (`resolveAcceptedPaymentMethods`); só passagem até `<CloseBillModal>`. */
+  acceptedPaymentMethods: PaymentMethod[];
   onClose: () => void;
   /** Chamado depois de qualquer ação que muda um pedido — o pai refaz a agregação. */
   onOrdersChanged: () => void;
@@ -123,6 +125,7 @@ export function TableDrawer({
   table,
   openOrders,
   alerts,
+  acceptedPaymentMethods,
   onClose,
   onOrdersChanged,
   onAlertsChanged,
@@ -873,6 +876,7 @@ export function TableDrawer({
       <CloseBillModal
         open={closeBillModalOpen}
         table={table}
+        acceptedPaymentMethods={acceptedPaymentMethods}
         onCancel={() => {
           setCloseBillModalOpen(false);
           setCloseBillError(null);

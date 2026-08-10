@@ -32,6 +32,31 @@ export type UpdateTableInput = z.infer<typeof updateTableSchema>;
 // para uma sprint futura, por pedido explícito do dono.
 export const PAYMENT_METHOD_VALUES = ["pix", "credit_card", "debit_card", "cash"] as const;
 
+/**
+ * Normaliza `restaurants.accepted_payment_methods` (Fase 4B.1,
+ * 2026-08-10) com o mesmo fallback defensivo dos dois pontos que a
+ * consomem — `close-bill-modal.tsx` (UI) e `close-bill/route.ts`
+ * (backend), única fonte da regra, para os dois nunca divergirem.
+ *
+ * Se o valor não for um array, vier vazio, ou não sobrar nenhum valor
+ * válido depois de filtrar contra `PAYMENT_METHOD_VALUES` (dado
+ * inconsistente — nunca deveria acontecer, já que o `PATCH
+ * /api/v1/restaurant` da Fase 4A exige pelo menos 1 via Zod, mas um
+ * registro antigo/editado direto no banco pode fugir disso), cai nas 4
+ * formas atuais — nunca trava o fechamento de conta por causa de uma
+ * configuração ausente ou corrompida. Valores inválidos misturados com
+ * válidos são só descartados individualmente, sem descartar o restante.
+ */
+export function resolveAcceptedPaymentMethods(value: unknown): (typeof PAYMENT_METHOD_VALUES)[number][] {
+  if (!Array.isArray(value)) return [...PAYMENT_METHOD_VALUES];
+
+  const valid = value.filter((item): item is (typeof PAYMENT_METHOD_VALUES)[number] =>
+    (PAYMENT_METHOD_VALUES as readonly string[]).includes(item as string),
+  );
+
+  return valid.length > 0 ? valid : [...PAYMENT_METHOD_VALUES];
+}
+
 // Sprint "Fechamento de Conta com Registro de Venda": corpo de
 // `PATCH /api/v1/tables/{id}/close-bill` — a única informação que o
 // atendente decide neste passo é a forma de pagamento.

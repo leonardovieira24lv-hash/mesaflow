@@ -1,6 +1,7 @@
 import { requirePageSession } from "@/lib/auth/require-page-session";
 import { createClient } from "@/lib/supabase/server";
 import { TablesManager } from "@/components/mesas/tables-manager";
+import { resolveAcceptedPaymentMethods } from "@/lib/validations/tables";
 import type { Table } from "@/types/domain";
 
 export const metadata = { title: "Mesas" };
@@ -17,6 +18,15 @@ export const metadata = { title: "Mesas" };
  * para a própria API do mesmo app é um round-trip desnecessário — só é
  * necessário para exibir a URL codificada no QR Code de cada mesa, não é
  * uma escrita nem um dado consumido por outra superfície.
+ *
+ * Fase 4B.1 — Pagamentos em Mesas (2026-08-10): o mesmo `select` que já
+ * buscava `slug` ganhou `accepted_payment_methods` (`restaurants`,
+ * `0028_restaurant_operation_settings.sql`) — sem query nova. Já
+ * normalizado aqui (`resolveAcceptedPaymentMethods`, fallback defensivo
+ * pras 4 formas se vier `null`/vazio/inconsistente) antes de descer pra
+ * `TablesManager` → `TableDrawer` → `CloseBillModal`, que só filtra os
+ * botões — a validação de verdade é no backend
+ * (`close-bill/route.ts`).
  */
 export default async function MesasPage() {
   const { profile } = await requirePageSession();
@@ -25,7 +35,7 @@ export default async function MesasPage() {
   const [{ data: restaurant }, { data: tablesData }] = await Promise.all([
     supabase
       .from("restaurants")
-      .select("id, slug")
+      .select("id, slug, accepted_payment_methods")
       .eq("id", profile.restaurantId)
       .single(),
 
@@ -59,6 +69,7 @@ export default async function MesasPage() {
         initialTables={tables}
         restaurantSlug={restaurant?.slug ?? ""}
         restaurantId={restaurant?.id ?? ""}
+        acceptedPaymentMethods={resolveAcceptedPaymentMethods(restaurant?.accepted_payment_methods)}
       />
     </div>
   );

@@ -32,6 +32,8 @@ interface OpenSessionResponse {
 interface CloseBillModalProps {
   open: boolean;
   table: TableEntity;
+  /** Fase 4B.1 (2026-08-10) — já normalizado (`resolveAcceptedPaymentMethods`, nunca vazio). Filtra `PAYMENT_METHOD_OPTIONS`; a validação de verdade é no backend (`close-bill/route.ts`). */
+  acceptedPaymentMethods: PaymentMethod[];
   onCancel: () => void;
   onConfirm: (paymentMethod: PaymentMethod) => void;
   isSubmitting: boolean;
@@ -88,8 +90,19 @@ function consolidate(orders: OpenSessionResponse["orders"]): ConsolidatedLine[] 
  * vinculados a ela, de qualquer status — a mesma fonte de verdade dos
  * dois lados do fluxo.
  */
-export function CloseBillModal({ open, table, onCancel, onConfirm, isSubmitting, error }: CloseBillModalProps) {
+export function CloseBillModal({
+  open,
+  table,
+  acceptedPaymentMethods,
+  onCancel,
+  onConfirm,
+  isSubmitting,
+  error,
+}: CloseBillModalProps) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
+  // Só filtra quais aparecem — a lista/ordem/rótulo/ícone de cada opção
+  // continuam vindo de `PAYMENT_METHOD_OPTIONS`, sem duplicar nada.
+  const visibleOptions = PAYMENT_METHOD_OPTIONS.filter((option) => acceptedPaymentMethods.includes(option.value));
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [orders, setOrders] = useState<OpenSessionResponse["orders"]>([]);
@@ -247,7 +260,7 @@ export function CloseBillModal({ open, table, onCancel, onConfirm, isSubmitting,
                 Forma de pagamento
               </span>
               <div className="grid grid-cols-2 gap-2">
-                {PAYMENT_METHOD_OPTIONS.map((option) => {
+                {visibleOptions.map((option) => {
                   const Icon = option.icon;
                   const isSelected = selectedMethod === option.value;
                   return (

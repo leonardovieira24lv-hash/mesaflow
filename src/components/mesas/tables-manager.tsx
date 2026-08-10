@@ -47,7 +47,7 @@ import {
   type TableCardAlert,
 } from "@/lib/mesas/derive-table-card-state";
 import { playNewOrderChime } from "@/lib/mesas/play-new-order-chime";
-import { createTableSchema, updateTableSchema, TABLE_STATUS_VALUES } from "@/lib/validations/tables";
+import { createTableSchema, updateTableSchema, TABLE_STATUS_VALUES, PAYMENT_METHOD_VALUES } from "@/lib/validations/tables";
 import type { OrderListRow } from "@/components/pedidos/orders-list";
 import type { Table as TableEntity, TableStatus, TableEvent } from "@/types/domain";
 import type { ApiError, ApiSuccess } from "@/types/api";
@@ -58,6 +58,8 @@ interface TablesManagerProps {
   restaurantSlug: string;
   /** Para o canal Realtime de pedidos (`restaurant:{id}:orders`). */
   restaurantId: string;
+  /** Fase 4B.1 (2026-08-10) — já normalizado por `resolveAcceptedPaymentMethods` em `mesas/page.tsx`; só passagem até `<CloseBillModal>`. */
+  acceptedPaymentMethods: (typeof PAYMENT_METHOD_VALUES)[number][];
 }
 
 interface TableDto {
@@ -138,7 +140,7 @@ function aggregateByTable(orders: OrderListRow[]): Record<string, TableOperation
  * render anterior por mesa (`prevTonesRef`), então só acontece na transição
  * em si, não enquanto o estado "novo pedido" permanece verdadeiro.
  */
-export function TablesManager({ initialTables, restaurantSlug, restaurantId }: TablesManagerProps) {
+export function TablesManager({ initialTables, restaurantSlug, restaurantId, acceptedPaymentMethods }: TablesManagerProps) {
   const [tables, setTables] = useState<TableEntity[]>(initialTables);
   const [operations, setOperations] = useState<Record<string, TableOperations>>({});
   const [operationsError, setOperationsError] = useState<string | null>(null);
@@ -1172,6 +1174,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId }: T
           table={drawerTable}
           openOrders={drawerOperations?.orders ?? []}
           alerts={tableEvents[drawerTable.id] ?? []}
+          acceptedPaymentMethods={acceptedPaymentMethods}
           onClose={() => setDrawerTable(null)}
           onOrdersChanged={() => void fetchOperations()}
           onAlertsChanged={() => void fetchTableEvents()}
