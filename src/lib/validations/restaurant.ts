@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PAYMENT_METHOD_VALUES } from "@/lib/validations/tables";
 
 /**
  * Schema do módulo de Configurações do Restaurante (contrato seção 4.2).
@@ -21,6 +22,63 @@ import { z } from "zod";
 // respeitam esta regra) — aqui a validação é a contraparte que impede o
 // usuário de digitar um slug fora do padrão na tela de Configurações.
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+// Fase 4A — Operação (2026-08-10). `HH:MM`, 24h, mesmo formato que o
+// `<input type="time">` nativo já produz — nenhuma conversão necessária
+// entre o que o navegador devolve e o que é validado/salvo.
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const openingPeriodSchema = z
+  .object({
+    open: z.string().regex(TIME_REGEX, "Use o formato HH:MM."),
+    close: z.string().regex(TIME_REGEX, "Use o formato HH:MM."),
+  })
+  .refine((period) => period.open < period.close, {
+    message: "O horário de fechamento deve ser depois do de abertura.",
+    path: ["close"],
+  });
+
+// Comparação lexicográfica de strings "HH:MM" já ordena corretamente por
+// horário (mesmo truque usado no `.refine` acima) — não precisa converter
+// para minutos/Date para comparar.
+function hasOverlappingPeriods(periods: { open: string; close: string }[]): boolean {
+  const sorted = [...periods].sort((a, b) => (a.open < b.open ? -1 : a.open > b.open ? 1 : 0));
+  for (let i = 1; i < sorted.length; i++) {
+    const current = sorted[i];
+    const previous = sorted[i - 1];
+    if (!current || !previous) continue;
+    if (current.open < previous.close) return true;
+  }
+  return false;
+}
+
+const daySchema = z
+  .array(openingPeriodSchema)
+  .refine((periods) => !hasOverlappingPeriods(periods), { message: "Os períodos não podem se sobrepor." });
+
+// Estrutura recomendada pela auditoria da Fase 4 — um array de períodos por
+// dia da semana (array vazio = dia fechado), permitindo mais de um período
+// no mesmo dia (ex.: almoço e jantar). Chaves fixas (não `Record<string,
+// ...>` livre) — os 7 dias são sempre os mesmos, sem risco de chave
+// inválida entrar no JSON salvo.
+export const openingHoursSchema = z.object({
+  mon: daySchema,
+  tue: daySchema,
+  wed: daySchema,
+  thu: daySchema,
+  fri: daySchema,
+  sat: daySchema,
+  sun: daySchema,
+});
+export type OpeningHours = z.infer<typeof openingHoursSchema>;
+
+// Mesmos 4 valores de `order_sessions.payment_method`
+// (`lib/validations/tables.ts`, fonte única — não redeclarados aqui, para
+// nunca divergir). Pelo menos 1 selecionado: um restaurante sem nenhuma
+// forma de pagamento aceita não consegue fechar conta nenhuma.
+export const acceptedPaymentMethodsSchema = z
+  .array(z.enum(PAYMENT_METHOD_VALUES))
+  .min(1, "Selecione pelo menos uma forma de pagamento.");
 
 export const updateRestaurantSchema = z.object({
   name: z.string().trim().min(2, "O nome deve ter pelo menos 2 caracteres.").optional(),
@@ -70,5 +128,9 @@ export const updateRestaurantSchema = z.object({
   instagram: z.string().trim().max(160).optional(),
   facebook: z.string().trim().max(160).optional(),
   website: z.string().trim().url("URL inválida (inclua http:// ou https://).").max(200).optional(),
+
+  // Operação — Fase 4A (2026-08-10).
+  opening_hours: openingHoursSchema.optional(),
+  accepted_payment_methods: acceptedPaymentMethodsSchema.optional(),
 });
 export type UpdateRestaurantInput = z.infer<typeof updateRestaurantSchema>;

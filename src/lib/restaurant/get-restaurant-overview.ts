@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { AppError } from "@/lib/api/errors";
 import type { RestaurantStatus } from "@/types/domain";
 import type { Database } from "@/types/database.types";
+import type { OpeningHours } from "@/lib/validations/restaurant";
+import type { PaymentMethod } from "@/lib/cashier/queries";
 
 export interface RestaurantOverview {
   id: string;
@@ -33,6 +35,14 @@ export interface RestaurantOverview {
   // `checklist`/`counts`.
   logoUrl: string | null;
   description: string | null;
+  // Operação — Fase 4A (2026-08-10), colunas de
+  // `0028_restaurant_operation_settings.sql`. `openingHours` fica `null`
+  // quando o proprietário ainda não configurou nada — estado distinto de
+  // "todo dia fechado" (objeto com os 7 dias como array vazio). Mesmo
+  // raciocínio dos campos acima: só para a tela de Configurações, fora do
+  // `checklist`/`counts`.
+  openingHours: OpeningHours | null;
+  acceptedPaymentMethods: PaymentMethod[];
   checklist: {
     hasCategories: boolean;
     hasProducts: boolean;
@@ -76,7 +86,7 @@ export async function getRestaurantOverview(
     supabase
       .from("restaurants")
       .select(
-        "id, name, slug, status, qr_codes_printed_at, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description",
+        "id, name, slug, status, qr_codes_printed_at, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description, opening_hours, accepted_payment_methods",
       )
       .eq("id", restaurantId)
       .single(),
@@ -116,6 +126,8 @@ export async function getRestaurantOverview(
     website: restaurant.website,
     logoUrl: restaurant.logo_url,
     description: restaurant.description,
+    openingHours: restaurant.opening_hours as OpeningHours | null,
+    acceptedPaymentMethods: restaurant.accepted_payment_methods as PaymentMethod[],
     checklist: {
       hasCategories: categoriesCount > 0,
       hasProducts: productsCount > 0,

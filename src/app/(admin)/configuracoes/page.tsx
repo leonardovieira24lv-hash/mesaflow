@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Users } from "lucide-react";
+import { Users, Clock } from "lucide-react";
 import { requirePageSession } from "@/lib/auth/require-page-session";
 import { createClient } from "@/lib/supabase/server";
 import { getRestaurantOverview } from "@/lib/restaurant/get-restaurant-overview";
@@ -49,10 +49,16 @@ export default async function ConfiguracoesPage() {
             Gerencie a identidade, o contato e o endereço do restaurante.
           </p>
         </div>
-        <ButtonLink href={ROUTES.configuracoesEquipe} variant="outline" size="sm">
-          <Users className="h-4 w-4" />
-          Equipe
-        </ButtonLink>
+        <div className="flex gap-2">
+          <ButtonLink href={ROUTES.configuracoesOperacao} variant="outline" size="sm">
+            <Clock className="h-4 w-4" />
+            Operação
+          </ButtonLink>
+          <ButtonLink href={ROUTES.configuracoesEquipe} variant="outline" size="sm">
+            <Users className="h-4 w-4" />
+            Equipe
+          </ButtonLink>
+        </div>
       </div>
 
       <RestaurantSettingsForm

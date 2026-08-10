@@ -30,6 +30,7 @@ export const ROUTES = {
   caixa: "/caixa",
   configuracoes: "/configuracoes",
   configuracoesEquipe: "/configuracoes/equipe",
+  configuracoesOperacao: "/configuracoes/operacao",
 
   // Área do cliente (pública, sem login)
   clienteMesa: (slug: string, token: string): Route =>
