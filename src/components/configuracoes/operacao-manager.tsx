@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Clock, CreditCard, Plus, Trash2 } from "lucide-react";
+import { Clock, CreditCard, Globe, Plus, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHOD_VALUES } from "@/lib/validations/tables";
 import { PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/lib/cashier/queries";
-import type { OpeningHours } from "@/lib/validations/restaurant";
+import { TIMEZONE_OPTIONS, type OpeningHours } from "@/lib/validations/restaurant";
 import type { ApiError } from "@/types/api";
 
 type DayKey = keyof OpeningHours;
@@ -31,6 +32,7 @@ const EMPTY_OPENING_HOURS: OpeningHours = { mon: [], tue: [], wed: [], thu: [], 
 interface OperacaoManagerProps {
   initialOpeningHours: OpeningHours | null;
   initialAcceptedPaymentMethods: PaymentMethod[];
+  initialTimezone: string;
 }
 
 /**
@@ -46,10 +48,22 @@ interface OperacaoManagerProps {
  *
  * Nesta Sprint (4A), a configuração só é persistida — nada aqui afeta
  * Cardápio Público, Mesas ou Caixa ainda (Fase 4B, separada e futura).
+ *
+ * Fase 4B.2 (2026-08-10, seguinte): campo de fuso horário adicionado —
+ * mesmo padrão de formulário, mesmo `PATCH` já existente. A partir desta
+ * Sprint, o horário configurado abaixo passa a ser usado de verdade
+ * (Cardápio Público, `RestaurantHeader`), calculado no fuso escolhido aqui
+ * — nunca fixo em `America/Sao_Paulo` na lógica, só como valor padrão
+ * inicial da coluna no banco.
  */
-export function OperacaoManager({ initialOpeningHours, initialAcceptedPaymentMethods }: OperacaoManagerProps) {
+export function OperacaoManager({
+  initialOpeningHours,
+  initialAcceptedPaymentMethods,
+  initialTimezone,
+}: OperacaoManagerProps) {
   const [openingHours, setOpeningHours] = useState<OpeningHours>(initialOpeningHours ?? EMPTY_OPENING_HOURS);
   const [acceptedMethods, setAcceptedMethods] = useState<PaymentMethod[]>(initialAcceptedPaymentMethods);
+  const [timezone, setTimezone] = useState(initialTimezone);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -86,7 +100,11 @@ export function OperacaoManager({ initialOpeningHours, initialAcceptedPaymentMet
       const response = await fetch("/api/v1/restaurant", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ opening_hours: openingHours, accepted_payment_methods: acceptedMethods }),
+        body: JSON.stringify({
+          opening_hours: openingHours,
+          accepted_payment_methods: acceptedMethods,
+          timezone,
+        }),
       });
       const body = await response.json();
 
@@ -107,6 +125,27 @@ export function OperacaoManager({ initialOpeningHours, initialAcceptedPaymentMet
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-4 w-4" aria-hidden />
+            Fuso horário
+          </CardTitle>
+          <CardDescription>
+            Usado para calcular se o restaurante está aberto agora, no horário local dele.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select value={timezone} onChange={(e) => setTimezone(e.target.value)} disabled={isSubmitting}>
+            {TIMEZONE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

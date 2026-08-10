@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, UtensilsCrossed, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface RestaurantHeaderProps {
   restaurantName: string;
@@ -18,6 +19,16 @@ interface RestaurantHeaderProps {
    */
   logoUrl?: string | null;
   description?: string | null;
+  /**
+   * Operação — Fase 4B.2 (2026-08-10). `true`/`false` = mostra o badge
+   * "Aberto agora"/"Fechado"; `null`/`undefined` = não mostra nada (sem
+   * horário configurado, ou dado inconsistente — `getRestaurantOpenStatus`,
+   * `lib/orders/resolve-public-context.ts`, decide isso, nunca este
+   * componente). Só passado pelo Cardápio (`menu/page.tsx`) — nas outras 3
+   * telas públicas o prop nem é passado, então nada aparece, sem precisar
+   * de uma flag separada.
+   */
+  isOpenNow?: boolean | null;
 }
 
 /**
@@ -27,14 +38,13 @@ interface RestaurantHeaderProps {
  * Sprint "Redesign Premium do Cardápio" (2026-07-28): ganhou uma busca
  * elegante integrada (filtra os produtos já carregados por nome/descrição —
  * estado local em `<CardapioClienteView>`, nenhuma chamada nova de API).
- * Deliberadamente NÃO inclui indicador de "Aberto/Fechado" nem "tempo
- * médio de entrega": `Restaurant` no contrato atual (`src/types/domain.ts`)
- * não tem campo de status operacional nem de tempo estimado — só
- * `id/name/slug/status` (status de onboarding, não de "aberto agora").
- * Inventar esses dois indicadores aqui seria fabricar informação (ex.: todo
- * restaurante sempre "Aberto"), o que o próprio projeto já evitou em telas
- * anteriores. Ficam como candidatos a uma sprint futura que adicione esses
- * campos de verdade ao contrato/banco.
+ *
+ * Fase 4B.2 — Horário + Timezone (2026-08-10): o indicador "Aberto
+ * agora"/"Fechado", cogitado e deliberadamente adiado em Sprints
+ * anteriores (`Restaurant` não tinha campo de horário real, só `status` de
+ * onboarding), agora existe de verdade — `isOpenNow`, calculado por
+ * `getRestaurantOpenStatus()` a partir do horário configurado pelo dono e
+ * do timezone real do restaurante, nunca inventado.
  *
  * Sprint "Cardápio Dark/Premium" (2026-08-09): fundo `zinc-950`, campo de
  * busca elevado em `zinc-900` (hierarquia visual: superfície mais clara que
@@ -79,6 +89,7 @@ export function RestaurantHeader({
   onSearchChange,
   logoUrl,
   description,
+  isOpenNow,
 }: RestaurantHeaderProps) {
   const hasSearch = onSearchChange !== undefined;
   const hasDescription = Boolean(description?.trim());
@@ -128,6 +139,21 @@ export function RestaurantHeader({
       )}
 
       {!logoUrl && hasDescription && <p className="line-clamp-2 text-xs text-zinc-400">{description}</p>}
+
+      {/* Fase 4B.2 — só o Cardápio passa `isOpenNow` (menu/page.tsx);
+          Carrinho/Checkout/Acompanhamento simplesmente não passam essa
+          prop, então este bloco nunca renderiza nessas 3 telas. */}
+      {(isOpenNow === true || isOpenNow === false) && (
+        <div className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className={cn("h-1.5 w-1.5 rounded-full", isOpenNow ? "bg-emerald-400" : "bg-red-400")}
+          />
+          <span className={cn("text-xs font-semibold", isOpenNow ? "text-emerald-400" : "text-red-400")}>
+            {isOpenNow ? "Aberto agora" : "Fechado"}
+          </span>
+        </div>
+      )}
 
 
       {hasSearch && (

@@ -38,6 +38,7 @@ export async function GET() {
       description: overview.description,
       opening_hours: overview.openingHours,
       accepted_payment_methods: overview.acceptedPaymentMethods,
+      timezone: overview.timezone,
       checklist: {
         has_categories: overview.checklist.hasCategories,
         has_products: overview.checklist.hasProducts,
@@ -82,6 +83,7 @@ export async function PATCH(request: Request) {
       logo_url,
       opening_hours,
       accepted_payment_methods,
+      timezone,
     } = parseOrThrow(updateRestaurantSchema, body);
 
     const supabase = await createClient();
@@ -112,13 +114,14 @@ export async function PATCH(request: Request) {
     // Operação — Fase 4A (2026-08-10).
     if (opening_hours !== undefined) updates.opening_hours = opening_hours;
     if (accepted_payment_methods !== undefined) updates.accepted_payment_methods = accepted_payment_methods;
+    if (timezone !== undefined) updates.timezone = timezone;
 
     const { data: updated, error } = await supabase
       .from("restaurants")
       .update(updates)
       .eq("id", profile.restaurantId)
       .select(
-        "id, name, slug, status, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description, opening_hours, accepted_payment_methods",
+        "id, name, slug, status, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description, opening_hours, accepted_payment_methods, timezone",
       )
       .maybeSingle();
 
@@ -168,6 +171,7 @@ export async function PATCH(request: Request) {
       description: updated.description,
       opening_hours: updated.opening_hours,
       accepted_payment_methods: updated.accepted_payment_methods,
+      timezone: updated.timezone,
     });
   } catch (err) {
     return handleRouteError(err);

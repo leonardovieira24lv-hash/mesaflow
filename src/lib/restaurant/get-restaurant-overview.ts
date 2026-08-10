@@ -43,6 +43,10 @@ export interface RestaurantOverview {
   // `checklist`/`counts`.
   openingHours: OpeningHours | null;
   acceptedPaymentMethods: PaymentMethod[];
+  // Timezone — Fase 4B.2 (2026-08-10), coluna de
+  // `0029_restaurant_timezone.sql`. Sempre uma string (nunca `null`) —
+  // `not null default 'America/Sao_Paulo'` garante isso desde o schema.
+  timezone: string;
   checklist: {
     hasCategories: boolean;
     hasProducts: boolean;
@@ -86,7 +90,7 @@ export async function getRestaurantOverview(
     supabase
       .from("restaurants")
       .select(
-        "id, name, slug, status, qr_codes_printed_at, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description, opening_hours, accepted_payment_methods",
+        "id, name, slug, status, qr_codes_printed_at, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description, opening_hours, accepted_payment_methods, timezone",
       )
       .eq("id", restaurantId)
       .single(),
@@ -128,6 +132,7 @@ export async function getRestaurantOverview(
     description: restaurant.description,
     openingHours: restaurant.opening_hours as OpeningHours | null,
     acceptedPaymentMethods: restaurant.accepted_payment_methods as PaymentMethod[],
+    timezone: restaurant.timezone,
     checklist: {
       hasCategories: categoriesCount > 0,
       hasProducts: productsCount > 0,

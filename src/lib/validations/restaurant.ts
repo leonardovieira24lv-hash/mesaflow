@@ -80,6 +80,47 @@ export const acceptedPaymentMethodsSchema = z
   .array(z.enum(PAYMENT_METHOD_VALUES))
   .min(1, "Selecione pelo menos uma forma de pagamento.");
 
+// Fase 4B.2 — Timezone (2026-08-10). Validação genérica de qualquer
+// identificador IANA válido (não restrita à lista curada abaixo, que é só
+// para o dropdown da UI) — `Intl.DateTimeFormat` já sabe validar isso
+// nativamente, sem precisar manter uma lista exaustiva de fusos só para
+// checar validade. Mesma API usada no cálculo de aberto/fechado
+// (`getRestaurantOpenStatus`, `lib/orders/resolve-public-context.ts`), pra
+// nunca aceitar aqui um valor que o cálculo depois rejeitaria.
+export const timezoneSchema = z
+  .string()
+  .trim()
+  .refine((tz) => {
+    try {
+      // eslint-disable-next-line no-new -- só testando se `tz` é aceito, sem usar o formatador.
+      new Intl.DateTimeFormat("en-US", { timeZone: tz });
+      return true;
+    } catch {
+      return false;
+    }
+  }, "Fuso horário inválido.");
+
+// Lista curada, não exaustiva — cobre os fusos brasileiros e alguns
+// internacionais comuns, o suficiente para a primeira versão sem inflar o
+// escopo. Qualquer identificador IANA válido é aceito pelo backend
+// (`timezoneSchema`, acima); esta lista é só a opção mais conveniente na
+// tela de Operação, não uma restrição.
+export const TIMEZONE_OPTIONS = [
+  { value: "America/Noronha", label: "Fernando de Noronha (UTC−02:00)" },
+  { value: "America/Sao_Paulo", label: "Brasília, São Paulo, Rio de Janeiro (UTC−03:00)" },
+  { value: "America/Bahia", label: "Salvador (UTC−03:00)" },
+  { value: "America/Fortaleza", label: "Fortaleza, Recife (UTC−03:00)" },
+  { value: "America/Belem", label: "Belém (UTC−03:00)" },
+  { value: "America/Manaus", label: "Manaus (UTC−04:00)" },
+  { value: "America/Campo_Grande", label: "Campo Grande, Cuiabá (UTC−04:00)" },
+  { value: "America/Boa_Vista", label: "Boa Vista, Porto Velho (UTC−04:00)" },
+  { value: "America/Rio_Branco", label: "Rio Branco (UTC−05:00)" },
+  { value: "America/New_York", label: "Nova York (UTC−05:00)" },
+  { value: "America/Los_Angeles", label: "Los Angeles (UTC−08:00)" },
+  { value: "Europe/Lisbon", label: "Lisboa (UTC±00:00)" },
+  { value: "Europe/London", label: "Londres (UTC±00:00)" },
+] as const;
+
 export const updateRestaurantSchema = z.object({
   name: z.string().trim().min(2, "O nome deve ter pelo menos 2 caracteres.").optional(),
   slug: z
@@ -132,5 +173,6 @@ export const updateRestaurantSchema = z.object({
   // Operação — Fase 4A (2026-08-10).
   opening_hours: openingHoursSchema.optional(),
   accepted_payment_methods: acceptedPaymentMethodsSchema.optional(),
+  timezone: timezoneSchema.optional(),
 });
 export type UpdateRestaurantInput = z.infer<typeof updateRestaurantSchema>;

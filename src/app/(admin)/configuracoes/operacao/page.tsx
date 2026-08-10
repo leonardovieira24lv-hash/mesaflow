@@ -33,6 +33,7 @@ export default async function OperacaoPage() {
       <OperacaoManager
         initialOpeningHours={overview.openingHours}
         initialAcceptedPaymentMethods={overview.acceptedPaymentMethods}
+        initialTimezone={overview.timezone}
       />
     </div>
   );

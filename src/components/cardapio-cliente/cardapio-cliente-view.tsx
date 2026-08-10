@@ -19,6 +19,10 @@ interface CardapioClienteViewProps {
   // (2026-08-09). Só passagem até `<RestaurantHeader>`.
   restaurantLogoUrl?: string | null;
   restaurantDescription?: string | null;
+  // Operação — Fase 4B.2 (2026-08-10). Só passagem até
+  // `<RestaurantHeader>`; não passado por Carrinho/Checkout/Acompanhamento
+  // de propósito (o indicador é exclusivo do Cardápio).
+  restaurantIsOpen?: boolean | null;
   tableName?: string;
   categories: PublicMenuCategory[];
 }
@@ -65,6 +69,7 @@ export function CardapioClienteView({
   restaurantName,
   restaurantLogoUrl,
   restaurantDescription,
+  restaurantIsOpen,
   tableName,
   categories,
 }: CardapioClienteViewProps) {
@@ -97,6 +102,7 @@ export function CardapioClienteView({
           restaurantName={restaurantName}
           logoUrl={restaurantLogoUrl}
           description={restaurantDescription}
+          isOpenNow={restaurantIsOpen}
           tableName={tableName}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
