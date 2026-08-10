@@ -30,6 +30,14 @@ interface RouteParams {
  * `resolveRestaurantBySlug`).
  *
  * Também nunca permite apagar um `owner` por aqui — só `role = 'staff'`.
+ *
+ * Ajuste (2026-08-10, `0027_staff_deletion_preserves_history.sql`): duas
+ * tabelas de Sprints anteriores (`table_events.resolved_by`,
+ * `cashier_closings.closed_by`) também referenciavam `profiles(id)`, sem
+ * cascade — apagar um funcionário que já tinha resolvido um chamado de
+ * mesa ou fechado o caixa era barrado pelo banco. A migration trocou essas
+ * FKs para `on delete set null`: o histórico continua intacto, só a
+ * atribuição de "quem" vira vazia nesses registros antigos.
  */
 export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
