@@ -27,11 +27,14 @@ export const metadata = { title: "Perfil do Restaurante" };
  * `GET/PATCH /api/v1/restaurant` já impõem (a proteção real está lá, isto
  * só evita que um `staff` veja a tela renderizar antes de qualquer
  * requisição falhar). Ganhou também o atalho para `/configuracoes/equipe`.
+ * O `?blocked=configuracoes` no redirect é lido por `<AccessDeniedToast>`
+ * (`components/dashboard/access-denied-toast.tsx`) para explicar, com um
+ * toast, por que a pessoa voltou pro Dashboard sem ter feito nada.
  */
 export default async function ConfiguracoesPage() {
   const { profile } = await requirePageSession();
   if (profile.role !== "owner") {
-    redirect(ROUTES.dashboard);
+    redirect(`${ROUTES.dashboard}?blocked=configuracoes`);
   }
 
   const supabase = await createClient();

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Users, UserPlus } from "lucide-react";
+import { Users, UserPlus, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/toast";
 import { createStaffSchema } from "@/lib/validations/team";
 import type { TeamMember } from "@/lib/team/get-team-members";
@@ -24,14 +25,15 @@ interface TeamManagerProps {
  * Mesmo padrão de formulário já usado em `RestaurantSettingsForm`:
  * validação client-side com o mesmo schema Zod do Route Handler, `fetch`
  * direto, `FormField`/`toast` para erro e sucesso. Sem diálogo de
- * confirmação (diferente do slug do Perfil) — criar um funcionário não
- * invalida nada existente, não há necessidade de aviso prévio.
+ * confirmação na criação (diferente do slug do Perfil) — criar um
+ * funcionário não invalida nada existente, não há necessidade de aviso
+ * prévio. A remoção, abaixo, já é diferente — é destrutiva.
  *
- * Remover/desativar funcionário fica fora desta primeira versão — a Sprint
- * autorizou implementar só "se puder ser feito com segurança dentro do
- * escopo", e envolveria decidir entre excluir de vez (perde histórico de
- * quem processou o quê) ou um campo novo de "desativado" (migration nova,
- * fora do que foi pedido aqui). Fica para uma Sprint própria.
+ * Remoção de funcionário (2026-08-09, encerramento da Fase 3): `DELETE
+ * /api/v1/team/{id}` — o cascade de `profiles` já cuida de tudo numa
+ * chamada só (ver docstring do endpoint). Com `ConfirmDialog` antes, mesmo
+ * padrão de "Limpar carrinho"/mudança de slug — ação destrutiva, sem
+ * desfazer.
  */
 export function TeamManager({ initialTeam }: TeamManagerProps) {
   const [team, setTeam] = useState<TeamMember[]>(initialTeam);
@@ -40,6 +42,32 @@ export function TeamManager({ initialTeam }: TeamManagerProps) {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  async function handleRemoveConfirmed() {
+    if (!memberToRemove) return;
+
+    setIsRemoving(true);
+    try {
+      const response = await fetch(`/api/v1/team/${memberToRemove.id}`, { method: "DELETE" });
+
+      if (!response.ok) {
+        const body = await response.json();
+        const apiError = body as ApiError;
+        toast.error("Não foi possível remover", apiError.error?.message);
+        return;
+      }
+
+      setTeam((prev) => prev.filter((m) => m.id !== memberToRemove.id));
+      toast.success("Funcionário removido", memberToRemove.email);
+      setMemberToRemove(null);
+    } catch {
+      toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
+    } finally {
+      setIsRemoving(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -114,6 +142,16 @@ export function TeamManager({ initialTeam }: TeamManagerProps) {
                     </span>
                     <span className="truncate text-xs text-ds2-foreground-muted">{member.email}</span>
                   </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setMemberToRemove(member)}
+                    aria-label={`Remover ${member.name || member.email}`}
+                    className="shrink-0 text-ds2-danger hover:text-ds2-danger"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -171,6 +209,21 @@ export function TeamManager({ initialTeam }: TeamManagerProps) {
           </form>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={memberToRemove !== null}
+        onOpenChange={(open) => !open && setMemberToRemove(null)}
+        title="Remover funcionário"
+        description={
+          memberToRemove
+            ? `${memberToRemove.name || memberToRemove.email} perderá o acesso ao sistema imediatamente. Essa ação não pode ser desfeita.`
+            : undefined
+        }
+        confirmLabel="Remover"
+        variant="destructive"
+        onConfirm={handleRemoveConfirmed}
+        isConfirming={isRemoving}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist
 import { RecentOrders } from "@/components/dashboard/recent-orders";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { DashboardRealtimeSync } from "@/components/dashboard/dashboard-realtime-sync";
+import { AccessDeniedToast } from "@/components/dashboard/access-denied-toast";
 import {
   StatusHeaderSkeleton,
   ActionRequiredSkeleton,
@@ -51,6 +52,9 @@ export default async function DashboardPage() {
           <RestaurantStatusHeader restaurantId={profile.restaurantId} />
         </Suspense>
         <DashboardRealtimeSync restaurantId={profile.restaurantId} />
+        <Suspense fallback={null}>
+          <AccessDeniedToast />
+        </Suspense>
       </div>
 
       <Suspense fallback={<ActionRequiredSkeleton />}>
