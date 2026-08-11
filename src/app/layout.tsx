@@ -41,8 +41,8 @@ const poppinsNumeric = Poppins({
 
 export const metadata: Metadata = {
   title: {
-    default: "MesaFlow",
-    template: "%s · MesaFlow",
+    default: "Forko",
+    template: "%s · Forko",
   },
   description: "Pedidos via QR Code para restaurantes — cardápio digital e painel em tempo real.",
 };

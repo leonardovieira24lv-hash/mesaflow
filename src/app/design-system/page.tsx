@@ -25,7 +25,7 @@ export default function DesignSystemV2Page() {
       <div className="mx-auto flex max-w-5xl flex-col gap-16 p-6 py-12 md:p-12">
         <header className="flex flex-col gap-2">
           <p className="font-mono text-xs uppercase tracking-widest text-ds2-primary">Design System · 2.0 · Sprint 1</p>
-          <h1 className="font-display text-4xl font-bold tracking-tight text-ds2-foreground">MesaFlow</h1>
+          <h1 className="font-display text-4xl font-bold tracking-tight text-ds2-foreground">Forko</h1>
           <p className="max-w-2xl text-ds2-foreground-muted">
             Fundação do novo sistema visual: grafite quase preto, verde como única cor de marca, sem dourado.
             Esta sprint só cria e documenta os tokens — nenhuma tela existente foi redesenhada.

@@ -33,9 +33,9 @@ function BrandMark() {
         aria-hidden
         className="flex h-8 w-8 items-center justify-center rounded-ds2-sm bg-ds2-primary font-display text-sm font-bold text-ds2-primary-foreground shadow-ds2-sm"
       >
-        M
+        F
       </span>
-      <span className="font-display text-lg font-bold tracking-tight text-ds2-foreground">MesaFlow</span>
+      <span className="font-display text-lg font-bold tracking-tight text-ds2-foreground">Forko</span>
     </Link>
   );
 }
@@ -104,7 +104,7 @@ export function AdminSidebar({ isOwner }: { isOwner: boolean }) {
         <BrandMark />
         <NavLinks items={items} />
         <div className="border-t border-ds2-border px-6 py-4 text-xs text-ds2-foreground-muted">
-          MesaFlow © {new Date().getFullYear()}
+          Forko © {new Date().getFullYear()}
         </div>
       </aside>
 

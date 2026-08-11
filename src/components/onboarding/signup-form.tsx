@@ -103,7 +103,7 @@ export function SignupForm() {
       <OnboardingProgress current={1} />
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
         <div className="flex flex-col gap-1 text-center">
-          <h1 className="font-display text-2xl font-semibold">Crie sua conta no MesaFlow</h1>
+          <h1 className="font-display text-2xl font-semibold">Crie sua conta no Forko</h1>
           <p className="text-sm text-muted-foreground">Leva menos de 2 minutos para começar.</p>
         </div>
 

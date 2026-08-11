@@ -64,7 +64,7 @@ export async function OnboardingChecklist({ restaurantId }: { restaurantId: stri
           <CardDescription>
             {pendingCount === 0
               ? "Tudo pronto — seu restaurante está totalmente configurado."
-              : `${pendingCount} ${pendingCount === 1 ? "item pendente" : "itens pendentes"} para aproveitar o MesaFlow por completo.`}
+              : `${pendingCount} ${pendingCount === 1 ? "item pendente" : "itens pendentes"} para aproveitar o Forko por completo.`}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">

@@ -107,7 +107,7 @@ export function TablesForm() {
         return;
       }
 
-      toast.success("Tudo pronto!", "Seu restaurante já está ativo no MesaFlow.");
+      toast.success("Tudo pronto!", "Seu restaurante já está ativo no Forko.");
       router.push(ROUTES.dashboard);
     } catch {
       toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
