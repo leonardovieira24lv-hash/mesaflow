@@ -39,6 +39,16 @@ interface ProductDetailModalProps {
  * claros que o painel, para parecerem "elevados"/tocáveis), preço em
  * `emerald-400`, botão principal continua `emerald-500` sólido. Nenhuma
  * lógica foi tocada.
+ *
+ * Sprint "Identidade Forko — Cardápio Claro" (2026-08-11): painel branco
+ * sobre o mesmo overlay escuro (`backdrop:bg-black/60` — continua
+ * funcionando bem mesmo com painel claro, é padrão comum). Controles
+ * internos viraram `zinc-100`→`branco` (a mesma lógica de "mais claro =
+ * mais elevado" se inverte naturalmente: branco é o tom mais claro
+ * possível, então os controles viram brancos dentro de um card cinza-claro
+ * — sensação de elevação preservada). Preço em `emerald-600` (não
+ * `emerald-400` — contraste ruim em fundo branco). Botão principal
+ * continua `emerald-500` sólido, intocado.
  */
 export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
   const { addItem } = useCart();
@@ -96,7 +106,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
       }}
       aria-label={item?.name}
       className={cn(
-        "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88dvh] w-full overflow-hidden rounded-t-3xl border-t border-zinc-800 bg-zinc-900 p-0 text-white shadow-2xl",
+        "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88dvh] w-full overflow-hidden rounded-t-3xl border-t border-zinc-200 bg-white p-0 text-zinc-900 shadow-2xl",
         "sm:inset-0 sm:bottom-auto sm:m-auto sm:max-w-md sm:rounded-2xl sm:border sm:shadow-2xl",
         "backdrop:bg-black/60 backdrop:backdrop-blur-[2px]",
       )}
@@ -104,10 +114,10 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
       {item && (
         <div className="flex max-h-[88dvh] flex-col sm:max-h-[85dvh]">
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="relative h-56 w-full shrink-0 bg-zinc-800 sm:h-64 sm:rounded-t-2xl">
+            <div className="relative h-56 w-full shrink-0 bg-zinc-100 sm:h-64 sm:rounded-t-2xl">
               {showImage ? (
                 <>
-                  {!imageLoaded && <div className="absolute inset-0 animate-pulse bg-zinc-800" aria-hidden />}
+                  {!imageLoaded && <div className="absolute inset-0 animate-pulse bg-zinc-100" aria-hidden />}
                   <Image
                     src={item.image_url as string}
                     alt=""
@@ -123,7 +133,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                 </>
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
-                  <UtensilsCrossed className="h-12 w-12 text-zinc-500" aria-hidden />
+                  <UtensilsCrossed className="h-12 w-12 text-zinc-400" aria-hidden />
                 </div>
               )}
               <div
@@ -135,7 +145,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                 type="button"
                 onClick={onClose}
                 aria-label="Fechar"
-                className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-900 text-zinc-300 shadow-md ring-1 ring-zinc-700 transition hover:bg-zinc-800 active:scale-95"
+                className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-zinc-700 shadow-md ring-1 ring-zinc-200 transition hover:bg-white active:scale-95"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -143,32 +153,32 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
 
             <div className="flex flex-col gap-5 px-6 pb-6 pt-5">
               <div className="flex flex-col gap-1.5">
-                <h2 className="text-2xl font-bold tracking-tight text-white">{item.name}</h2>
+                <h2 className="text-2xl font-bold tracking-tight text-zinc-900">{item.name}</h2>
                 {item.description && <p className="text-sm leading-relaxed text-zinc-500">{item.description}</p>}
-                <p className="pt-1 text-lg font-bold tabular-nums text-emerald-400">{formatCurrency(item.price)}</p>
+                <p className="pt-1 text-lg font-bold tabular-nums text-emerald-600">{formatCurrency(item.price)}</p>
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl bg-zinc-900 px-4 py-3 ring-1 ring-zinc-800">
-                <span className="text-sm font-medium text-white">Quantidade</span>
+              <div className="flex items-center justify-between rounded-2xl bg-zinc-100 px-4 py-3 ring-1 ring-zinc-200">
+                <span className="text-sm font-medium text-zinc-900">Quantidade</span>
                 {/* Controles +/- — HTML nativo, área de toque 40x40, com fundo/borda/estado ativo próprios. */}
-                <div className="flex items-center gap-1 rounded-full bg-zinc-800 p-1">
+                <div className="flex items-center gap-1 rounded-full bg-white p-1 shadow-sm ring-1 ring-zinc-200">
                   <button
                     type="button"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                     disabled={quantity <= 1}
                     aria-label="Diminuir quantidade"
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-300 transition hover:bg-zinc-700 active:scale-90 disabled:pointer-events-none disabled:opacity-30"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 transition hover:bg-zinc-100 active:scale-90 disabled:pointer-events-none disabled:opacity-30"
                   >
                     <Minus className="h-4 w-4" />
                   </button>
-                  <span aria-live="polite" className="w-7 text-center text-base font-semibold text-white">
+                  <span aria-live="polite" className="w-7 text-center text-base font-semibold text-zinc-900">
                     {quantity}
                   </span>
                   <button
                     type="button"
                     onClick={() => setQuantity((q) => q + 1)}
                     aria-label="Aumentar quantidade"
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-300 transition hover:bg-zinc-700 active:scale-90"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 transition hover:bg-zinc-100 active:scale-90"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
@@ -177,7 +187,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
 
               {/* Campo de observação — label/textarea/hint em HTML nativo, sem depender de FormField/Textarea. */}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="product-notes" className="text-sm font-medium text-white">
+                <label htmlFor="product-notes" className="text-sm font-medium text-zinc-900">
                   Observação
                 </label>
                 <textarea
@@ -186,15 +196,15 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Alguma observação para a cozinha?"
                   rows={2}
-                  className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full resize-none rounded-xl border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 />
-                <p className="text-xs text-zinc-500">Opcional — ex.: sem cebola, ponto da carne.</p>
+                <p className="text-xs text-zinc-400">Opcional — ex.: sem cebola, ponto da carne.</p>
               </div>
             </div>
           </div>
 
           {/* Botão principal — HTML nativo, fundo/contraste/hover/active próprios. */}
-          <div className="shrink-0 border-t border-zinc-800 bg-zinc-900 px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
+          <div className="shrink-0 border-t border-zinc-200 bg-white px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
             <button
               type="button"
               onClick={handleAdd}

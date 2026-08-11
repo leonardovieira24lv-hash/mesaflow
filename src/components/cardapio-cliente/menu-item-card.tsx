@@ -24,6 +24,15 @@ interface MenuItemCardProps {
  * `zinc-950`, borda `zinc-800`, preço em `emerald-400` (mais claro que
  * `emerald-600` para manter contraste em fundo escuro), botão "+" continua
  * `emerald-500` sólido. Nenhuma lógica de seleção foi tocada.
+ *
+ * Sprint "Identidade Forko — Cardápio Claro" (2026-08-11): card branco
+ * sobre fundo `zinc-50`, borda `zinc-200`. Preço voltou para `emerald-600`
+ * — o `emerald-400` do tema escuro (claro demais, tuned pra fundo preto)
+ * fica com contraste ruim em fundo branco; mesmo raciocínio inverso já
+ * usado quando o Cardápio foi de claro pra escuro (o preço trocou de
+ * `emerald-600` pra `emerald-400` naquela ocasião, pelo motivo oposto).
+ * Verde continua sendo a cor de ação em todo o Cardápio — só o tom exato
+ * mudou por legibilidade, não a cor em si.
  */
 export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
   const isAvailable = item.is_available;
@@ -38,16 +47,16 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
       onClick={() => onSelect(item)}
       aria-label={isAvailable ? `Ver detalhes de ${item.name}` : `${item.name} — indisponível no momento`}
       className={cn(
-        "group flex w-full items-stretch gap-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-3.5 text-left shadow-sm transition-all duration-300 ease-out",
+        "group flex w-full items-stretch gap-4 rounded-2xl border border-zinc-200 bg-white p-3.5 text-left shadow-sm transition-all duration-300 ease-out",
         isAvailable
-          ? "hover:-translate-y-1 hover:border-zinc-700 hover:shadow-md active:translate-y-0 active:scale-[0.99] active:shadow-sm"
+          ? "hover:-translate-y-1 hover:border-zinc-300 hover:shadow-md active:translate-y-0 active:scale-[0.99] active:shadow-sm"
           : "cursor-not-allowed opacity-60",
       )}
     >
-      <div className="relative h-36 w-36 shrink-0 overflow-hidden rounded-2xl bg-zinc-800">
+      <div className="relative h-36 w-36 shrink-0 overflow-hidden rounded-2xl bg-zinc-100">
         {showImage ? (
           <>
-            {!imageLoaded && <div className="absolute inset-0 z-10 animate-pulse bg-zinc-800" aria-hidden />}
+            {!imageLoaded && <div className="absolute inset-0 z-10 animate-pulse bg-zinc-100" aria-hidden />}
             <Image
               src={item.image_url as string}
               alt=""
@@ -66,14 +75,14 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
           // Placeholder discreto: cinza liso e um ícone pequeno, sem
           // círculo/sombra própria — não deve competir com fotos reais nem
           // parecer um erro.
-          <div className="flex h-full w-full items-center justify-center bg-zinc-800">
-            <ImageOff className="h-6 w-6 text-zinc-500" strokeWidth={1.5} aria-hidden />
+          <div className="flex h-full w-full items-center justify-center bg-zinc-100">
+            <ImageOff className="h-6 w-6 text-zinc-400" strokeWidth={1.5} aria-hidden />
           </div>
         )}
 
         {!isAvailable && (
-          <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/70 backdrop-blur-[1px]">
-            <span className="rounded-full bg-zinc-900 px-2.5 py-1 text-xs font-semibold text-white">
+          <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
+            <span className="rounded-full bg-zinc-900/90 px-2.5 py-1 text-xs font-semibold text-white">
               Indisponível
             </span>
           </div>
@@ -81,13 +90,13 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 py-1">
-        <p className="line-clamp-1 text-lg font-bold leading-tight tracking-tight text-white">{item.name}</p>
+        <p className="line-clamp-1 text-lg font-bold leading-tight tracking-tight text-zinc-900">{item.name}</p>
         {item.description && (
           <p className="line-clamp-2 text-[13px] leading-snug text-zinc-500">{item.description}</p>
         )}
 
         <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="text-lg font-extrabold tabular-nums tracking-tight text-emerald-400">
+          <span className="text-lg font-extrabold tabular-nums tracking-tight text-emerald-600">
             {formatCurrency(item.price)}
           </span>
 
