@@ -21,21 +21,20 @@ const NAV_ITEMS = [
 ] as const;
 
 /**
- * Não depende de `.btn-primary-surface` (classe legada em `globals.css`)
- * — usa `bg-ds2-primary`/`text-ds2-primary-foreground` diretamente.
- * `.btn-primary-surface` perde aqui seu último consumidor administrativo
- * — só resta `menu-item-card.tsx` (Cardápio do cliente, público).
+ * Logo real da marca (2026-08-11) — `public/logo-forko.png`, ícone +
+ * wordmark já combinados numa imagem só (não é mais badge+texto
+ * separados). `<img>` nativo, não `next/image`: mesmo raciocínio já usado
+ * na logo do restaurante no Cardápio Público — a altura é fixa (`h-10`),
+ * a largura segue a proporção real do arquivo (`w-auto`), então não
+ * precisa de `width`/`height` fixos que o `next/image` exigiria.
+ * `alt="Forko"` garante que o nome continue acessível a leitor de tela
+ * mesmo sem nenhum texto visível ao lado.
  */
 function BrandMark() {
   return (
-    <Link href={ROUTES.dashboard} className="flex items-center gap-2.5 px-6 py-6">
-      <span
-        aria-hidden
-        className="flex h-8 w-8 items-center justify-center rounded-ds2-sm bg-ds2-primary font-display text-sm font-bold text-ds2-primary-foreground shadow-ds2-sm"
-      >
-        F
-      </span>
-      <span className="font-display text-lg font-bold tracking-tight text-ds2-foreground">Forko</span>
+    <Link href={ROUTES.dashboard} className="flex items-center px-6 py-6">
+      {/* eslint-disable-next-line @next/next/no-img-element -- proporção real do arquivo, ver docstring acima. */}
+      <img src="/logo-forko.png" alt="Forko" className="h-10 w-auto" />
     </Link>
   );
 }
