@@ -94,34 +94,47 @@
      reservados a status operacionais (Pronto/Preparando/Cancelado), assim
      o dourado nunca compete com eles por atenção. */
   .dark {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 100%;
+    /* Identidade Forko (2026-08-11) — antes um tema realmente escuro
+       (fundo quase preto). O painel administrativo passou a usar fundo
+       claro/branco, com o vermelho da marca como cor de ação — mesmos
+       nomes de variável de sempre (`.dark`/`.ds2-dark` continuam se
+       chamando assim só por não valer a pena renomear a classe usada em
+       vários arquivos por uma etiqueta interna que ninguém vê), valores
+       completamente novos.
+       `--primary` (vermelho vivo, `#E63946`) é a cor de AÇÃO — botões,
+       links, destaques. `--destructive` é um vermelho bem mais escuro
+       (bordô, `#8B1E24`) — deliberadamente diferente do `--primary`, pra
+       nunca confundir "Adicionar"/"Salvar" com "Excluir"/"Remover" só
+       porque os dois são "vermelho": são tons claramente distintos, não a
+       mesma cor duas vezes. */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 5%;
 
-    --surface: 0 0% 11%;
-    --surface-foreground: 0 0% 100%;
+    --surface: 0 0% 90%;
+    --surface-foreground: 0 0% 5%;
 
-    --primary: 43 74% 52%;
-    --primary-foreground: 0 0% 7%;
-    --primary-deep: 38 68% 40%;
+    --primary: 355 78% 56%;
+    --primary-foreground: 0 0% 100%;
+    --primary-deep: 355 78% 42%;
 
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 74%;
-    --foreground-subtle: 0 0% 55%;
-    --border: 0 0% 18%;
+    --muted: 0 0% 92%;
+    --muted-foreground: 0 0% 20%;
+    --foreground-subtle: 0 0% 45%;
+    --border: 0 0% 85%;
 
-    --success: 142 50% 45%;
-    --success-foreground: 0 0% 7%;
+    --success: 152 60% 40%;
+    --success-foreground: 0 0% 100%;
 
-    --warning: 28 80% 52%;
-    --warning-foreground: 0 0% 7%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 10%;
 
-    --destructive: 355 60% 48%;
+    --destructive: 357 65% 33%;
     --destructive-foreground: 0 0% 100%;
 
-    --info: 212 75% 58%;
-    --info-foreground: 0 0% 7%;
+    --info: 212 75% 50%;
+    --info-foreground: 0 0% 100%;
 
-    --ring: 43 74% 52%;
+    --ring: 355 78% 56%;
 
     /* Sidebar/header — um degrau acima do fundo (#151515), não preto puro,
        para ler como painel próprio (Windows 11: a barra de tarefas nunca é
@@ -142,7 +155,7 @@
     --shadow-card-hover: 0 12px 28px -6px rgb(0 0 0 / 0.55), 0 4px 10px -3px rgb(0 0 0 / 0.4);
     --shadow-bar: 0 -4px 24px 0 rgb(0 0 0 / 0.5);
     --shadow-sheet: 0 -16px 40px -8px rgb(0 0 0 / 0.6);
-    --elevation-highlight: inset 0 1px 0 0 rgb(255 255 255 / 0.04);
+    --elevation-highlight: inset 0 1px 0 0 rgb(0 0 0 / 0.04);
   }
 
   /* Tema claro (público/onboarding/auth): --shadow-*, --elevation-highlight
@@ -222,31 +235,34 @@
      mais que `.dark`/`.menu-dark` (background/surface/surface-hover)
      para dar mais hierarquia de profundidade a cards aninhados. */
   .ds2-dark {
-    --ds2-background: 0 0% 5%;
-    --ds2-surface: 0 0% 10%;
-    --ds2-surface-hover: 0 0% 13%;
-    --ds2-border: 0 0% 18%;
-    --ds2-border-strong: 0 0% 26%;
+    /* Identidade Forko (2026-08-11) — ver nota completa no bloco `.dark`,
+       acima; mesmo raciocínio aqui (fundo claro, vermelho vivo como
+       primária, bordô como destrutivo — dois vermelhos, nunca um só). */
+    --ds2-background: 0 0% 100%;
+    --ds2-surface: 0 0% 90%;
+    --ds2-surface-hover: 0 0% 85%;
+    --ds2-border: 0 0% 85%;
+    --ds2-border-strong: 0 0% 72%;
 
-    --ds2-foreground: 0 0% 98%;
-    --ds2-foreground-muted: 0 0% 68%;
-    --ds2-foreground-subtle: 0 0% 46%;
+    --ds2-foreground: 0 0% 5%;
+    --ds2-foreground-muted: 0 0% 20%;
+    --ds2-foreground-subtle: 0 0% 45%;
 
-    --ds2-primary: 152 65% 45%;
+    --ds2-primary: 355 78% 56%;
     --ds2-primary-foreground: 0 0% 100%;
-    --ds2-primary-hover: 152 65% 40%;
-    --ds2-primary-active: 152 65% 35%;
+    --ds2-primary-hover: 355 78% 48%;
+    --ds2-primary-active: 355 78% 42%;
 
-    --ds2-success: 152 60% 45%;
+    --ds2-success: 152 60% 40%;
     --ds2-success-foreground: 0 0% 100%;
-    --ds2-warning: 38 92% 55%;
-    --ds2-warning-foreground: 0 0% 8%;
-    --ds2-danger: 0 72% 56%;
+    --ds2-warning: 38 92% 50%;
+    --ds2-warning-foreground: 0 0% 10%;
+    --ds2-danger: 357 65% 33%;
     --ds2-danger-foreground: 0 0% 100%;
-    --ds2-info: 210 80% 60%;
+    --ds2-info: 210 80% 50%;
     --ds2-info-foreground: 0 0% 100%;
 
-    --ds2-ring: 152 65% 50%;
+    --ds2-ring: 355 78% 56%;
 
     /* Raio — 3 degraus nomeados (controles pequenos / cards / superfícies
        grandes), em vez do único `--radius` genérico do sistema atual. */
@@ -264,7 +280,7 @@
     --ds2-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.45);
     --ds2-shadow-md: 0 8px 20px -6px rgb(0 0 0 / 0.55), 0 2px 8px -2px rgb(0 0 0 / 0.4);
     --ds2-shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.65);
-    --ds2-elevation-highlight: inset 0 1px 0 0 rgb(255 255 255 / 0.045);
+    --ds2-elevation-highlight: inset 0 1px 0 0 rgb(0 0 0 / 0.04);
 
     /* Transições — 3 durações nomeadas, uma curva só (nunca "linear",
        nunca "ease" puro) para todo hover/focus/disabled do sistema. */
