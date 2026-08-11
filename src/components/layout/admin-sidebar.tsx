@@ -32,7 +32,7 @@ const NAV_ITEMS = [
  */
 function BrandMark() {
   return (
-    <Link href={ROUTES.dashboard} className="flex items-center px-6 py-6">
+    <Link href={ROUTES.dashboard} className="flex items-center justify-center px-6 py-6">
       {/* eslint-disable-next-line @next/next/no-img-element -- proporção real do arquivo, ver docstring acima. */}
       <img src="/logo-forko.png" alt="Forko" className="h-10 w-auto" />
     </Link>
@@ -116,12 +116,14 @@ export function AdminSidebar({ isOwner }: { isOwner: boolean }) {
             onClick={() => setMobileNavOpen(false)}
           />
           <div className="absolute inset-y-0 left-0 flex w-72 flex-col bg-ds2-background shadow-ds2-lg animate-slide-in-right">
-            <div className="flex items-center justify-between">
-              <BrandMark />
+            <div className="relative flex items-center">
+              <div className="flex flex-1 justify-center">
+                <BrandMark />
+              </div>
               <button
                 aria-label="Fechar menu"
                 onClick={() => setMobileNavOpen(false)}
-                className="mr-3 flex h-11 w-11 items-center justify-center rounded-ds2-sm text-ds2-foreground-muted transition-colors hover:bg-ds2-primary/10 hover:text-ds2-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background"
+                className="absolute right-3 flex h-11 w-11 items-center justify-center rounded-ds2-sm text-ds2-foreground-muted transition-colors hover:bg-ds2-primary/10 hover:text-ds2-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background"
               >
                 <X className="h-5 w-5" />
               </button>
