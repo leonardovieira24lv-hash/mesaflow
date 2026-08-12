@@ -7,6 +7,13 @@ type AdminClient = ReturnType<typeof createAdminClient>;
 export interface PublicOrderStatusItem {
   name: string;
   quantity: number;
+  // Correção (2026-08-12): observação por item ("sem cebola", etc.) nunca
+  // chegava até a Área do Cliente — a consulta de origem
+  // (`getOrdersForSessions`) não buscava a coluna. Cliente confirmava o
+  // pedido, a cozinha recebia certo, mas o cliente não tinha como saber
+  // que a observação realmente foi registrada — podia gerar chamada de
+  // garçom desnecessária. `null` quando o item não tem observação.
+  notes: string | null;
 }
 
 export interface PublicOrderStatus {
@@ -48,7 +55,7 @@ export async function getPublicOrderStatus(
 
   const { data: items, error: itemsError } = await admin
     .from("order_items")
-    .select("name, quantity")
+    .select("name, quantity, notes")
     .eq("order_id", order.id);
 
   if (itemsError) {
@@ -58,6 +65,6 @@ export async function getPublicOrderStatus(
   return {
     id: order.id,
     status: order.status as OrderStatus,
-    items: (items ?? []).map((item) => ({ name: item.name, quantity: item.quantity })),
+    items: (items ?? []).map((item) => ({ name: item.name, quantity: item.quantity, notes: item.notes })),
   };
 }

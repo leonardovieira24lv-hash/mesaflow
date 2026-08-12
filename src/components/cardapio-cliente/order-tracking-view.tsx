@@ -115,6 +115,16 @@ const STATUS_STYLES: Record<OrderStatus, string> = {
  * `border-border`) em vez de zinc literal. "Continuar comprando"
  * (emerald-500) e o destaque verde de pedido não processado
  * (emerald-500/30, emerald-500/[0.07]) preservados sem alteração.
+ *
+ * Correção (2026-08-12): observação por item ("sem cebola", etc.) nunca
+ * aparecia aqui — a cadeia inteira (consulta em `getOrdersForSessions`,
+ * `lib/tables/get-open-table-operations.ts` → `getPublicSessionOrders`,
+ * `lib/orders/get-public-session-orders.ts` → este componente) descartava
+ * o campo antes de chegar na tela, mesmo a cozinha recebendo certo por um
+ * caminho diferente. Cliente confirmava com observação, via só o nome do
+ * produto no acompanhamento, sem confirmação visual de que o pedido
+ * específico foi registrado — risco real de achar que não funcionou e
+ * chamar o garçom à toa. Corrigido na cadeia inteira, não só aqui.
  */
 export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLogoUrl, menuTheme, initialOrders, tableToken }: OrderTrackingViewProps) {
   const [orders, setOrders] = useState<PublicSessionOrder[]>(initialOrders);
@@ -242,6 +252,7 @@ export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLog
                     {order.items.map((item, index) => (
                       <li key={`${order.id}-${item.name}-${index}`} className="text-xs text-muted-foreground">
                         <span className="font-semibold text-foreground">{item.quantity}×</span> {item.name}
+                        {item.notes && <span className="italic"> — {item.notes}</span>}
                       </li>
                     ))}
                   </ul>
