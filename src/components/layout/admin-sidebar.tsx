@@ -24,12 +24,11 @@ const NAV_ITEMS = [
  * Logo real da marca (2026-08-11) — `public/logo-forko.png`, ícone +
  * wordmark já combinados numa imagem só (não é mais badge+texto
  * separados). `<img>` nativo, não `next/image`: mesmo raciocínio já usado
- * na logo do restaurante no Cardápio Público — a altura é fixa (`h-[68px]`,
- * era `h-10` — a logo trocada depois tem proporção mais próxima de 1.5:1,
- * não a faixa larga ~4:1 da versão anterior; em `h-10` ficava pequena
- * demais pra ler "FORKO" com conforto; 68px não é um valor padrão do
- * Tailwind, por isso o colchete — pedido explícito, não arredondado pra
- * `h-16`/`h-18`), a largura segue a proporção real do arquivo (`w-auto`), então não
+ * na logo do restaurante no Cardápio Público — a altura é fixa (`h-24`,
+ * 96px — passou por `h-10`(40px)→`h-[68px]`→`h-24`(96px), essa última
+ * proporção mais próxima de 1.5:1, não a faixa larga ~4:1 da versão
+ * anterior, exigia um salto grande pra parecer proporcional ao resto da
+ * sidebar), a largura segue a proporção real do arquivo (`w-auto`), então não
  * precisa de `width`/`height` fixos que o `next/image` exigiria.
  * `alt="Forko"` garante que o nome continue acessível a leitor de tela
  * mesmo sem nenhum texto visível ao lado.
@@ -38,7 +37,7 @@ function BrandMark() {
   return (
     <Link href={ROUTES.dashboard} className="flex items-center justify-center px-6 py-6">
       {/* eslint-disable-next-line @next/next/no-img-element -- proporção real do arquivo, ver docstring acima. */}
-      <img src="/logo-forko.png" alt="Forko" className="h-[68px] w-auto" />
+      <img src="/logo-forko.png" alt="Forko" className="h-24 w-auto" />
     </Link>
   );
 }
