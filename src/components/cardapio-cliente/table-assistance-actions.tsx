@@ -41,6 +41,16 @@ interface TableAssistanceActionsProps {
  *
  * Nenhuma chamada de API, endpoint, estado ou lógica de idempotência foi
  * tocada.
+ *
+ * Etapa 3M — Migração para Tokens (2026-08-12): botão ocioso virou
+ * `bg-surface`/`shadow-card` (mesma superfície "com presença" de sempre,
+ * agora calibrada por tema); badge do ícone um passo acima
+ * (`bg-muted`→`bg-background` no hover, mesma relação de "mais claro =
+ * mais próximo/tocável" de antes). Verde do estado confirmado
+ * (`emerald-500/15` de fundo, preservado) teve só o TOM do texto
+ * recalibrado (`emerald-300`→`emerald-700`) — o claro original ficava
+ * ilegível sobre fundo branco, mesmo raciocínio já aplicado ao preço do
+ * cardápio (mesma cor, tom mais escuro por legibilidade).
  */
 export function TableAssistanceActions({ slug, tableToken }: TableAssistanceActionsProps) {
   const [calledWaiter, setCalledWaiter] = useState(false);
@@ -78,14 +88,14 @@ export function TableAssistanceActions({ slug, tableToken }: TableAssistanceActi
 
   const baseButton =
     "group flex flex-1 min-h-[44px] items-center justify-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-semibold transition active:scale-[0.97] disabled:pointer-events-none";
-  const idleButton = `${baseButton} bg-zinc-800 text-white shadow-sm shadow-black/40 hover:bg-zinc-700`;
-  const doneButton = `${baseButton} bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30`;
+  const idleButton = `${baseButton} bg-surface text-foreground shadow-card hover:bg-muted`;
+  const doneButton = `${baseButton} bg-emerald-500/15 text-emerald-700 ring-1 ring-inset ring-emerald-500/30`;
   const iconBadge =
-    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-zinc-100 transition group-hover:bg-zinc-600";
-  const iconBadgeDone = "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/25 text-emerald-300";
+    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition group-hover:bg-background";
+  const iconBadgeDone = "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/25 text-emerald-700";
 
   return (
-    <div className="flex gap-2.5 border-b border-zinc-800 bg-zinc-950 px-4 py-3">
+    <div className="flex gap-2.5 border-b border-border bg-background px-4 py-3">
       <button
         type="button"
         onClick={() => handleAction("waiter")}

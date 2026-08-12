@@ -48,53 +48,63 @@ interface CartLineItemProps {
  *
  * Nenhuma prop, handler, cálculo (`lineTotal`) ou comportamento foi
  * alterado — `onUpdateQuantity`/`onRemove`/`editable` seguem idênticos.
+ *
+ * Etapa 3K — Migração para Tokens (2026-08-12): card migrou pra
+ * `bg-surface`/`border-border` + `elevation-card` (mesmo card "3D" do
+ * cardápio, mesma classe, mesma calibração). Pill de quantidade virou
+ * `bg-background` (branca, dentro do card cinza — mesma hierarquia
+ * página/card/pill já usada em `product-detail-modal.tsx`). Preço
+ * (`emerald-400`→`emerald-600`) e hover de excluir
+ * (`text-red-400`→`text-red-600`) recalibrados por contraste — mesmo tom,
+ * mais escuro pra continuar legível em fundo claro (mesmo raciocínio já
+ * aplicado ao preço do cardápio).
  */
 export function CartLineItem({ item, editable = false, onUpdateQuantity, onRemove }: CartLineItemProps) {
   const lineTotal = item.price * item.quantity;
 
   return (
-    <div className="flex items-center gap-3.5 rounded-2xl border border-zinc-800 bg-zinc-900 p-3">
-      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-zinc-800">
+    <div className="flex items-center gap-3.5 rounded-2xl border border-border bg-surface p-3 elevation-card">
+      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
         {item.imageUrl ? (
           <Image src={item.imageUrl} alt="" fill sizes="64px" className="object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <UtensilsCrossed className="h-5 w-5 text-zinc-500" aria-hidden />
+            <UtensilsCrossed className="h-5 w-5 text-muted-foreground" aria-hidden />
           </div>
         )}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <p className="truncate font-semibold text-white">{item.name}</p>
-        {item.notes && <p className="truncate text-xs text-zinc-500">Obs.: {item.notes}</p>}
-        <span className="text-sm font-bold tabular-nums text-emerald-400">{formatCurrency(lineTotal)}</span>
+        <p className="truncate font-semibold text-foreground">{item.name}</p>
+        {item.notes && <p className="truncate text-xs text-muted-foreground">Obs.: {item.notes}</p>}
+        <span className="text-sm font-bold tabular-nums text-emerald-600">{formatCurrency(lineTotal)}</span>
       </div>
 
       {editable ? (
-        <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-zinc-800 p-1">
+        <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-background p-1">
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition hover:bg-zinc-700 hover:text-white active:scale-90"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-90"
             onClick={() => onUpdateQuantity?.(item.quantity - 1)}
             aria-label={`Diminuir quantidade de ${item.name}`}
           >
             <Minus className="h-3.5 w-3.5" strokeWidth={2.5} />
           </button>
-          <span className="w-5 text-center text-sm font-bold tabular-nums text-white">{item.quantity}</span>
+          <span className="w-5 text-center text-sm font-bold tabular-nums text-foreground">{item.quantity}</span>
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition hover:bg-zinc-700 hover:text-white active:scale-90"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-90"
             onClick={() => onUpdateQuantity?.(item.quantity + 1)}
             aria-label={`Aumentar quantidade de ${item.name}`}
           >
             <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
           </button>
 
-          <span aria-hidden className="mx-0.5 h-5 w-px bg-zinc-700" />
+          <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
 
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 transition hover:bg-red-500/15 hover:text-red-400 active:scale-90"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-red-500/15 hover:text-red-600 active:scale-90"
             onClick={onRemove}
             aria-label={`Remover ${item.name} do carrinho`}
           >
@@ -102,7 +112,7 @@ export function CartLineItem({ item, editable = false, onUpdateQuantity, onRemov
           </button>
         </div>
       ) : (
-        <span className="shrink-0 rounded-full bg-zinc-800 px-3 py-1.5 text-xs font-semibold tabular-nums text-zinc-300">
+        <span className="shrink-0 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold tabular-nums text-muted-foreground">
           Qtd. {item.quantity}
         </span>
       )}

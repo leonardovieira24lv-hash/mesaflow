@@ -53,9 +53,16 @@ type SubmitStatus = "idle" | "submitting" | "success" | "error";
  * âmbar/vermelho ajustados para tons escuros translúcidos
  * (`amber-950/40`, `red-950/40`) mantendo o texto legível.
  *
- * RISCO AINDA NÃO RESOLVIDO: `<CartLineItem>` e `<TableAssistanceActions>`
- * são importados aqui mas eu nunca recebi o código-fonte deles — não
- * posso garantir que já estão no dark theme.
+ * Etapa 3N — Migração para Tokens (2026-08-12): as três raízes migraram
+ * pra `bg-background`/`border-border`; textos pra `text-foreground`/
+ * `text-muted-foreground`; textarea e "Voltar ao carrinho" pra
+ * `bg-surface`. Avisos de âmbar/vermelho recalibrados pro padrão claro
+ * (fundo claro + texto escuro, ex.: `amber-950/40 + amber-300` virou
+ * `amber-50 + amber-800`) — os tons escuros translúcidos da nota acima
+ * ficavam ilegíveis em fundo branco; mesmo hue, tom recalibrado por
+ * contraste, mesmo raciocínio já aplicado ao verde do preço em outros
+ * arquivos. `<CartLineItem>`/`<TableAssistanceActions>` já migrados
+ * (Etapas 3K/3M) — a nota de risco antiga sobre eles não se aplica mais.
  */
 export function CheckoutView(props: CheckoutViewProps) {
   return (
@@ -151,16 +158,16 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
     return (
       <div
         className={cn(
-          "flex min-h-dvh flex-col items-center justify-center gap-5 bg-zinc-950 p-6 text-center",
+          "flex min-h-dvh flex-col items-center justify-center gap-5 bg-background p-6 text-center",
           menuTheme === "dark" && "menu-dark",
         )}
       >
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15">
-          <CheckCircle2 className="h-10 w-10 text-emerald-400" aria-hidden />
+          <CheckCircle2 className="h-10 w-10 text-emerald-600" aria-hidden />
         </div>
         <div className="flex flex-col gap-1.5">
-          <p className="text-xl font-bold text-white">Pedido realizado!</p>
-          <p className="text-sm text-zinc-500">Levando você para o acompanhamento...</p>
+          <p className="text-xl font-bold text-foreground">Pedido realizado!</p>
+          <p className="text-sm text-muted-foreground">Levando você para o acompanhamento...</p>
         </div>
       </div>
     );
@@ -170,18 +177,18 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
     return (
       <div
         className={cn(
-          "mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 sm:border-x sm:border-zinc-800 sm:shadow-sm",
+          "mx-auto flex min-h-dvh max-w-xl flex-col bg-background sm:border-x sm:border-border sm:shadow-sm",
           menuTheme === "dark" && "menu-dark",
         )}
       >
         <RestaurantHeader restaurantName={restaurantName} logoUrl={restaurantLogoUrl} tableName={tableName} />
         <TableAssistanceActions slug={slug} tableToken={tableToken} />
         <main className="flex flex-1 items-center justify-center p-6">
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-zinc-700 bg-zinc-900 px-6 py-12 text-center">
-            <ShoppingBag className="h-10 w-10 text-zinc-300" aria-hidden />
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center">
+            <ShoppingBag className="h-10 w-10 text-muted-foreground" aria-hidden />
             <div className="flex flex-col gap-1">
-              <p className="font-semibold text-white">Seu carrinho está vazio</p>
-              <p className="text-sm text-zinc-500">Volte ao cardápio para adicionar produtos antes de finalizar.</p>
+              <p className="font-semibold text-foreground">Seu carrinho está vazio</p>
+              <p className="text-sm text-muted-foreground">Volte ao cardápio para adicionar produtos antes de finalizar.</p>
             </div>
             <Link
               href={menuHref}
@@ -198,7 +205,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
   return (
     <div
       className={cn(
-        "mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800 sm:shadow-sm",
+        "mx-auto flex min-h-dvh max-w-xl flex-col bg-background pb-8 sm:border-x sm:border-border sm:shadow-sm",
         menuTheme === "dark" && "menu-dark",
       )}
     >
@@ -208,7 +215,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
       <div className="px-4 pt-4">
         <Link
           href={cartHref}
-          className="flex min-h-9 w-fit items-center gap-1.5 rounded-xl bg-zinc-800 px-3 py-1.5 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-700 active:scale-[0.97]"
+          className="flex min-h-9 w-fit items-center gap-1.5 rounded-xl bg-surface px-3 py-1.5 text-sm font-semibold text-foreground transition hover:bg-muted active:scale-[0.97]"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Voltar ao carrinho
@@ -216,10 +223,10 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
       </div>
 
       <main className="flex flex-1 flex-col gap-5 px-4 py-4">
-        <h1 className="text-xl font-bold tracking-tight text-white">Confirmar pedido</h1>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">Confirmar pedido</h1>
 
         {!tableToken && (
-          <div className="flex items-start gap-2.5 rounded-xl border border-amber-800/50 bg-amber-950/40 px-4 py-3 text-sm text-amber-300">
+          <div className="flex items-start gap-2.5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <p>Não identificamos sua mesa. Escaneie novamente o QR Code para finalizar o pedido.</p>
           </div>
@@ -232,7 +239,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="checkout-notes" className="text-sm font-medium text-white">
+          <label htmlFor="checkout-notes" className="text-sm font-medium text-foreground">
             Observações do pedido
           </label>
           <textarea
@@ -242,17 +249,17 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
             placeholder="Ex.: trazer talheres extras, entregar tudo junto..."
             rows={3}
             disabled={status === "submitting"}
-            className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-60"
+            className="w-full resize-none rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-60"
           />
-          <p className="text-xs text-zinc-500">Opcional — algo geral para a cozinha ou o atendente.</p>
+          <p className="text-xs text-muted-foreground">Opcional — algo geral para a cozinha ou o atendente.</p>
         </div>
 
         {staleItems && staleItems.length > 0 && (
-          <div className="flex flex-col gap-2 rounded-xl border border-red-800/50 bg-red-950/40 px-4 py-3 text-sm text-red-300">
+          <div className="flex flex-col gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
             <p>Estes itens mudaram desde que você montou o carrinho: {staleItems.join(", ")}.</p>
             <Link
               href={cartHref}
-              className="self-start rounded-lg border border-red-700/60 bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-500/15"
+              className="self-start rounded-lg border border-red-300 bg-background px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-500/15"
             >
               Voltar ao carrinho
             </Link>
@@ -260,7 +267,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
         )}
 
         {errorMessage && !staleItems && (
-          <div className="flex items-start gap-2.5 rounded-xl border border-red-800/50 bg-red-950/40 px-4 py-3 text-sm text-red-300">
+          <div className="flex items-start gap-2.5 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <p>{errorMessage}</p>
           </div>

@@ -33,6 +33,13 @@ interface OrderSummaryBarProps {
  * `zinc-800` sobre fundo `zinc-950`, "Total" em `zinc-500`, valor em
  * branco, botão continua `emerald-500` sólido. Nenhuma prop/lógica
  * tocada.
+ *
+ * Etapa 3L — Migração para Tokens (2026-08-12): card migrou pra
+ * `bg-surface`/`border-border` + `elevation-card` (mesmo card "3D" do
+ * resto do Cardápio) — `shadow-lg` genérico removido, `.elevation-card`
+ * já define seu próprio `box-shadow`, as duas juntas competiriam pela
+ * mesma propriedade. "Total"/valor migraram pra `text-muted-foreground`/
+ * `text-foreground`. Botão (`emerald-500`) intocado.
  */
 export function OrderSummaryBar({
   total,
@@ -53,10 +60,10 @@ export function OrderSummaryBar({
         className,
       )}
     >
-      <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-lg">
+      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 elevation-card">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-zinc-500">Total</span>
-          <span className="text-lg font-bold tabular-nums text-white">{formatCurrency(total)}</span>
+          <span className="text-sm font-medium text-muted-foreground">Total</span>
+          <span className="text-lg font-bold tabular-nums text-foreground">{formatCurrency(total)}</span>
         </div>
 
         {actionSlot ?? (

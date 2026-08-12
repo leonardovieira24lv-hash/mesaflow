@@ -52,11 +52,11 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
  * produção) — mesmos status, mesmos rótulos, só com aparência própria.
  */
 const STATUS_STYLES: Record<OrderStatus, string> = {
-  pending: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
-  preparing: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
-  ready: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
-  delivered: "bg-zinc-700/60 text-zinc-300 ring-zinc-600",
-  cancelled: "bg-red-500/15 text-red-300 ring-red-500/30",
+  pending: "bg-emerald-50 text-emerald-800 ring-emerald-300",
+  preparing: "bg-amber-50 text-amber-800 ring-amber-300",
+  ready: "bg-sky-50 text-sky-800 ring-sky-300",
+  delivered: "bg-muted text-muted-foreground ring-border",
+  cancelled: "bg-red-50 text-red-800 ring-red-300",
 };
 
 /**
@@ -103,6 +103,18 @@ const STATUS_STYLES: Record<OrderStatus, string> = {
  *
  * Nenhuma lógica foi tocada: polling, `isTerminal`, `totalAmount`,
  * `itemCount`, `orderNumberById` e `formatTime` são idênticos.
+ *
+ * Etapa 3O — Migração para Tokens (2026-08-12): raiz, card "Total
+ * parcial" e cards de pedido migraram pra token + `elevation-card` (mesmo
+ * "3D" do resto do Cardápio). Os 5 `STATUS_STYLES` recalibrados pro claro
+ * — cada um mantém o mesmo hue semântico (verde/âmbar/azul/cinza/
+ * vermelho), só trocando de "tom translúcido sobre fundo escuro" pra
+ * "fundo bem claro + texto escuro", mesmo raciocínio já aplicado no verde
+ * do preço e nos avisos do checkout. "delivered" (neutro, sem hue
+ * próprio) virou token puro (`bg-muted`/`text-muted-foreground`/
+ * `border-border`) em vez de zinc literal. "Continuar comprando"
+ * (emerald-500) e o destaque verde de pedido não processado
+ * (emerald-500/30, emerald-500/[0.07]) preservados sem alteração.
  */
 export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLogoUrl, menuTheme, initialOrders, tableToken }: OrderTrackingViewProps) {
   const [orders, setOrders] = useState<PublicSessionOrder[]>(initialOrders);
@@ -149,28 +161,28 @@ export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLog
   return (
     <div
       className={cn(
-        "mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800",
+        "mx-auto flex min-h-dvh max-w-xl flex-col bg-background pb-8 sm:border-x sm:border-border",
         menuTheme === "dark" && "menu-dark",
       )}
     >
       <RestaurantHeader restaurantName={restaurantName} logoUrl={restaurantLogoUrl} />
 
       <main className="flex flex-1 flex-col gap-6 px-4 py-6">
-        <h1 className="text-xl font-bold tracking-tight text-white">Sua comanda</h1>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">Sua comanda</h1>
 
         {/* Resumo da comanda (Fase 4) — total parcial, quantidade de
             pedidos e de itens, tudo derivado dos mesmos `orders` que
             alimentam a timeline abaixo, sem consulta própria. */}
-        <div className="flex flex-col gap-1.5 rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Total parcial</span>
-          <span className="text-3xl font-extrabold tabular-nums tracking-tight text-white">
+        <div className="flex flex-col gap-1.5 rounded-2xl border border-border bg-surface p-5 elevation-card">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Total parcial</span>
+          <span className="text-3xl font-extrabold tabular-nums tracking-tight text-foreground">
             {formatCurrency(totalAmount)}
           </span>
-          <div className="mt-2.5 flex items-center gap-2 border-t border-zinc-800 pt-2.5 text-xs text-zinc-400">
+          <div className="mt-2.5 flex items-center gap-2 border-t border-border pt-2.5 text-xs text-muted-foreground">
             <span>
               {orders.length} {orders.length === 1 ? "pedido" : "pedidos"}
             </span>
-            <span aria-hidden className="text-zinc-600">
+            <span aria-hidden className="text-muted-foreground">
               ·
             </span>
             <span>
@@ -190,7 +202,7 @@ export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLog
         )}
 
         <div className="flex flex-col gap-2.5">
-          <h2 className="text-sm font-semibold text-zinc-400">Pedidos desta comanda</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground">Pedidos desta comanda</h2>
           <ul className="flex flex-col gap-2.5">
             {orders.map((order) => {
               // Fase 4 ("destaque visual quando acabou de ser enviado"):
@@ -206,13 +218,13 @@ export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLog
                   key={order.id}
                   className={cn(
                     "flex flex-col gap-2.5 rounded-2xl border p-4 text-sm transition-colors",
-                    isUnprocessed ? "border-emerald-500/30 bg-emerald-500/[0.07]" : "border-zinc-800 bg-zinc-900",
+                    isUnprocessed ? "border-emerald-500/30 bg-emerald-500/[0.07] elevation-card" : "border-border bg-surface elevation-card",
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="flex items-baseline gap-1.5 font-semibold text-white">
+                    <span className="flex items-baseline gap-1.5 font-semibold text-foreground">
                       Pedido #{orderNumberById.get(order.id)}
-                      <span className="text-xs font-normal tabular-nums text-zinc-500">
+                      <span className="text-xs font-normal tabular-nums text-muted-foreground">
                         · {formatTime(order.createdAt)}
                       </span>
                     </span>
@@ -226,10 +238,10 @@ export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLog
                     </span>
                   </div>
 
-                  <ul className="flex flex-col gap-1 border-t border-zinc-800/80 pt-2.5">
+                  <ul className="flex flex-col gap-1 border-t border-border/80 pt-2.5">
                     {order.items.map((item, index) => (
-                      <li key={`${order.id}-${item.name}-${index}`} className="text-xs text-zinc-400">
-                        <span className="font-semibold text-zinc-200">{item.quantity}×</span> {item.name}
+                      <li key={`${order.id}-${item.name}-${index}`} className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">{item.quantity}×</span> {item.name}
                       </li>
                     ))}
                   </ul>
