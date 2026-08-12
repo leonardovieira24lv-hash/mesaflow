@@ -41,14 +41,18 @@
        Mesas — lá o FUNDO é branco puro e o CARD é cinza; aqui tinha ficado
        o inverso (fundo cinza, card branco puro). Trocado pra bater exato:
        `--background` volta a 100% (branco puro, era 93%), `--surface`
-       agora é quem cede tom (90%, era 100%) — mesmo par de valores do
-       painel administrativo (`ds2-background: 100%`, `ds2-surface: 90%`),
-       só que aqui mantendo o matiz azulado (220°) já usado no resto do
-       Cardápio, em vez do cinza neutro do admin. */
+       agora é quem cede tom (era 100%).
+
+       Etapa 3I — Cópia Literal do Mesas (2026-08-12): a Etapa 3H ainda
+       tinha usado um matiz azulado (220°) só aproximado, não os valores
+       reais do painel administrativo. Agora é cópia exata dos tokens
+       `ds2-*` (`ds2-surface: 0 0% 90%`, `ds2-border: 0 0% 85%`) — cinza
+       neutro puro, sem matiz, idêntico ao Mesas, não mais uma aproximação
+       com tom azulado. */
     --background: 0 0% 100%;
     --foreground: 220 20% 12%;
 
-    --surface: 220 16% 90%;
+    --surface: 0 0% 90%;
     --surface-foreground: 220 20% 12%;
 
     --primary: 160 84% 39%;
@@ -57,7 +61,7 @@
 
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
-    --border: 220 15% 82%;
+    --border: 0 0% 85%;
 
     --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
@@ -92,8 +96,13 @@
        ficar perceptível como Mesas pede. Borda do card voltou a ser fina
        (`border`, não `border-2`) — a "grossura visual" deve vir da sombra,
        não da borda; borda grossa competia com o efeito em vez de somar. */
-    --shadow-card: 0 3px 6px -1px rgb(0 0 0 / 0.20), 0 2px 4px -2px rgb(0 0 0 / 0.14);
-    --shadow-card-hover: 0 10px 22px -4px rgb(0 0 0 / 0.32), 0 4px 10px -3px rgb(0 0 0 / 0.20);
+    /* Etapa 3I — Cópia Literal do Mesas (2026-08-12): valores exatos de
+       `--ds2-shadow-sm`/`--ds2-shadow-md` (painel administrativo),
+       substituindo a receita própria da Etapa 3G. Repare que o Mesas usa
+       só 1 camada de sombra no repouso (não 2) — copiado assim mesmo,
+       sem inventar uma segunda camada que ele não tem. */
+    --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.45);
+    --shadow-card-hover: 0 8px 20px -6px rgb(0 0 0 / 0.55), 0 2px 8px -2px rgb(0 0 0 / 0.4);
     --shadow-bar: 0 -4px 20px 0 rgb(15 15 25 / 0.08);
     --shadow-sheet: 0 -12px 32px -8px rgb(15 15 25 / 0.18);
     --elevation-highlight: inset 0 0 0 0 transparent;
