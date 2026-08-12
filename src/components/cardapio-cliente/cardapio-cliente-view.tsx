@@ -64,6 +64,18 @@ interface CardapioClienteViewProps {
  * (`min-h-dvh`, sem faixa/bloco extra — nenhum elemento deste arquivo tem
  * fundo preto próprio além do fundo geral da página).
  *
+ * Etapa 3A — Prova de Conceito do Tema (2026-08-12): a ESTRUTURA PRINCIPAL
+ * deste arquivo (raiz + os 2 estados vazios + título de categoria) migrou
+ * de classe literal (`bg-zinc-950`, `text-white`, etc.) para token
+ * semântico (`bg-background`, `text-foreground`, etc.) — responde de
+ * verdade a `menu-dark`/`:root` agora. `--foreground-subtle` foi
+ * deliberadamente evitado (existe só em `.menu-dark`, ausente em `:root`
+ * — usá-lo quebraria o tema claro); `text-muted-foreground` cobre o mesmo
+ * papel e existe nos dois. Os componentes internos
+ * (`RestaurantHeader`/`MenuItemCard`/`ProductDetailModal`/`CategoryNav`/
+ * `CartSummaryBar`/`TableAssistanceActions`) continuam com classe literal
+ * — intocados de propósito, escopo de uma etapa futura.
+ *
  * RISCO AINDA NÃO RESOLVIDO: `<TableAssistanceActions>` ("Chamar
  * garçom"/"Pedir a conta") é importado aqui mas eu nunca recebi o
  * código-fonte dele — não posso corrigir a aparência desses dois botões
@@ -106,7 +118,7 @@ export function CardapioClienteView({
     <CartProvider slug={slug} tableToken={tableToken}>
       <div
         className={cn(
-          "mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-24 sm:border-x sm:border-zinc-800 sm:shadow-sm",
+          "mx-auto flex min-h-dvh max-w-xl flex-col bg-background pb-24 sm:border-x sm:border-border sm:shadow-sm",
           menuTheme === "dark" && "menu-dark",
         )}
       >
@@ -124,19 +136,19 @@ export function CardapioClienteView({
 
         <main className="flex flex-1 flex-col gap-7 px-4 py-5">
           {!hasCategories ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-zinc-700 bg-zinc-900 px-6 py-14 text-center">
-              <UtensilsCrossed className="h-10 w-10 text-zinc-300" aria-hidden />
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-14 text-center">
+              <UtensilsCrossed className="h-10 w-10 text-muted-foreground" aria-hidden />
               <div className="flex flex-col gap-1">
-                <p className="font-semibold text-white">Cardápio ainda não disponível</p>
-                <p className="text-sm text-zinc-500">Este restaurante ainda não cadastrou categorias ou produtos.</p>
+                <p className="font-semibold text-foreground">Cardápio ainda não disponível</p>
+                <p className="text-sm text-muted-foreground">Este restaurante ainda não cadastrou categorias ou produtos.</p>
               </div>
             </div>
           ) : !hasResults ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-zinc-700 bg-zinc-900 px-6 py-14 text-center">
-              <SearchX className="h-10 w-10 text-zinc-300" aria-hidden />
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-14 text-center">
+              <SearchX className="h-10 w-10 text-muted-foreground" aria-hidden />
               <div className="flex flex-col gap-1">
-                <p className="font-semibold text-white">Nenhum produto encontrado</p>
-                <p className="text-sm text-zinc-500">
+                <p className="font-semibold text-foreground">Nenhum produto encontrado</p>
+                <p className="text-sm text-muted-foreground">
                   Não encontramos nada para &quot;{searchTerm.trim()}&quot;. Tente buscar por outro termo.
                 </p>
               </div>
@@ -148,7 +160,7 @@ export function CardapioClienteView({
                 id={categorySectionId(category.id)}
                 className="flex scroll-mt-16 flex-col gap-3"
               >
-                <h2 className="text-base font-bold tracking-tight text-white">{category.name}</h2>
+                <h2 className="text-base font-bold tracking-tight text-foreground">{category.name}</h2>
 
                 <div className="flex flex-col gap-3.5">
                   {category.items.map((item) => (
