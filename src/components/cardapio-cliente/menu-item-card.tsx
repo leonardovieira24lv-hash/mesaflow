@@ -72,6 +72,17 @@ interface MenuItemCardProps {
  * a sombra ao pressionar, agora com o valor calibrado por tema em vez de
  * um fixo). Nenhum token novo criado, `globals.css` não foi tocado — só
  * conectei uma classe que já existia.
+ *
+ * Etapa 3D — Reforço de Contraste (2026-08-12): resultado da 3C ficou
+ * discreto demais em fundo claro — a distância de luminosidade entre
+ * `--background`/`--surface` em `:root` é pequena (97%/100%, só 3 pontos),
+ * bem menor que a do painel administrativo (Mesas, `ds2-*`, 10 pontos).
+ * Sem editar `globals.css` (esses tokens também governam onboarding/login
+ * — mudança maior que o escopo desta etapa), o reforço possível aqui é
+ * `border` → `border-2`, dobrando o peso da borda pra compensar a
+ * distância pequena de tom. Ajuda bastante mas não empata 100% com o nível
+ * de contraste do Mesas — se ainda não for suficiente, o ajuste correto é
+ * nos valores de `:root`/`.menu-dark`, fora do escopo desta etapa.
  */
 export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
   const isAvailable = item.is_available;
@@ -86,7 +97,7 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
       onClick={() => onSelect(item)}
       aria-label={isAvailable ? `Ver detalhes de ${item.name}` : `${item.name} — indisponível no momento`}
       className={cn(
-        "group flex w-full items-stretch gap-4 rounded-2xl border border-border bg-surface p-3.5 text-left elevation-card",
+        "group flex w-full items-stretch gap-4 rounded-2xl border-2 border-border bg-surface p-3.5 text-left elevation-card",
         isAvailable
           ? "hover:-translate-y-1 active:translate-y-0 active:scale-[0.99] active:shadow-card"
           : "cursor-not-allowed opacity-60",

@@ -40,6 +40,16 @@ export function categorySectionId(categoryId: string): string {
  * Sprint "Cardápio Dark/Premium" (2026-08-09): fundo `zinc-950`, pill
  * inativa `zinc-900`/borda `zinc-700` (visível contra o fundo), pill ativa
  * continua `emerald-500` sólido. Lógica intocada.
+ *
+ * Etapa 3D — Migração para Tokens (2026-08-12): barra migrou pra
+ * `bg-background` (mesmo nível do fundo da página — igual já era a
+ * relação original, `zinc-950` na barra = mesma cor do fundo `zinc-950`
+ * da raiz), pill inativa virou `bg-surface`/`border-border` (um degrau
+ * acima da barra, mesma relação de antes: `zinc-900` era mais claro que
+ * `zinc-950`). Pill ativa (verde) preservada sem alteração — cor de ação,
+ * fora do escopo. `hover:border-zinc-600` removido sem substituto — não
+ * existe token de "borda mais forte" neste conjunto (mesma limitação já
+ * registrada em `menu-item-card.tsx`); `hover:text-foreground` mantido.
  */
 export function CategoryNav({ categories }: CategoryNavProps) {
   const [activeId, setActiveId] = useState(categories[0]?.id);
@@ -81,7 +91,7 @@ export function CategoryNav({ categories }: CategoryNavProps) {
   return (
     <nav
       aria-label="Categorias do cardápio"
-      className="sticky top-0 z-20 flex gap-2 overflow-x-auto border-b border-zinc-800 bg-zinc-950/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/85 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="sticky top-0 z-20 flex gap-2 overflow-x-auto border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/85 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {categories.map((category) => (
         <button
@@ -93,7 +103,7 @@ export function CategoryNav({ categories }: CategoryNavProps) {
             "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-[background-color,color,transform,box-shadow] duration-150 active:scale-[0.96]",
             activeId === category.id
               ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30"
-              : "border border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-zinc-600 hover:text-white",
+              : "border border-border bg-surface text-muted-foreground hover:text-foreground",
           )}
         >
           {category.name}
