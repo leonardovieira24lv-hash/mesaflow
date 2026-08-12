@@ -24,16 +24,13 @@ const NAV_ITEMS = [
  * Logo real da marca (2026-08-11) — `public/logo-forko.png`, ícone +
  * wordmark já combinados numa imagem só (não é mais badge+texto
  * separados). `<img>` nativo, não `next/image`: mesmo raciocínio já usado
- * na logo do restaurante no Cardápio Público — a altura é fixa (`h-10`,
- * 40px). Passou por várias tentativas de aumento (`h-14`→`h-[68px]`→
- * `h-24`) achando que a proporção real do arquivo era ~1.5:1 (quase
- * quadrada) — errado: o corte original tinha ~12 mil pixels quase
- * invisíveis (alpha 1-10, ruído de anti-aliasing) que enganaram a medição
- * do conteúdo real, fazendo parecer que a logo ocupava quase o canvas
- * inteiro. Recortada de novo com limiar de alpha > 50 (ignora esse
- * ruído): proporção real é ~4.5:1, larga como a versão anterior — por
- * isso a altura voltou a 40px, valor adequado pra esse formato.
- * A largura segue a proporção real do arquivo (`w-auto`), então não
+ * na logo do restaurante no Cardápio Público — a altura é fixa (`h-12`,
+ * 48px — era `h-10`/40px, aumentado a pedido). `max-w-full` como trava:
+ * a sidebar só tem ~208px de largura útil pra logo (256px do `<aside>`
+ * menos `px-6` de cada lado) — com a proporção real ~4.5:1 do arquivo,
+ * ~48px de altura já ocupa a maior parte desse espaço (~215px de
+ * largura); sem a trava, um aumento futuro de altura sem pensar na
+ * largura poderia estourar e quebrar linha dentro da sidebar. do arquivo (`w-auto`), então não
  * precisa de `width`/`height` fixos que o `next/image` exigiria.
  * `alt="Forko"` garante que o nome continue acessível a leitor de tela
  * mesmo sem nenhum texto visível ao lado.
@@ -42,7 +39,7 @@ function BrandMark() {
   return (
     <Link href={ROUTES.dashboard} className="flex items-center justify-center px-6 py-6">
       {/* eslint-disable-next-line @next/next/no-img-element -- proporção real do arquivo, ver docstring acima. */}
-      <img src="/logo-forko.png" alt="Forko" className="h-10 w-auto" />
+      <img src="/logo-forko.png" alt="Forko" className="h-12 w-auto max-w-full" />
     </Link>
   );
 }
