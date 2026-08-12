@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, CheckCircle2, ChefHat, Clock3, Hand, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
+import { Bell, CheckCircle2, ChefHat, Clock3, Hand, Loader2, Printer, Receipt, StickyNote, UtensilsCrossed, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -43,6 +43,15 @@ interface TableDrawerProps {
   alerts: TableCardAlert[];
   /** Fase 4B.1 (2026-08-10) — já normalizado (`resolveAcceptedPaymentMethods`); só passagem até `<CloseBillModal>`. */
   acceptedPaymentMethods: PaymentMethod[];
+  /**
+   * URL pública do cardápio desta mesa (`/{slug}/mesa/{qrToken}`) — a
+   * mesma que o QR Code impresso já leva o cliente, montada em
+   * `tables-manager.tsx` (`tableUrl()`, já reaproveitada ali pro modal de
+   * QR Code — este é só mais um consumidor da mesma função). Abre pro
+   * garçom conseguir tirar o pedido manualmente na mesa, ou só conferir o
+   * cardápio, sem precisar escanear o QR Code físico.
+   */
+  menuUrl: string;
   onClose: () => void;
   /** Chamado depois de qualquer ação que muda um pedido — o pai refaz a agregação. */
   onOrdersChanged: () => void;
@@ -126,6 +135,7 @@ export function TableDrawer({
   openOrders,
   alerts,
   acceptedPaymentMethods,
+  menuUrl,
   onClose,
   onOrdersChanged,
   onAlertsChanged,
@@ -803,6 +813,19 @@ export function TableDrawer({
             <span className="text-sm font-medium text-ds2-foreground-muted">Total da mesa</span>
             <span className="font-numeric text-lg font-bold tabular-nums text-ds2-foreground">{formatCurrency(subtotal)}</span>
           </div>
+
+          <a
+            href={menuUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "flex min-h-11 items-center justify-center gap-2 rounded-ds2-sm border border-ds2-border bg-ds2-surface text-sm font-medium text-ds2-foreground transition hover:border-ds2-primary/40 hover:bg-ds2-surface-hover",
+              focusRingClass,
+            )}
+          >
+            <UtensilsCrossed className="h-4 w-4" aria-hidden />
+            Abrir cardápio desta mesa
+          </a>
 
           <div className="flex gap-2">
             <Button

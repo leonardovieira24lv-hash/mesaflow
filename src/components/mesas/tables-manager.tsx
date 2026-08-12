@@ -1175,6 +1175,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
           openOrders={drawerOperations?.orders ?? []}
           alerts={tableEvents[drawerTable.id] ?? []}
           acceptedPaymentMethods={acceptedPaymentMethods}
+          menuUrl={tableUrl(drawerTable)}
           onClose={() => setDrawerTable(null)}
           onOrdersChanged={() => void fetchOperations()}
           onAlertsChanged={() => void fetchTableEvents()}
