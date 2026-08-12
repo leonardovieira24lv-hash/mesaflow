@@ -819,7 +819,7 @@ export function TableDrawer({
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
-              "flex min-h-11 items-center justify-center gap-2 rounded-ds2-sm border border-ds2-border bg-ds2-surface text-sm font-medium text-ds2-foreground transition hover:border-ds2-primary/40 hover:bg-ds2-surface-hover",
+              "flex min-h-12 items-center justify-center gap-2 rounded-ds2-md border-2 border-ds2-info/40 bg-ds2-info/10 text-sm font-semibold text-ds2-info shadow-ds2-sm transition hover:border-ds2-info/60 hover:bg-ds2-info/15 hover:shadow-ds2-md active:scale-[0.99]",
               focusRingClass,
             )}
           >
