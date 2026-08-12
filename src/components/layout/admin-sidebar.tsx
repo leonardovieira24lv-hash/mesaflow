@@ -24,8 +24,10 @@ const NAV_ITEMS = [
  * Logo real da marca (2026-08-11) — `public/logo-forko.png`, ícone +
  * wordmark já combinados numa imagem só (não é mais badge+texto
  * separados). `<img>` nativo, não `next/image`: mesmo raciocínio já usado
- * na logo do restaurante no Cardápio Público — a altura é fixa (`h-10`),
- * a largura segue a proporção real do arquivo (`w-auto`), então não
+ * na logo do restaurante no Cardápio Público — a altura é fixa (`h-14`,
+ * era `h-10` — a logo trocada depois tem proporção mais próxima de 1.5:1,
+ * não a faixa larga ~4:1 da versão anterior; em `h-10` ficava pequena
+ * demais pra ler "FORKO" com conforto), a largura segue a proporção real do arquivo (`w-auto`), então não
  * precisa de `width`/`height` fixos que o `next/image` exigiria.
  * `alt="Forko"` garante que o nome continue acessível a leitor de tela
  * mesmo sem nenhum texto visível ao lado.
@@ -34,7 +36,7 @@ function BrandMark() {
   return (
     <Link href={ROUTES.dashboard} className="flex items-center justify-center px-6 py-6">
       {/* eslint-disable-next-line @next/next/no-img-element -- proporção real do arquivo, ver docstring acima. */}
-      <img src="/logo-forko.png" alt="Forko" className="h-10 w-auto" />
+      <img src="/logo-forko.png" alt="Forko" className="h-14 w-auto" />
     </Link>
   );
 }
