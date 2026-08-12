@@ -136,7 +136,7 @@ export function CardapioClienteView({
 
         <main className="flex flex-1 flex-col gap-7 px-4 py-5">
           {!hasCategories ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-14 text-center">
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-14 text-center elevation-card">
               <UtensilsCrossed className="h-10 w-10 text-muted-foreground" aria-hidden />
               <div className="flex flex-col gap-1">
                 <p className="font-semibold text-foreground">Cardápio ainda não disponível</p>
@@ -144,7 +144,7 @@ export function CardapioClienteView({
               </div>
             </div>
           ) : !hasResults ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-14 text-center">
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-14 text-center elevation-card">
               <SearchX className="h-10 w-10 text-muted-foreground" aria-hidden />
               <div className="flex flex-col gap-1">
                 <p className="font-semibold text-foreground">Nenhum produto encontrado</p>

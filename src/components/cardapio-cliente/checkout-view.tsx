@@ -184,7 +184,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
         <RestaurantHeader restaurantName={restaurantName} logoUrl={restaurantLogoUrl} tableName={tableName} />
         <TableAssistanceActions slug={slug} tableToken={tableToken} />
         <main className="flex flex-1 items-center justify-center p-6">
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center">
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center elevation-card">
             <ShoppingBag className="h-10 w-10 text-muted-foreground" aria-hidden />
             <div className="flex flex-col gap-1">
               <p className="font-semibold text-foreground">Seu carrinho está vazio</p>

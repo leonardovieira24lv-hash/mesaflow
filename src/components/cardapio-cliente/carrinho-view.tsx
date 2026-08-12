@@ -42,16 +42,24 @@ interface CarrinhoViewProps {
  * vazio em card `zinc-900`, "Limpar carrinho" ganhou borda própria
  * (`border-red-800/50`) para não parecer texto solto.
  *
- * RISCOS AINDA NÃO RESOLVIDOS NESTE ARQUIVO — componentes importados aqui
- * cujo código-fonte eu nunca recebi, então não posso garantir (nem
- * corrigir) a aparência deles:
- * - `<ConfirmDialog>` (confirmação de "Limpar carrinho") — modal inteiro.
- * - `<CartLineItem>` (cada linha de produto do carrinho: imagem, nome,
- *   preço, +/-, remover) — é bem provável que sofra do mesmo problema dos
- *   componentes já corrigidos, mas eu não tenho o arquivo para confirmar
- *   ou consertar.
- * - `<TableAssistanceActions>` ("Chamar garçom"/"Pedir a conta").
- * Os três precisam do arquivo real para serem corrigidos com segurança.
+ * Etapa 3P — Migração para Tokens (2026-08-12): este arquivo tinha ficado
+ * de fora do rollout anterior (só os componentes que ele IMPORTA —
+ * `<CartLineItem>`, `<OrderSummaryBar>`, `<TableAssistanceActions>` —
+ * tinham sido migrados; a raiz e os botões próprios deste arquivo,
+ * não). Corrigido: raiz, "Voltar ao cardápio", "Seu carrinho" e o estado
+ * vazio migraram pra token. "Limpar carrinho" (vermelho) teve só o TOM do
+ * texto recalibrado (`text-red-400`→`text-red-700`) — mesmo raciocínio já
+ * aplicado ao verde do preço em outros arquivos, cor preservada, só mais
+ * escura pra continuar legível em fundo claro.
+ *
+ * ACHADO PENDENTE (não corrigido aqui, precisa de decisão): `<ConfirmDialog>`
+ * (confirmação de "Limpar carrinho") usa `<Modal>` (`components/ui/`), que
+ * usa tokens `ds2-*` (`bg-ds2-surface`, `border-ds2-border`, etc.) — esses
+ * só resolvem dentro de `.ds2-dark` (painel administrativo). Fora dali —
+ * exatamente o caso do Cardápio Público — essas classes não têm variável
+ * CSS definida, então o modal provavelmente renderiza sem fundo/borda/cor
+ * de texto nenhum. `<Modal>` é compartilhado com o painel administrativo;
+ * não alterei sem confirmar, porque mexer nele afeta os dois lugares.
  */
 export function CarrinhoView({
   slug,
@@ -92,7 +100,7 @@ function CarrinhoContent({
   return (
     <div
       className={cn(
-        "mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800 sm:shadow-sm",
+        "mx-auto flex min-h-dvh max-w-xl flex-col bg-background pb-8 sm:border-x sm:border-border sm:shadow-sm",
         menuTheme === "dark" && "menu-dark",
       )}
     >
@@ -102,7 +110,7 @@ function CarrinhoContent({
       <div className="flex items-center justify-between px-4 pt-4">
         <Link
           href={menuHref}
-          className="flex min-h-9 items-center gap-1.5 rounded-xl bg-zinc-800 px-3 py-1.5 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-700 active:scale-[0.97]"
+          className="flex min-h-9 items-center gap-1.5 rounded-xl bg-surface px-3 py-1.5 text-sm font-semibold text-foreground transition hover:bg-muted active:scale-[0.97]"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Voltar ao cardápio
@@ -112,7 +120,7 @@ function CarrinhoContent({
           <button
             type="button"
             onClick={() => setConfirmingClear(true)}
-            className="flex min-h-9 items-center rounded-xl bg-red-500/15 px-3 py-1.5 text-sm font-semibold text-red-400 ring-1 ring-inset ring-red-500/30 transition hover:bg-red-500/25 active:scale-[0.97]"
+            className="flex min-h-9 items-center rounded-xl bg-red-500/15 px-3 py-1.5 text-sm font-semibold text-red-700 ring-1 ring-inset ring-red-500/30 transition hover:bg-red-500/25 active:scale-[0.97]"
           >
             Limpar carrinho
           </button>
@@ -120,14 +128,14 @@ function CarrinhoContent({
       </div>
 
       <main className="flex flex-1 flex-col gap-4 px-4 py-4 pb-40">
-        <h1 className="text-xl font-bold tracking-tight text-white">Seu carrinho</h1>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">Seu carrinho</h1>
 
         {items.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-700 bg-zinc-900 px-6 py-12 text-center">
-            <ShoppingBag className="h-10 w-10 text-zinc-300" aria-hidden />
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center elevation-card">
+            <ShoppingBag className="h-10 w-10 text-muted-foreground" aria-hidden />
             <div className="flex flex-col gap-1">
-              <p className="font-semibold text-white">Seu carrinho está vazio</p>
-              <p className="text-sm text-zinc-500">Volte ao cardápio para adicionar produtos.</p>
+              <p className="font-semibold text-foreground">Seu carrinho está vazio</p>
+              <p className="text-sm text-muted-foreground">Volte ao cardápio para adicionar produtos.</p>
             </div>
             <Link
               href={menuHref}
@@ -158,7 +166,7 @@ function CarrinhoContent({
           onAction={() => router.push(withMesaQuery(ROUTES.clienteCheckout(slug), tableToken))}
           actionSlot={
             tableToken ? undefined : (
-              <p className="text-center text-xs text-zinc-500">
+              <p className="text-center text-xs text-muted-foreground">
                 Escaneie o QR Code da mesa para finalizar o pedido.
               </p>
             )
