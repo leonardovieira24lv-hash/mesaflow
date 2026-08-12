@@ -34,6 +34,7 @@ export default async function OperacaoPage() {
         initialOpeningHours={overview.openingHours}
         initialAcceptedPaymentMethods={overview.acceptedPaymentMethods}
         initialTimezone={overview.timezone}
+        initialMenuTheme={overview.menuTheme}
       />
     </div>
   );

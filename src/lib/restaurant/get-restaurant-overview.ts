@@ -47,6 +47,11 @@ export interface RestaurantOverview {
   // `0029_restaurant_timezone.sql`. Sempre uma string (nunca `null`) —
   // `not null default 'America/Sao_Paulo'` garante isso desde o schema.
   timezone: string;
+  // Etapa 1 — Tema do Cardápio Público (2026-08-11), coluna de
+  // `0030_restaurant_menu_theme.sql`. Sempre 'light'|'dark' — `not null
+  // default 'dark'` garante isso desde o schema. Só persistido nesta
+  // etapa; nenhuma tela pública lê ainda.
+  menuTheme: "light" | "dark";
   checklist: {
     hasCategories: boolean;
     hasProducts: boolean;
@@ -90,7 +95,7 @@ export async function getRestaurantOverview(
     supabase
       .from("restaurants")
       .select(
-        "id, name, slug, status, qr_codes_printed_at, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description, opening_hours, accepted_payment_methods, timezone",
+        "id, name, slug, status, qr_codes_printed_at, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description, opening_hours, accepted_payment_methods, timezone, menu_theme",
       )
       .eq("id", restaurantId)
       .single(),
@@ -133,6 +138,7 @@ export async function getRestaurantOverview(
     openingHours: restaurant.opening_hours as OpeningHours | null,
     acceptedPaymentMethods: restaurant.accepted_payment_methods as PaymentMethod[],
     timezone: restaurant.timezone,
+    menuTheme: restaurant.menu_theme as "light" | "dark",
     checklist: {
       hasCategories: categoriesCount > 0,
       hasProducts: productsCount > 0,

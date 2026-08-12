@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Clock, CreditCard, Globe, Plus, Trash2 } from "lucide-react";
+import { Clock, CreditCard, Globe, Moon, Plus, Sun, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -29,10 +29,19 @@ const DAY_LABELS: Record<DayKey, string> = {
 
 const EMPTY_OPENING_HOURS: OpeningHours = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
 
+// Etapa 1 — Tema do Cardápio Público (2026-08-11). Só as duas opções
+// pedidas — sem inventar um terceiro valor (ex.: "automático") fora do que
+// foi aprovado.
+const MENU_THEME_OPTIONS = [
+  { value: "light" as const, label: "Claro", icon: Sun },
+  { value: "dark" as const, label: "Escuro", icon: Moon },
+];
+
 interface OperacaoManagerProps {
   initialOpeningHours: OpeningHours | null;
   initialAcceptedPaymentMethods: PaymentMethod[];
   initialTimezone: string;
+  initialMenuTheme: "light" | "dark";
 }
 
 /**
@@ -55,15 +64,26 @@ interface OperacaoManagerProps {
  * (Cardápio Público, `RestaurantHeader`), calculado no fuso escolhido aqui
  * — nunca fixo em `America/Sao_Paulo` na lógica, só como valor padrão
  * inicial da coluna no banco.
+ *
+ * Etapa 1 — Tema do Cardápio Público (2026-08-11, seguinte): campo
+ * "Fundo do cardápio" (`menu_theme`) adicionado — mesmo padrão de sempre
+ * (estado local, mesmo `PATCH`, mesmo `toast`). Reaproveita o mesmo
+ * padrão visual de "chip selecionável" já usado em Formas de Pagamento,
+ * abaixo, em vez de criar um componente novo. **Só persiste a
+ * preferência nesta etapa** — nenhuma tela do Cardápio Público lê
+ * `menu_theme` ainda; a propagação visual é uma etapa futura, aprovada
+ * separadamente.
  */
 export function OperacaoManager({
   initialOpeningHours,
   initialAcceptedPaymentMethods,
   initialTimezone,
+  initialMenuTheme,
 }: OperacaoManagerProps) {
   const [openingHours, setOpeningHours] = useState<OpeningHours>(initialOpeningHours ?? EMPTY_OPENING_HOURS);
   const [acceptedMethods, setAcceptedMethods] = useState<PaymentMethod[]>(initialAcceptedPaymentMethods);
   const [timezone, setTimezone] = useState(initialTimezone);
+  const [menuTheme, setMenuTheme] = useState<"light" | "dark">(initialMenuTheme);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -104,6 +124,7 @@ export function OperacaoManager({
           opening_hours: openingHours,
           accepted_payment_methods: acceptedMethods,
           timezone,
+          menu_theme: menuTheme,
         }),
       });
       const body = await response.json();
@@ -143,6 +164,44 @@ export function OperacaoManager({
               </option>
             ))}
           </Select>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sun className="h-4 w-4" aria-hidden />
+            Fundo do cardápio
+          </CardTitle>
+          <CardDescription>
+            Aparência do Cardápio Público. A mudança ainda não se aplica visualmente — só a preferência é salva
+            por enquanto.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {MENU_THEME_OPTIONS.map((option) => {
+              const isSelected = menuTheme === option.value;
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setMenuTheme(option.value)}
+                  disabled={isSubmitting}
+                  className={cn(
+                    "flex items-center gap-2 rounded-ds2-full border px-4 py-2 text-sm font-medium transition-colors",
+                    isSelected
+                      ? "border-ds2-primary bg-ds2-primary/10 text-ds2-primary"
+                      : "border-ds2-border text-ds2-foreground-muted hover:border-ds2-border-strong",
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" aria-hidden />
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 

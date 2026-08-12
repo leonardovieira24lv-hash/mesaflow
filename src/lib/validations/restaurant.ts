@@ -121,6 +121,11 @@ export const TIMEZONE_OPTIONS = [
   { value: "Europe/London", label: "Londres (UTC±00:00)" },
 ] as const;
 
+// Etapa 1 — Tema do Cardápio Público (2026-08-11). Só persiste a
+// preferência nesta etapa; nenhuma tela pública lê isto ainda (propagação
+// é etapa futura, aprovada separadamente).
+export const menuThemeSchema = z.enum(["light", "dark"]);
+
 export const updateRestaurantSchema = z.object({
   name: z.string().trim().min(2, "O nome deve ter pelo menos 2 caracteres.").optional(),
   slug: z
@@ -174,5 +179,6 @@ export const updateRestaurantSchema = z.object({
   opening_hours: openingHoursSchema.optional(),
   accepted_payment_methods: acceptedPaymentMethodsSchema.optional(),
   timezone: timezoneSchema.optional(),
+  menu_theme: menuThemeSchema.optional(),
 });
 export type UpdateRestaurantInput = z.infer<typeof updateRestaurantSchema>;

@@ -39,6 +39,7 @@ export async function GET() {
       opening_hours: overview.openingHours,
       accepted_payment_methods: overview.acceptedPaymentMethods,
       timezone: overview.timezone,
+      menu_theme: overview.menuTheme,
       checklist: {
         has_categories: overview.checklist.hasCategories,
         has_products: overview.checklist.hasProducts,
@@ -84,6 +85,7 @@ export async function PATCH(request: Request) {
       opening_hours,
       accepted_payment_methods,
       timezone,
+      menu_theme,
     } = parseOrThrow(updateRestaurantSchema, body);
 
     const supabase = await createClient();
@@ -115,13 +117,14 @@ export async function PATCH(request: Request) {
     if (opening_hours !== undefined) updates.opening_hours = opening_hours;
     if (accepted_payment_methods !== undefined) updates.accepted_payment_methods = accepted_payment_methods;
     if (timezone !== undefined) updates.timezone = timezone;
+    if (menu_theme !== undefined) updates.menu_theme = menu_theme;
 
     const { data: updated, error } = await supabase
       .from("restaurants")
       .update(updates)
       .eq("id", profile.restaurantId)
       .select(
-        "id, name, slug, status, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description, opening_hours, accepted_payment_methods, timezone",
+        "id, name, slug, status, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description, opening_hours, accepted_payment_methods, timezone, menu_theme",
       )
       .maybeSingle();
 
@@ -172,6 +175,7 @@ export async function PATCH(request: Request) {
       opening_hours: updated.opening_hours,
       accepted_payment_methods: updated.accepted_payment_methods,
       timezone: updated.timezone,
+      menu_theme: updated.menu_theme,
     });
   } catch (err) {
     return handleRouteError(err);
