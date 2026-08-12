@@ -931,6 +931,35 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
+                  {/* Sprint 13.4 — o botão "Abrir cardápio desta mesa"
+                      morava dentro do Drawer (`table-drawer.tsx`), mas
+                      empurrava "Fechar conta"/"Liberar mesa" pra fora da
+                      tela em mesas com vários pedidos, exigindo rolar —
+                      atrito real reportado no uso ("às vezes dá bug e
+                      atrasa o trabalho"). Movido pra cá: 1 clique no card,
+                      sem precisar abrir o Drawer primeiro — mesmo padrão
+                      visual dos outros 3 ícones (QR Code/Editar/Excluir)
+                      acima, só ícone, sem texto. `<a>`, não `<Button>`:
+                      é link de verdade (abre em nova aba), não uma ação
+                      de estado — mesmo raciocínio já usado no Drawer. */}
+                  <a
+                    href={tableUrl(table)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Abrir cardápio da ${table.name}`}
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-ds2-sm opacity-70 hover:opacity-100",
+                      isFilled
+                        ? isDarkOnLight
+                          ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
+                          : "text-white hover:bg-white/15 hover:text-white"
+                        : "text-ds2-foreground-muted",
+                      focusRingClass,
+                    )}
+                  >
+                    <UtensilsCrossed className="h-3.5 w-3.5" />
+                  </a>
                 </div>
 
                 {/* 1. Número da mesa — maior elemento do card, sem dominá-lo. */}
@@ -1175,7 +1204,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
           openOrders={drawerOperations?.orders ?? []}
           alerts={tableEvents[drawerTable.id] ?? []}
           acceptedPaymentMethods={acceptedPaymentMethods}
-          menuUrl={tableUrl(drawerTable)}
           onClose={() => setDrawerTable(null)}
           onOrdersChanged={() => void fetchOperations()}
           onAlertsChanged={() => void fetchTableEvents()}

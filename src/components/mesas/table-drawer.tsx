@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, CheckCircle2, ChefHat, Clock3, Hand, Loader2, Printer, Receipt, StickyNote, UtensilsCrossed, X } from "lucide-react";
+import { Bell, CheckCircle2, ChefHat, Clock3, Hand, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -43,15 +43,6 @@ interface TableDrawerProps {
   alerts: TableCardAlert[];
   /** Fase 4B.1 (2026-08-10) — já normalizado (`resolveAcceptedPaymentMethods`); só passagem até `<CloseBillModal>`. */
   acceptedPaymentMethods: PaymentMethod[];
-  /**
-   * URL pública do cardápio desta mesa (`/{slug}/mesa/{qrToken}`) — a
-   * mesma que o QR Code impresso já leva o cliente, montada em
-   * `tables-manager.tsx` (`tableUrl()`, já reaproveitada ali pro modal de
-   * QR Code — este é só mais um consumidor da mesma função). Abre pro
-   * garçom conseguir tirar o pedido manualmente na mesa, ou só conferir o
-   * cardápio, sem precisar escanear o QR Code físico.
-   */
-  menuUrl: string;
   onClose: () => void;
   /** Chamado depois de qualquer ação que muda um pedido — o pai refaz a agregação. */
   onOrdersChanged: () => void;
@@ -135,7 +126,6 @@ export function TableDrawer({
   openOrders,
   alerts,
   acceptedPaymentMethods,
-  menuUrl,
   onClose,
   onOrdersChanged,
   onAlertsChanged,
@@ -685,7 +675,16 @@ export function TableDrawer({
           </div>
         )}
 
-        <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
+        {/* Sprint 13.4: `min-h-0` é a correção — sem ela, um item flex
+            (`flex-1`) tem `min-height: auto` por padrão, o que impede ele
+            de encolher menos que o próprio conteúdo. Com muitos pedidos
+            na lista, isso fazia esta área CRESCER além da tela em vez de
+            travar e rolar internamente — empurrando "Fechar conta" pra
+            fora da vista, às vezes exigindo rolar o modal inteiro (comum
+            passar despercebido em uso corrido). Com `min-h-0`, o
+            `overflow-y-auto` passa a valer de verdade: cabeçalho e
+            rodapé (abaixo) ficam sempre visíveis, só esta lista rola. */}
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
           {error && <Alert variant="destructive">{error}</Alert>}
 
           {openOrders.length > 0 && (
@@ -813,19 +812,6 @@ export function TableDrawer({
             <span className="text-sm font-medium text-ds2-foreground-muted">Total da mesa</span>
             <span className="font-numeric text-lg font-bold tabular-nums text-ds2-foreground">{formatCurrency(subtotal)}</span>
           </div>
-
-          <a
-            href={menuUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "flex min-h-12 items-center justify-center gap-2 rounded-ds2-md border-2 border-ds2-info/40 bg-ds2-info/10 text-sm font-semibold text-ds2-info shadow-ds2-sm transition hover:border-ds2-info/60 hover:bg-ds2-info/15 hover:shadow-ds2-md active:scale-[0.99]",
-              focusRingClass,
-            )}
-          >
-            <UtensilsCrossed className="h-4 w-4" aria-hidden />
-            Abrir cardápio desta mesa
-          </a>
 
           <div className="flex gap-2">
             <Button
