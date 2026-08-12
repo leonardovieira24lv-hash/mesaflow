@@ -53,6 +53,25 @@ interface MenuItemCardProps {
  * de "borda mais forte" neste conjunto (`:root`/`.menu-dark`); efeito
  * hover minimamente reduzido, sem alterar a aparência de forma
  * perceptível fora desse detalhe.
+ *
+ * Etapa 3C — Elevação do Card (2026-08-12): `shadow-sm`/`hover:shadow-md`
+ * (fixos, mesmo peso nos dois temas) trocados por `.elevation-card`
+ * (`globals.css`) — classe já existente, pronta desde a Sprint "Redesign
+ * Completo do Cardápio Público", nunca antes conectada a nenhum
+ * componente. Ela já resolve os dois temas sozinha, sem condicional:
+ * sombra + realce de 1px no topo da borda, calibrados both em `:root`
+ * (sutil) e `.menu-dark` (mais forte, porque sombra soma pouco sobre um
+ * fundo já escuro — o realce claro no topo é quem faz a "espessura"
+ * aparecer ali). `transition-all duration-300` removido do card — competia
+ * com a transição própria de `.elevation-card` (150ms, já cobre
+ * `box-shadow`/`transform`/`border-color`, os únicos 3 que este card
+ * anima); manter os dois gerava duas declarações de `transition`
+ * concorrendo. `hover:border-border` (já era um no-op — mesmo valor da
+ * borda base, nota da Etapa 3B acima) removido junto, por ser redundante.
+ * `active:shadow-sm` virou `active:shadow-card` (mesmo espírito: "achatar"
+ * a sombra ao pressionar, agora com o valor calibrado por tema em vez de
+ * um fixo). Nenhum token novo criado, `globals.css` não foi tocado — só
+ * conectei uma classe que já existia.
  */
 export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
   const isAvailable = item.is_available;
@@ -67,9 +86,9 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
       onClick={() => onSelect(item)}
       aria-label={isAvailable ? `Ver detalhes de ${item.name}` : `${item.name} — indisponível no momento`}
       className={cn(
-        "group flex w-full items-stretch gap-4 rounded-2xl border border-border bg-surface p-3.5 text-left shadow-sm transition-all duration-300 ease-out",
+        "group flex w-full items-stretch gap-4 rounded-2xl border border-border bg-surface p-3.5 text-left elevation-card",
         isAvailable
-          ? "hover:-translate-y-1 hover:border-border hover:shadow-md active:translate-y-0 active:scale-[0.99] active:shadow-sm"
+          ? "hover:-translate-y-1 active:translate-y-0 active:scale-[0.99] active:shadow-card"
           : "cursor-not-allowed opacity-60",
       )}
     >
