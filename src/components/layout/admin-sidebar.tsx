@@ -24,13 +24,10 @@ const NAV_ITEMS = [
  * Logo real da marca (2026-08-11) — `public/logo-forko.png`, ícone +
  * wordmark já combinados numa imagem só (não é mais badge+texto
  * separados). `<img>` nativo, não `next/image`: mesmo raciocínio já usado
- * na logo do restaurante no Cardápio Público — a altura é fixa (`h-12`,
- * 48px — era `h-10`/40px, aumentado a pedido). `max-w-full` como trava:
- * a sidebar só tem ~208px de largura útil pra logo (256px do `<aside>`
- * menos `px-6` de cada lado) — com a proporção real ~4.5:1 do arquivo,
- * ~48px de altura já ocupa a maior parte desse espaço (~215px de
- * largura); sem a trava, um aumento futuro de altura sem pensar na
- * largura poderia estourar e quebrar linha dentro da sidebar. do arquivo (`w-auto`), então não
+ * na logo do restaurante no Cardápio Público — a altura é fixa (`h-8`,
+ * 32px — passou por `h-10`→`h-12`(48px, sobrepôs o botão X de fechar no
+ * menu mobile, confirmado por captura de tela real) até chegar aqui).
+ * `max-w-full` como trava contra estouro. A largura segue a proporção real do arquivo (`w-auto`), então não
  * precisa de `width`/`height` fixos que o `next/image` exigiria.
  * `alt="Forko"` garante que o nome continue acessível a leitor de tela
  * mesmo sem nenhum texto visível ao lado.
@@ -39,7 +36,7 @@ function BrandMark() {
   return (
     <Link href={ROUTES.dashboard} className="flex items-center justify-center px-6 py-6">
       {/* eslint-disable-next-line @next/next/no-img-element -- proporção real do arquivo, ver docstring acima. */}
-      <img src="/logo-forko.png" alt="Forko" className="h-12 w-auto max-w-full" />
+      <img src="/logo-forko.png" alt="Forko" className="h-8 w-auto max-w-full" />
     </Link>
   );
 }
@@ -122,7 +119,7 @@ export function AdminSidebar({ isOwner }: { isOwner: boolean }) {
           />
           <div className="absolute inset-y-0 left-0 flex w-72 flex-col bg-ds2-background shadow-ds2-lg animate-slide-in-right">
             <div className="relative flex items-center">
-              <div className="flex flex-1 justify-center">
+              <div className="flex flex-1 justify-center pr-11">
                 <BrandMark />
               </div>
               <button
