@@ -49,6 +49,7 @@ export default async function CheckoutPage({
         tableToken={tableToken ?? null}
         restaurantName={getRestaurantDisplayName(restaurant)}
         restaurantLogoUrl={restaurant.logoUrl}
+        menuTheme={restaurant.menuTheme}
         tableName={tableName}
       />
     );

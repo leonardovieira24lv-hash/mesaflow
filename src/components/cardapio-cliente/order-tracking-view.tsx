@@ -19,6 +19,9 @@ interface OrderTrackingViewProps {
   // Identidade — Sprint "Identidade do Restaurante no Cardápio Público"
   // (2026-08-09). Sem descrição aqui, por escopo (só o Cardápio mostra).
   restaurantLogoUrl?: string | null;
+  // Etapa 2 — Propagação do Tema (2026-08-11). Mesma nota de
+  // `cardapio-cliente-view.tsx`.
+  menuTheme?: "light" | "dark";
   initialOrders: PublicSessionOrder[];
   /**
    * Sprint "Continuar Comprando" (2026-07-31): `token` da mesa, só quando
@@ -101,7 +104,7 @@ const STATUS_STYLES: Record<OrderStatus, string> = {
  * Nenhuma lógica foi tocada: polling, `isTerminal`, `totalAmount`,
  * `itemCount`, `orderNumberById` e `formatTime` são idênticos.
  */
-export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLogoUrl, initialOrders, tableToken }: OrderTrackingViewProps) {
+export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLogoUrl, menuTheme, initialOrders, tableToken }: OrderTrackingViewProps) {
   const [orders, setOrders] = useState<PublicSessionOrder[]>(initialOrders);
   const isTerminal = orders.every((order) => TERMINAL_STATUSES.includes(order.status));
 
@@ -144,7 +147,12 @@ export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLog
   }, [orders]);
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800">
+    <div
+      className={cn(
+        "mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800",
+        menuTheme === "dark" && "menu-dark",
+      )}
+    >
       <RestaurantHeader restaurantName={restaurantName} logoUrl={restaurantLogoUrl} />
 
       <main className="flex flex-1 flex-col gap-6 px-4 py-6">

@@ -67,6 +67,7 @@ export default async function CardapioClientePage({
         restaurantLogoUrl={restaurant.logoUrl}
         restaurantDescription={restaurant.description}
         restaurantIsOpen={getRestaurantOpenStatus(restaurant)}
+        menuTheme={restaurant.menuTheme}
         tableName={tableName}
         categories={categories}
       />

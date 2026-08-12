@@ -12,6 +12,7 @@ import { TableAssistanceActions } from "@/components/cardapio-cliente/table-assi
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ROUTES } from "@/constants/routes";
 import { withMesaQuery } from "@/lib/cliente-url";
+import { cn } from "@/lib/utils";
 
 interface CarrinhoViewProps {
   slug: string;
@@ -20,6 +21,9 @@ interface CarrinhoViewProps {
   // Identidade — Sprint "Identidade do Restaurante no Cardápio Público"
   // (2026-08-09). Sem descrição aqui, por escopo (só o Cardápio mostra).
   restaurantLogoUrl?: string | null;
+  // Etapa 2 — Propagação do Tema (2026-08-11). Mesma nota de
+  // `cardapio-cliente-view.tsx`.
+  menuTheme?: "light" | "dark";
   tableName?: string;
 }
 
@@ -49,7 +53,14 @@ interface CarrinhoViewProps {
  * - `<TableAssistanceActions>` ("Chamar garçom"/"Pedir a conta").
  * Os três precisam do arquivo real para serem corrigidos com segurança.
  */
-export function CarrinhoView({ slug, tableToken, restaurantName, restaurantLogoUrl, tableName }: CarrinhoViewProps) {
+export function CarrinhoView({
+  slug,
+  tableToken,
+  restaurantName,
+  restaurantLogoUrl,
+  menuTheme,
+  tableName,
+}: CarrinhoViewProps) {
   return (
     <CartProvider slug={slug} tableToken={tableToken}>
       <CarrinhoContent
@@ -57,13 +68,21 @@ export function CarrinhoView({ slug, tableToken, restaurantName, restaurantLogoU
         tableToken={tableToken}
         restaurantName={restaurantName}
         restaurantLogoUrl={restaurantLogoUrl}
+        menuTheme={menuTheme}
         tableName={tableName}
       />
     </CartProvider>
   );
 }
 
-function CarrinhoContent({ slug, tableToken, restaurantName, restaurantLogoUrl, tableName }: CarrinhoViewProps) {
+function CarrinhoContent({
+  slug,
+  tableToken,
+  restaurantName,
+  restaurantLogoUrl,
+  menuTheme,
+  tableName,
+}: CarrinhoViewProps) {
   const router = useRouter();
   const { items, subtotal, updateQuantity, removeItem, clear } = useCart();
   const [confirmingClear, setConfirmingClear] = useState(false);
@@ -71,7 +90,12 @@ function CarrinhoContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
   const menuHref = withMesaQuery(ROUTES.clienteMenu(slug), tableToken);
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800 sm:shadow-sm">
+    <div
+      className={cn(
+        "mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800 sm:shadow-sm",
+        menuTheme === "dark" && "menu-dark",
+      )}
+    >
       <RestaurantHeader restaurantName={restaurantName} logoUrl={restaurantLogoUrl} tableName={tableName} />
       <TableAssistanceActions slug={slug} tableToken={tableToken} />
 

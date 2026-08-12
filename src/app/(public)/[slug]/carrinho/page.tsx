@@ -52,6 +52,7 @@ export default async function CarrinhoPage({
         tableToken={tableToken ?? null}
         restaurantName={getRestaurantDisplayName(restaurant)}
         restaurantLogoUrl={restaurant.logoUrl}
+        menuTheme={restaurant.menuTheme}
         tableName={tableName}
       />
     );

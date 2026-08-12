@@ -23,6 +23,12 @@ export interface PublicRestaurantContext {
   // é `not null default 'America/Sao_Paulo'`.
   openingHours: OpeningHours | null;
   timezone: string;
+  // Etapa 1 — Tema do Cardápio Público (2026-08-11), coluna de
+  // `0030_restaurant_menu_theme.sql`. Sempre 'light'|'dark' — `not null
+  // default 'dark'` garante isso desde o schema. Etapa 2: propagado aqui
+  // pra decidir, na raiz de cada página pública, se a classe `menu-dark`
+  // deve ser aplicada.
+  menuTheme: "light" | "dark";
 }
 
 export interface PublicTableContext {
@@ -47,7 +53,7 @@ export async function resolveRestaurantBySlug(
 ): Promise<PublicRestaurantContext> {
   const { data, error } = await admin
     .from("restaurants")
-    .select("id, name, slug, trade_name, logo_url, description, opening_hours, timezone")
+    .select("id, name, slug, trade_name, logo_url, description, opening_hours, timezone, menu_theme")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -67,6 +73,7 @@ export async function resolveRestaurantBySlug(
     description: data.description,
     openingHours: data.opening_hours as OpeningHours | null,
     timezone: data.timezone,
+    menuTheme: data.menu_theme as "light" | "dark",
   };
 }
 

@@ -11,6 +11,7 @@ import { OrderSummaryBar } from "@/components/cardapio-cliente/order-summary-bar
 import { TableAssistanceActions } from "@/components/cardapio-cliente/table-assistance-actions";
 import { ROUTES } from "@/constants/routes";
 import { withMesaQuery } from "@/lib/cliente-url";
+import { cn } from "@/lib/utils";
 import type { ApiError } from "@/types/api";
 
 interface CheckoutViewProps {
@@ -20,6 +21,9 @@ interface CheckoutViewProps {
   // Identidade — Sprint "Identidade do Restaurante no Cardápio Público"
   // (2026-08-09). Sem descrição aqui, por escopo (só o Cardápio mostra).
   restaurantLogoUrl?: string | null;
+  // Etapa 2 — Propagação do Tema (2026-08-11). Mesma nota de
+  // `cardapio-cliente-view.tsx`.
+  menuTheme?: "light" | "dark";
   tableName?: string;
 }
 
@@ -61,7 +65,7 @@ export function CheckoutView(props: CheckoutViewProps) {
   );
 }
 
-function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, tableName }: CheckoutViewProps) {
+function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, menuTheme, tableName }: CheckoutViewProps) {
   const router = useRouter();
   const { items, subtotal, clear } = useCart();
   const [notes, setNotes] = useState("");
@@ -145,7 +149,12 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
 
   if (status === "success") {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-5 bg-zinc-950 p-6 text-center">
+      <div
+        className={cn(
+          "flex min-h-dvh flex-col items-center justify-center gap-5 bg-zinc-950 p-6 text-center",
+          menuTheme === "dark" && "menu-dark",
+        )}
+      >
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15">
           <CheckCircle2 className="h-10 w-10 text-emerald-400" aria-hidden />
         </div>
@@ -159,7 +168,12 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
 
   if (items.length === 0) {
     return (
-      <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 sm:border-x sm:border-zinc-800 sm:shadow-sm">
+      <div
+        className={cn(
+          "mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 sm:border-x sm:border-zinc-800 sm:shadow-sm",
+          menuTheme === "dark" && "menu-dark",
+        )}
+      >
         <RestaurantHeader restaurantName={restaurantName} logoUrl={restaurantLogoUrl} tableName={tableName} />
         <TableAssistanceActions slug={slug} tableToken={tableToken} />
         <main className="flex flex-1 items-center justify-center p-6">
@@ -182,7 +196,12 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800 sm:shadow-sm">
+    <div
+      className={cn(
+        "mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-8 sm:border-x sm:border-zinc-800 sm:shadow-sm",
+        menuTheme === "dark" && "menu-dark",
+      )}
+    >
       <RestaurantHeader restaurantName={restaurantName} logoUrl={restaurantLogoUrl} tableName={tableName} />
       <TableAssistanceActions slug={slug} tableToken={tableToken} />
 

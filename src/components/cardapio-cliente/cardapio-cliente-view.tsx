@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { SearchX, UtensilsCrossed } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { RestaurantHeader } from "@/components/cardapio-cliente/restaurant-header";
 import { CategoryNav, categorySectionId } from "@/components/cardapio-cliente/category-nav";
 import { MenuItemCard } from "@/components/cardapio-cliente/menu-item-card";
@@ -23,6 +24,11 @@ interface CardapioClienteViewProps {
   // `<RestaurantHeader>`; não passado por Carrinho/Checkout/Acompanhamento
   // de propósito (o indicador é exclusivo do Cardápio).
   restaurantIsOpen?: boolean | null;
+  // Etapa 2 — Propagação do Tema (2026-08-11). Decide, na raiz desta view,
+  // se a classe `menu-dark` é aplicada — não em nenhum componente filho.
+  // Sem prop (`undefined`) cai no comportamento atual (escuro), mesmo
+  // default `'dark'` já usado no banco.
+  menuTheme?: "light" | "dark";
   tableName?: string;
   categories: PublicMenuCategory[];
 }
@@ -70,6 +76,7 @@ export function CardapioClienteView({
   restaurantLogoUrl,
   restaurantDescription,
   restaurantIsOpen,
+  menuTheme,
   tableName,
   categories,
 }: CardapioClienteViewProps) {
@@ -97,7 +104,12 @@ export function CardapioClienteView({
 
   return (
     <CartProvider slug={slug} tableToken={tableToken}>
-      <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-24 sm:border-x sm:border-zinc-800 sm:shadow-sm">
+      <div
+        className={cn(
+          "mx-auto flex min-h-dvh max-w-xl flex-col bg-zinc-950 pb-24 sm:border-x sm:border-zinc-800 sm:shadow-sm",
+          menuTheme === "dark" && "menu-dark",
+        )}
+      >
         <RestaurantHeader
           restaurantName={restaurantName}
           logoUrl={restaurantLogoUrl}

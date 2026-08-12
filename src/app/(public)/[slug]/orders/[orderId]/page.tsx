@@ -73,6 +73,7 @@ export default async function AcompanharPedidoPage({
         orderId={orderId}
         restaurantName={getRestaurantDisplayName(restaurant)}
         restaurantLogoUrl={restaurant.logoUrl}
+        menuTheme={restaurant.menuTheme}
         initialOrders={sessionOrders ?? [{ id: order.id, status: order.status, items: order.items, totalAmount: 0, createdAt: new Date().toISOString() }]}
         tableToken={tableContext?.isSessionOpen ? tableContext.tableToken : null}
       />
