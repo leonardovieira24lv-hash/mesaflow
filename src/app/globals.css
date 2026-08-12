@@ -35,11 +35,20 @@
        públicas que compartilham este `:root` (onboarding, login) —
        decisão deliberada, mais consistência visual em todo o produto
        claro, não só no Cardápio. `.menu-dark` (tema escuro do Cardápio)
-       não foi tocado — já estava aprovado como está. */
-    --background: 220 16% 93%;
+       não foi tocado — já estava aprovado como está.
+
+       Etapa 3H — Inverter Fundo/Card (2026-08-12): estava ao contrário do
+       Mesas — lá o FUNDO é branco puro e o CARD é cinza; aqui tinha ficado
+       o inverso (fundo cinza, card branco puro). Trocado pra bater exato:
+       `--background` volta a 100% (branco puro, era 93%), `--surface`
+       agora é quem cede tom (90%, era 100%) — mesmo par de valores do
+       painel administrativo (`ds2-background: 100%`, `ds2-surface: 90%`),
+       só que aqui mantendo o matiz azulado (220°) já usado no resto do
+       Cardápio, em vez do cinza neutro do admin. */
+    --background: 0 0% 100%;
     --foreground: 220 20% 12%;
 
-    --surface: 0 0% 100%;
+    --surface: 220 16% 90%;
     --surface-foreground: 220 20% 12%;
 
     --primary: 160 84% 39%;
