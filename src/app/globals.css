@@ -24,7 +24,19 @@
 
 @layer base {
   :root {
-    --background: 220 14% 97%;
+    /* Etapa 3E — Contraste do Tema Claro (2026-08-12). Antes: fundo 97%,
+       card (surface) 100% — só 3 pontos de distância, card "sem vida"
+       (achado real, testado no navegador). Depois: fundo 93%, card
+       continua 100% (branco puro) — 7 pontos de distância, mesma
+       filosofia do painel administrativo (Mesas, tokens `ds2-*`: fundo
+       100%, card 90%, 10 pontos), só que aqui invertido — o fundo é quem
+       cede tom, não o card, pra manter o card "fresco"/branco puro em vez
+       de acinzentado. Afeta todo o Cardápio Público E outras telas
+       públicas que compartilham este `:root` (onboarding, login) —
+       decisão deliberada, mais consistência visual em todo o produto
+       claro, não só no Cardápio. `.menu-dark` (tema escuro do Cardápio)
+       não foi tocado — já estava aprovado como está. */
+    --background: 220 16% 93%;
     --foreground: 220 20% 12%;
 
     --surface: 0 0% 100%;
@@ -36,7 +48,7 @@
 
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
-    --border: 220 13% 89%;
+    --border: 220 15% 82%;
 
     --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
