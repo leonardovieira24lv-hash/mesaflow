@@ -163,7 +163,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
         )}
       >
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15">
-          <CheckCircle2 className="h-10 w-10 text-emerald-600" aria-hidden />
+          <CheckCircle2 className="h-10 w-10 text-soft-success-foreground" aria-hidden />
         </div>
         <div className="flex flex-col gap-1.5">
           <p className="text-xl font-bold text-foreground">Pedido realizado!</p>
@@ -226,7 +226,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
         <h1 className="text-xl font-bold tracking-tight text-foreground">Confirmar pedido</h1>
 
         {!tableToken && (
-          <div className="flex items-start gap-2.5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="flex items-start gap-2.5 rounded-xl border border-soft-warning-ring bg-soft-warning px-4 py-3 text-sm text-soft-warning-foreground">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <p>Não identificamos sua mesa. Escaneie novamente o QR Code para finalizar o pedido.</p>
           </div>
@@ -255,11 +255,11 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
         </div>
 
         {staleItems && staleItems.length > 0 && (
-          <div className="flex flex-col gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <div className="flex flex-col gap-2 rounded-xl border border-soft-danger-ring bg-soft-danger px-4 py-3 text-sm text-soft-danger-foreground">
             <p>Estes itens mudaram desde que você montou o carrinho: {staleItems.join(", ")}.</p>
             <Link
               href={cartHref}
-              className="self-start rounded-lg border border-red-300 bg-background px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-500/15"
+              className="self-start rounded-lg border border-soft-danger-ring bg-background px-3 py-1.5 text-xs font-semibold text-soft-danger-foreground transition hover:bg-red-500/15"
             >
               Voltar ao carrinho
             </Link>
@@ -267,7 +267,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
         )}
 
         {errorMessage && !staleItems && (
-          <div className="flex items-start gap-2.5 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <div className="flex items-start gap-2.5 rounded-xl border border-soft-danger-ring bg-soft-danger px-4 py-3 text-sm text-soft-danger-foreground">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <p>{errorMessage}</p>
           </div>

@@ -24,6 +24,35 @@ const config: Config = {
           foreground: "hsl(var(--muted-foreground))",
         },
         "foreground-subtle": "hsl(var(--foreground-subtle))",
+        // Etapa 3S — Badges/avisos "suaves" no tema escuro (2026-08-12).
+        // Fundo bem claro + texto escuro no tema claro; fundo bem escuro +
+        // texto claro no escuro (mesmo hue nos dois) — usado em preço,
+        // status de pedido, avisos de erro/atenção do Cardápio Público.
+        // Sem isto, essas cores ficavam fixas pro claro (recalibradas na
+        // Etapa 3B em diante) e ilegíveis/estranhas quando o tema escuro
+        // fosse selecionado.
+        soft: {
+          success: {
+            DEFAULT: "hsl(var(--soft-success-bg))",
+            foreground: "hsl(var(--soft-success-text))",
+            ring: "hsl(var(--soft-success-ring))",
+          },
+          warning: {
+            DEFAULT: "hsl(var(--soft-warning-bg))",
+            foreground: "hsl(var(--soft-warning-text))",
+            ring: "hsl(var(--soft-warning-ring))",
+          },
+          danger: {
+            DEFAULT: "hsl(var(--soft-danger-bg))",
+            foreground: "hsl(var(--soft-danger-text))",
+            ring: "hsl(var(--soft-danger-ring))",
+          },
+          info: {
+            DEFAULT: "hsl(var(--soft-info-bg))",
+            foreground: "hsl(var(--soft-info-text))",
+            ring: "hsl(var(--soft-info-ring))",
+          },
+        },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",

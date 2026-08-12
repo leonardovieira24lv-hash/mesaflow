@@ -146,7 +146,7 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
         )}
 
         <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="text-lg font-extrabold tabular-nums tracking-tight text-emerald-600">
+          <span className="text-lg font-extrabold tabular-nums tracking-tight text-soft-success-foreground">
             {formatCurrency(item.price)}
           </span>
 

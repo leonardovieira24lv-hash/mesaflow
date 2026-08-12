@@ -141,6 +141,24 @@
     --ds2-shadow-md: 0 8px 20px -6px rgb(0 0 0 / 0.55), 0 2px 8px -2px rgb(0 0 0 / 0.4);
     --ds2-radius-sm: 0.5rem;
     --ds2-radius-lg: 1rem;
+
+    /* Etapa 3S — Badges/avisos "suaves" (2026-08-12). Valores claros —
+       fundo bem claro (~50), texto escuro e saturado (~800), anel médio
+       (~300), mesmo hue de cada semântica. Espelham os tons Tailwind
+       emerald/amber/red/sky-50/300/800 (não copiados literalmente por
+       precisar de HSL puro pro token, mas equivalentes). */
+    --soft-success-bg: 151 81% 96%;
+    --soft-success-text: 153 73% 24%;
+    --soft-success-ring: 156 72% 67%;
+    --soft-warning-bg: 48 100% 96%;
+    --soft-warning-text: 26 78% 26%;
+    --soft-warning-ring: 46 97% 65%;
+    --soft-danger-bg: 0 86% 97%;
+    --soft-danger-text: 0 70% 35%;
+    --soft-danger-ring: 0 94% 82%;
+    --soft-info-bg: 204 100% 97%;
+    --soft-info-text: 201 90% 27%;
+    --soft-info-ring: 202 94% 74%;
   }
 
   /* ────────────────────────────────────────────────────────────────────
@@ -311,6 +329,25 @@
     --ds2-shadow-md: 0 14px 32px -6px rgb(0 0 0 / 0.65), 0 4px 12px -3px rgb(0 0 0 / 0.5);
     --ds2-radius-sm: 0.5rem;
     --ds2-radius-lg: 1rem;
+
+    /* Etapa 3S — Badges/avisos "suaves" (2026-08-12). Valores escuros —
+       fundo bem escuro e saturado (~950), texto claro (~300), anel médio
+       escuro (~700), mesmo hue de cada semântica — voltando ao espírito
+       original da Sprint "Cardápio Dark/Premium" (bg-emerald-500/15 +
+       text-emerald-300, etc.), só que como cor sólida em vez de
+       translúcida, pra caber num token HSL puro. */
+    --soft-success-bg: 152 45% 12%;
+    --soft-success-text: 156 72% 67%;
+    --soft-success-ring: 152 40% 30%;
+    --soft-warning-bg: 38 45% 13%;
+    --soft-warning-text: 46 97% 65%;
+    --soft-warning-ring: 38 40% 30%;
+    --soft-danger-bg: 0 45% 14%;
+    --soft-danger-text: 0 94% 82%;
+    --soft-danger-ring: 0 40% 32%;
+    --soft-info-bg: 204 45% 13%;
+    --soft-info-text: 202 94% 74%;
+    --soft-info-ring: 204 40% 32%;
   }
 
   /* ────────────────────────────────────────────────────────────────────

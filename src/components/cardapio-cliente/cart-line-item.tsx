@@ -77,7 +77,7 @@ export function CartLineItem({ item, editable = false, onUpdateQuantity, onRemov
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="truncate font-semibold text-foreground">{item.name}</p>
         {item.notes && <p className="truncate text-xs text-muted-foreground">Obs.: {item.notes}</p>}
-        <span className="text-sm font-bold tabular-nums text-emerald-600">{formatCurrency(lineTotal)}</span>
+        <span className="text-sm font-bold tabular-nums text-soft-success-foreground">{formatCurrency(lineTotal)}</span>
       </div>
 
       {editable ? (
@@ -104,7 +104,7 @@ export function CartLineItem({ item, editable = false, onUpdateQuantity, onRemov
 
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-red-500/15 hover:text-red-600 active:scale-90"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-red-500/15 hover:text-soft-danger-foreground active:scale-90"
             onClick={onRemove}
             aria-label={`Remover ${item.name} do carrinho`}
           >

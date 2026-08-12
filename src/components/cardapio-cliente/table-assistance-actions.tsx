@@ -89,10 +89,10 @@ export function TableAssistanceActions({ slug, tableToken }: TableAssistanceActi
   const baseButton =
     "group flex flex-1 min-h-[44px] items-center justify-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-semibold transition active:scale-[0.97] disabled:pointer-events-none";
   const idleButton = `${baseButton} bg-surface text-foreground shadow-card hover:bg-muted`;
-  const doneButton = `${baseButton} bg-emerald-500/15 text-emerald-700 ring-1 ring-inset ring-emerald-500/30`;
+  const doneButton = `${baseButton} bg-soft-success text-soft-success-foreground ring-1 ring-inset ring-soft-success-ring`;
   const iconBadge =
     "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition group-hover:bg-background";
-  const iconBadgeDone = "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/25 text-emerald-700";
+  const iconBadgeDone = "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-soft-success text-soft-success-foreground";
 
   return (
     <div className="flex gap-2.5 border-b border-border bg-background px-4 py-3">

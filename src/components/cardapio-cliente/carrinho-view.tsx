@@ -120,7 +120,7 @@ function CarrinhoContent({
           <button
             type="button"
             onClick={() => setConfirmingClear(true)}
-            className="flex min-h-9 items-center rounded-xl bg-red-500/15 px-3 py-1.5 text-sm font-semibold text-red-700 ring-1 ring-inset ring-red-500/30 transition hover:bg-red-500/25 active:scale-[0.97]"
+            className="flex min-h-9 items-center rounded-xl bg-soft-danger px-3 py-1.5 text-sm font-semibold text-soft-danger-foreground ring-1 ring-inset ring-soft-danger-ring transition hover:bg-red-500/25 active:scale-[0.97]"
           >
             Limpar carrinho
           </button>

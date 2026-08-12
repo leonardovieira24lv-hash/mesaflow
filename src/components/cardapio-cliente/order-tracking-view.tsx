@@ -52,11 +52,11 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
  * produção) — mesmos status, mesmos rótulos, só com aparência própria.
  */
 const STATUS_STYLES: Record<OrderStatus, string> = {
-  pending: "bg-emerald-50 text-emerald-800 ring-emerald-300",
-  preparing: "bg-amber-50 text-amber-800 ring-amber-300",
-  ready: "bg-sky-50 text-sky-800 ring-sky-300",
+  pending: "bg-soft-success text-soft-success-foreground ring-soft-success-ring",
+  preparing: "bg-soft-warning text-soft-warning-foreground ring-soft-warning-ring",
+  ready: "bg-soft-info text-soft-info-foreground ring-soft-info-ring",
   delivered: "bg-muted text-muted-foreground ring-border",
-  cancelled: "bg-red-50 text-red-800 ring-red-300",
+  cancelled: "bg-soft-danger text-soft-danger-foreground ring-soft-danger-ring",
 };
 
 /**

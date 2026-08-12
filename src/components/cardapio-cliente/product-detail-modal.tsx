@@ -166,7 +166,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
               <div className="flex flex-col gap-1.5">
                 <h2 className="text-2xl font-bold tracking-tight text-foreground">{item.name}</h2>
                 {item.description && <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>}
-                <p className="pt-1 text-lg font-bold tabular-nums text-emerald-600">{formatCurrency(item.price)}</p>
+                <p className="pt-1 text-lg font-bold tabular-nums text-soft-success-foreground">{formatCurrency(item.price)}</p>
               </div>
 
               <div className="flex items-center justify-between rounded-2xl bg-surface px-4 py-3 ring-1 ring-border">
