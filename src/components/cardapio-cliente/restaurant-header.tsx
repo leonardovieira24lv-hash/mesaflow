@@ -59,6 +59,14 @@ interface RestaurantHeaderProps {
  * marca da plataforma, só com a do estabelecimento. Verde continua sendo
  * a cor de ação em todo o Cardápio, intocado.
  *
+ * Etapa 3B — Migração para Tokens (2026-08-12): fundo/borda/texto
+ * migraram de classe literal para token semântico (`bg-surface`,
+ * `border-border`, `text-foreground`, `text-muted-foreground`) — responde
+ * a `menu-dark`/`:root` de verdade agora. Verde/vermelho (badge "Mesa X",
+ * badge "Aberto agora"/"Fechado", foco do campo de busca) foram
+ * deliberadamente PRESERVADOS sem alteração — não são cor estrutural, são
+ * cor de ação/estado, fora do escopo desta etapa.
+ *
  * Sprint "Identidade do Restaurante no Cardápio Público" (2026-08-09,
  * seguinte): logo (`logoUrl`, com fallback discreto em ícone+nome quando
  * não cadastrada) e descrição (`description`, só renderizada quando existe
@@ -103,7 +111,7 @@ export function RestaurantHeader({
   const hasDescription = Boolean(description?.trim());
 
   return (
-    <header className="flex flex-col gap-3 border-b border-zinc-200 bg-white/95 px-4 pb-3.5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+    <header className="flex flex-col gap-3 border-b border-border bg-surface/95 px-4 pb-3.5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-surface/80">
       {logoUrl ? (
         <div className="flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element -- proporção livre, ver docstring acima. */}
@@ -112,12 +120,12 @@ export function RestaurantHeader({
       ) : (
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-zinc-100 ring-1 ring-zinc-200">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-muted ring-1 ring-border">
               <div className="flex h-full w-full items-center justify-center">
-                <UtensilsCrossed className="h-4 w-4 text-zinc-400" aria-hidden />
+                <UtensilsCrossed className="h-4 w-4 text-muted-foreground" aria-hidden />
               </div>
             </div>
-            <h1 className="truncate text-xl font-bold tracking-tight text-zinc-900">{restaurantName}</h1>
+            <h1 className="truncate text-xl font-bold tracking-tight text-foreground">{restaurantName}</h1>
           </div>
           {tableName && (
             <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
@@ -134,7 +142,7 @@ export function RestaurantHeader({
       {logoUrl && (hasDescription || tableName) && (
         <div className="flex items-center justify-between gap-3">
           {hasDescription ? (
-            <p className="line-clamp-2 text-xs text-zinc-500">{description}</p>
+            <p className="line-clamp-2 text-xs text-muted-foreground">{description}</p>
           ) : (
             <span aria-hidden />
           )}
@@ -146,7 +154,7 @@ export function RestaurantHeader({
         </div>
       )}
 
-      {!logoUrl && hasDescription && <p className="line-clamp-2 text-xs text-zinc-500">{description}</p>}
+      {!logoUrl && hasDescription && <p className="line-clamp-2 text-xs text-muted-foreground">{description}</p>}
 
       {/* Fase 4B.2 — só o Cardápio passa `isOpenNow` (menu/page.tsx);
           Carrinho/Checkout/Acompanhamento simplesmente não passam essa
@@ -167,7 +175,7 @@ export function RestaurantHeader({
       {hasSearch && (
         <div className="relative">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
           />
           <input
@@ -177,14 +185,14 @@ export function RestaurantHeader({
             onChange={(e) => onSearchChange?.(e.target.value)}
             placeholder="Buscar no cardápio..."
             aria-label="Buscar produtos no cardápio"
-            className="w-full rounded-full border border-zinc-300 bg-white py-2.5 pl-9 pr-9 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            className="w-full rounded-full border border-border bg-surface py-2.5 pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => onSearchChange?.("")}
               aria-label="Limpar busca"
-              className="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
+              className="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
             </button>
