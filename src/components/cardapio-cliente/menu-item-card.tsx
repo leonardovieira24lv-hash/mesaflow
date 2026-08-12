@@ -97,7 +97,7 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
       onClick={() => onSelect(item)}
       aria-label={isAvailable ? `Ver detalhes de ${item.name}` : `${item.name} — indisponível no momento`}
       className={cn(
-        "group flex w-full items-stretch gap-4 rounded-2xl border-2 border-border bg-surface p-3.5 text-left elevation-card",
+        "group flex w-full items-stretch gap-4 rounded-2xl border border-border bg-surface p-3.5 text-left elevation-card",
         isAvailable
           ? "hover:-translate-y-1 active:translate-y-0 active:scale-[0.99] active:shadow-card"
           : "cursor-not-allowed opacity-60",

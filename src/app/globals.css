@@ -72,15 +72,19 @@
     --chrome-active: 160 84% 39%;
 
     --foreground-subtle: 220 9% 55%;
-    /* Etapa 3F — Sombra "3D" (2026-08-12). Opacidade multiplicada bem
-       além do que era (0.04→0.35, quase 9x) — a causa real do efeito
-       "botão saltando da tela" do painel administrativo (Mesas,
-       `--ds2-shadow-sm: rgb(0 0 0 / 0.45)`) não é borda nem gradiente, é
-       justamente uma sombra escura e definida logo abaixo do card, não
-       uma sombra ambiente suave. Tamanho do blur mantido pequeno
-       (`1px`/`2px`) — só ficou mais ESCURA, não maior/mais espalhada. */
-    --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.35), 0 1px 3px 0 rgb(0 0 0 / 0.22);
-    --shadow-card-hover: 0 8px 20px -4px rgb(0 0 0 / 0.4), 0 3px 8px -2px rgb(0 0 0 / 0.28);
+    /* Etapa 3G — Sombra Direcional (2026-08-12). A Etapa 3F só aumentou a
+       opacidade, mas manteve o deslocamento vertical pequeno (1px) — isso
+       cria um anel escuro quase uniforme em volta do card, não a sensação
+       de "sombra escorrendo pra baixo, afinando pra cima" que o painel
+       administrativo (Mesas) tem. Deslocamento vertical aumentado (2px→6px,
+       era 1px) e blur maior, com spread negativo pra não vazar demais pros
+       lados — mesma receita usada em sombras de card "flutuante" (ex.:
+       Tailwind `shadow`/`shadow-md` padrão), agora puxada mais forte pra
+       ficar perceptível como Mesas pede. Borda do card voltou a ser fina
+       (`border`, não `border-2`) — a "grossura visual" deve vir da sombra,
+       não da borda; borda grossa competia com o efeito em vez de somar. */
+    --shadow-card: 0 3px 6px -1px rgb(0 0 0 / 0.20), 0 2px 4px -2px rgb(0 0 0 / 0.14);
+    --shadow-card-hover: 0 10px 22px -4px rgb(0 0 0 / 0.32), 0 4px 10px -3px rgb(0 0 0 / 0.20);
     --shadow-bar: 0 -4px 20px 0 rgb(15 15 25 / 0.08);
     --shadow-sheet: 0 -12px 32px -8px rgb(15 15 25 / 0.18);
     --elevation-highlight: inset 0 0 0 0 transparent;
