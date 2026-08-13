@@ -13,7 +13,7 @@
     "supabase:types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_ID\" --schema public > src/types/database.types.ts"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.4.0",
+    "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.45.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.427.0",
