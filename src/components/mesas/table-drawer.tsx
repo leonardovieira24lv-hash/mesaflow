@@ -33,7 +33,7 @@ interface OrderDetail {
   total_amount: number;
   notes?: string;
   created_at: string;
-  items: { id: string; name: string; quantity: number; price: number; notes?: string; cancelled_at: string | null }[];
+  items: { id: string; name: string; quantity: number; price: number; notes?: string }[];
 }
 
 interface TableDrawerProps {
@@ -153,15 +153,6 @@ export function TableDrawer({
   // independentemente).
   const isCancelingOrderRef = useRef(false);
   const [confirmingCancelOrderId, setConfirmingCancelOrderId] = useState<string | null>(null);
-  // Cancelamento de ITEM individual (distinto do pedido inteiro acima) —
-  // `confirmingCancelItem` guarda {orderId, itemId} juntos, porque a
-  // chamada precisa dos dois (a RPC identifica o pedido pelo item, mas o
-  // fetch usa os dois na URL, mesmo padrão REST do resto do contrato).
-  const isCancelingItemRef = useRef(false);
-  const [cancelingItemId, setCancelingItemId] = useState<string | null>(null);
-  const [confirmingCancelItem, setConfirmingCancelItem] = useState<{ orderId: string; itemId: string } | null>(
-    null,
-  );
   // "Chamar garçom" / "Solicitar conta" — mesmo raciocínio de lock, para
   // não deixar um duplo toque em "Atendido"/"Conta entregue" disparar duas
   // requisições para o mesmo evento.
@@ -358,42 +349,6 @@ export function TableDrawer({
       setUpdatingOrderId(null);
       setConfirmingCancelOrderId(null);
       isCancelingOrderRef.current = false;
-    }
-  }
-
-  /**
-   * Sprint 13.13 (item individual) — cancela só 1 item dentro de um
-   * pedido com vários (ex.: "2× calabresa, 1× x burguer", cancela só o
-   * burguer). Toda a regra de negócio (recalcular o total do pedido,
-   * decidir se o pedido inteiro vira `cancelled`, decidir se a MESA
-   * INTEIRA libera sozinha — olhando todos os pedidos dela, não só este)
-   * vive na RPC `cancel_order_item` (migration 0034) — este handler só
-   * chama o endpoint e atualiza a tela.
-   */
-  async function handleCancelItem(orderId: string, itemId: string) {
-    if (isCancelingItemRef.current) return;
-    isCancelingItemRef.current = true;
-
-    setCancelingItemId(itemId);
-    setError(null);
-    try {
-      const response = await fetch(`/api/v1/orders/${orderId}/items/${itemId}/cancel`, {
-        method: "POST",
-      });
-      const body = await response.json();
-      if (!response.ok) {
-        setError(body?.error?.message ?? "Não foi possível cancelar o item.");
-        onOrdersChanged();
-        return;
-      }
-      toast.success(body?.data?.tableReleased ? "Item cancelado — mesa liberada" : "Item cancelado");
-      onOrdersChanged();
-    } catch {
-      setError("Não foi possível conectar. Verifique sua internet e tente novamente.");
-    } finally {
-      setCancelingItemId(null);
-      setConfirmingCancelItem(null);
-      isCancelingItemRef.current = false;
     }
   }
 
@@ -870,44 +825,15 @@ export function TableDrawer({
 
                     {detail ? (
                       shouldSummarizeOrders ? (
-                        // Sprint 13.10 — versão compacta: chips em vez de
-                        // lista, pra caber mais pedido em tela sem rolar.
-                        // Sprint 13.13 — cada chip ativo ganhou um "×"
-                        // próprio (cancela só aquele item); item já
-                        // cancelado aparece riscado, sem botão (nada a
-                        // cancelar de novo). Observação NUNCA fica
-                        // escondida — sempre visível mesmo no resumo.
-                        <div className="flex flex-col gap-1.5">
-                          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
-                            {detail.items.map((item, index) => (
-                              <span key={item.id} className="inline-flex items-center gap-1 text-sm">
-                                <span
-                                  className={cn(
-                                    item.cancelled_at
-                                      ? "text-ds2-foreground-muted line-through"
-                                      : "text-ds2-foreground",
-                                  )}
-                                >
-                                  {item.quantity}× {item.name}
-                                  {index < detail.items.length - 1 ? "," : ""}
-                                </span>
-                                {!item.cancelled_at && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setConfirmingCancelItem({ orderId: order.id, itemId: item.id })}
-                                    disabled={cancelingItemId === item.id}
-                                    aria-label={`Cancelar ${item.name}`}
-                                    className={cn(
-                                      "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-ds2-foreground-muted hover:bg-ds2-danger/10 hover:text-ds2-danger",
-                                      focusRingClass,
-                                    )}
-                                  >
-                                    <X className="h-2.5 w-2.5" />
-                                  </button>
-                                )}
-                              </span>
-                            ))}
-                          </div>
+                        // Sprint 13.10 — versão compacta: 1-2 linhas em vez
+                        // de uma por item, pra caber mais pedido em tela
+                        // sem rolar. Observação ("sem cebola" etc.) NUNCA
+                        // fica escondida — informação crítica pra cozinha,
+                        // sempre visível mesmo no resumo.
+                        <div className="flex flex-col gap-1">
+                          <p className="text-sm text-ds2-foreground">
+                            {detail.items.map((item) => `${item.quantity}× ${item.name}`).join(", ")}
+                          </p>
                           {detail.items
                             .filter((item) => item.notes)
                             .map((item) => (
@@ -925,40 +851,15 @@ export function TableDrawer({
                           {detail.items.map((item) => (
                             <li key={item.id} className="flex flex-col gap-0.5">
                               <div className="flex items-center justify-between gap-2 text-sm">
-                                <span
-                                  className={cn(
-                                    "flex items-center gap-2",
-                                    item.cancelled_at
-                                      ? "text-ds2-foreground-muted line-through"
-                                      : "text-ds2-foreground",
-                                  )}
-                                >
+                                <span className="flex items-center gap-2 text-ds2-foreground">
                                   <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-ds2-sm bg-ds2-surface-hover px-1 font-numeric text-xs font-semibold text-ds2-foreground-muted">
                                     {item.quantity}×
                                   </span>
                                   {item.name}
                                 </span>
-                                {item.cancelled_at ? (
-                                  <span className="shrink-0 text-xs font-medium text-ds2-danger">Cancelado</span>
-                                ) : (
-                                  <span className="flex shrink-0 items-center gap-2">
-                                    <span className="font-numeric font-medium text-ds2-foreground-muted">
-                                      {formatCurrency(item.price * item.quantity)}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => setConfirmingCancelItem({ orderId: order.id, itemId: item.id })}
-                                      disabled={cancelingItemId === item.id}
-                                      aria-label={`Cancelar ${item.name}`}
-                                      className={cn(
-                                        "inline-flex h-5 w-5 items-center justify-center rounded-full text-ds2-foreground-muted hover:bg-ds2-danger/10 hover:text-ds2-danger",
-                                        focusRingClass,
-                                      )}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </button>
-                                  </span>
-                                )}
+                                <span className="font-numeric font-medium text-ds2-foreground-muted">
+                                  {formatCurrency(item.price * item.quantity)}
+                                </span>
                               </div>
                               {item.notes && (
                                 <span className="flex items-center gap-1 pl-7 text-xs italic text-ds2-foreground-muted">
@@ -1153,20 +1054,6 @@ export function TableDrawer({
           if (confirmingCancelOrderId) void handleCancelOrder(confirmingCancelOrderId);
         }}
         isConfirming={confirmingCancelOrderId !== null && updatingOrderId === confirmingCancelOrderId}
-      />
-
-      <ConfirmDialog
-        open={confirmingCancelItem !== null}
-        onOpenChange={(open) => {
-          if (!open) setConfirmingCancelItem(null);
-        }}
-        title="Cancelar item"
-        description="Este item não entra mais no total do pedido nem no caixa. Se for o último item ativo, o pedido inteiro cancela e a mesa libera sozinha. Não é possível desfazer. Cancelar mesmo assim?"
-        confirmLabel="Cancelar item"
-        onConfirm={() => {
-          if (confirmingCancelItem) void handleCancelItem(confirmingCancelItem.orderId, confirmingCancelItem.itemId);
-        }}
-        isConfirming={confirmingCancelItem !== null && cancelingItemId === confirmingCancelItem.itemId}
       />
 
       <CloseBillModal
