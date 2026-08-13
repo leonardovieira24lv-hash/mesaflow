@@ -924,20 +924,55 @@ export function TableDrawer({
                                   {item.quantity}× {item.name}
                                   {index < detail.items.length - 1 ? "," : ""}
                                 </span>
-                                {!item.cancelled_at && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setConfirmingCancelItem({ orderId: order.id, itemId: item.id })}
-                                    disabled={cancelingItemId === item.id}
-                                    aria-label={`Cancelar ${item.name}`}
-                                    className={cn(
-                                      "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-ds2-danger hover:bg-ds2-danger/10",
-                                      focusRingClass,
-                                    )}
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
-                                )}
+                                {!item.cancelled_at &&
+                                  (confirmingCancelItem?.itemId === item.id ? (
+                                    // Sprint 13.16 — confirmação EM LINHA, sem
+                                    // nenhum <dialog> novo. O modal de
+                                    // confirmação (nativo, aninhado dentro do
+                                    // <dialog> da mesa) se provou frágil nesse
+                                    // caso específico mesmo depois de duas
+                                    // tentativas de correção (rótulos, depois
+                                    // portal) — troquei a estratégia inteira em
+                                    // vez de insistir numa terceira correção do
+                                    // mesmo mecanismo.
+                                    <span className="inline-flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCancelItem(order.id, item.id)}
+                                        disabled={cancelingItemId === item.id}
+                                        aria-label={`Confirmar cancelamento de ${item.name}`}
+                                        className={cn(
+                                          "rounded-ds2-sm bg-ds2-danger px-1.5 py-0.5 text-xs font-semibold text-ds2-danger-foreground",
+                                          focusRingClass,
+                                        )}
+                                      >
+                                        {cancelingItemId === item.id ? "..." : "Confirmar"}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmingCancelItem(null)}
+                                        aria-label="Voltar, não cancelar"
+                                        className={cn(
+                                          "rounded-ds2-sm px-1.5 py-0.5 text-xs font-medium text-ds2-foreground-muted hover:bg-ds2-surface-hover",
+                                          focusRingClass,
+                                        )}
+                                      >
+                                        Voltar
+                                      </button>
+                                    </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmingCancelItem({ orderId: order.id, itemId: item.id })}
+                                      aria-label={`Cancelar ${item.name}`}
+                                      className={cn(
+                                        "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-ds2-danger hover:bg-ds2-danger/10",
+                                        focusRingClass,
+                                      )}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  ))}
                               </span>
                             ))}
                           </div>
@@ -973,6 +1008,32 @@ export function TableDrawer({
                                 </span>
                                 {item.cancelled_at ? (
                                   <span className="shrink-0 text-xs font-medium text-ds2-danger">Cancelado</span>
+                                ) : confirmingCancelItem?.itemId === item.id ? (
+                                  <span className="flex shrink-0 items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCancelItem(order.id, item.id)}
+                                      disabled={cancelingItemId === item.id}
+                                      aria-label={`Confirmar cancelamento de ${item.name}`}
+                                      className={cn(
+                                        "rounded-ds2-sm bg-ds2-danger px-2 py-1 text-xs font-semibold text-ds2-danger-foreground",
+                                        focusRingClass,
+                                      )}
+                                    >
+                                      {cancelingItemId === item.id ? "..." : "Confirmar"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmingCancelItem(null)}
+                                      aria-label="Voltar, não cancelar"
+                                      className={cn(
+                                        "rounded-ds2-sm px-2 py-1 text-xs font-medium text-ds2-foreground-muted hover:bg-ds2-surface-hover",
+                                        focusRingClass,
+                                      )}
+                                    >
+                                      Voltar
+                                    </button>
+                                  </span>
                                 ) : (
                                   <span className="flex shrink-0 items-center gap-2">
                                     <span className="font-numeric font-medium text-ds2-foreground-muted">
@@ -981,7 +1042,6 @@ export function TableDrawer({
                                     <button
                                       type="button"
                                       onClick={() => setConfirmingCancelItem({ orderId: order.id, itemId: item.id })}
-                                      disabled={cancelingItemId === item.id}
                                       aria-label={`Cancelar ${item.name}`}
                                       className={cn(
                                         "inline-flex h-6 w-6 items-center justify-center rounded-full text-ds2-danger hover:bg-ds2-danger/10",
@@ -1188,22 +1248,6 @@ export function TableDrawer({
           if (confirmingCancelOrderId) void handleCancelOrder(confirmingCancelOrderId);
         }}
         isConfirming={confirmingCancelOrderId !== null && updatingOrderId === confirmingCancelOrderId}
-      />
-
-      <ConfirmDialog
-        open={confirmingCancelItem !== null}
-        onOpenChange={(open) => {
-          if (!open) setConfirmingCancelItem(null);
-        }}
-        title="Cancelar item"
-        description="Este item não entra mais no total do pedido nem no caixa. Se for o último item ativo, o pedido inteiro cancela e a mesa libera sozinha. Não é possível desfazer."
-        cancelLabel="Voltar"
-        confirmLabel="Sim, cancelar item"
-        variant="destructive"
-        onConfirm={() => {
-          if (confirmingCancelItem) void handleCancelItem(confirmingCancelItem.orderId, confirmingCancelItem.itemId);
-        }}
-        isConfirming={confirmingCancelItem !== null && cancelingItemId === confirmingCancelItem.itemId}
       />
 
       <CloseBillModal
