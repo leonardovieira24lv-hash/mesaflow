@@ -7,12 +7,17 @@
  *
  * `AudioContext` é criado só na primeira chamada (não no import/mount do
  * componente) — navegadores restringem áudio antes de qualquer interação
- * do usuário na página; como este painel é usado o dia inteiro com toques
- * constantes, na prática o contexto já estará liberado bem antes do
- * primeiro pedido. Mesmo assim, `.resume()` é chamado defensivamente e
- * qualquer falha (contexto bloqueado, navegador sem suporte) é
- * silenciosa — o alerta visual (animação + badge) nunca depende do som
- * pra funcionar.
+ * do usuário na página.
+ *
+ * Sprint 13.11 (2026-08-13) — correção real de um caso relatado ("testei
+ * num PC e não funcionou"): antes, `context.resume()` era chamado sem
+ * `await`, e as notas eram agendadas imediatamente em seguida — se o
+ * contexto ainda estivesse `suspended` no exato momento do primeiro som
+ * (ex.: página aberta sem nenhum clique prévio na aba), o navegador podia
+ * descartar esse primeiro som silenciosamente, mesmo com o resto do
+ * código "correto". Agora a função é `async` e espera o `resume()`
+ * terminar de verdade antes de agendar qualquer nota — falha continua
+ * silenciosa (o alerta visual nunca depende do som pra funcionar).
  */
 let sharedContext: AudioContext | null = null;
 
@@ -49,13 +54,13 @@ function playTone(context: AudioContext, frequency: number, startTime: number, d
   oscillator.stop(startTime + duration);
 }
 
-export function playNewOrderChime() {
+export async function playNewOrderChime() {
   try {
     const context = getAudioContext();
     if (!context) return;
 
     if (context.state === "suspended") {
-      void context.resume();
+      await context.resume();
     }
 
     const now = context.currentTime;

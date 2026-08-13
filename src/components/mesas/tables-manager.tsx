@@ -16,6 +16,8 @@ import {
   TrendingUp,
   Trash2,
   UtensilsCrossed,
+  Volume2,
+  VolumeX,
   Wallet,
   Wrench,
 } from "lucide-react";
@@ -140,6 +142,11 @@ function aggregateByTable(orders: OrderListRow[]): Record<string, TableOperation
  * render anterior por mesa (`prevTonesRef`), então só acontece na transição
  * em si, não enquanto o estado "novo pedido" permanece verdadeiro.
  */
+// Sprint 13.11 — chave do localStorage para o botão "Silenciar sons" do
+// Painel de Mesas. Escopo de módulo (não de instância) — mesma chave
+// independente de quantas vezes o componente remonta.
+const SOUND_MUTED_STORAGE_KEY = "mesaflow:mesas:sound-muted";
+
 export function TablesManager({ initialTables, restaurantSlug, restaurantId, acceptedPaymentMethods }: TablesManagerProps) {
   const [tables, setTables] = useState<TableEntity[]>(initialTables);
   const [operations, setOperations] = useState<Record<string, TableOperations>>({});
@@ -363,12 +370,19 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
   // SEPARADO de `currentTones`/`prevTonesRef` acima (que existem só para o
   // flash visual). Guarda a QUANTIDADE de pedidos da mesa (`orders.length`,
   // já disponível em `TableOperationalData` — nenhum campo novo) junto com
-  // `hasUnprocessedOrders`, em vez de `table.status`: a regra de negócio é
-  // "0 pedidos → 1 pedido não toca; N pedidos → N+1 toca (N ≥ 1)" — uma
-  // contagem, não um estado de mesa. Desacoplado de propósito: continua
-  // funcionando sem nenhuma mudança aqui se um dia existirem novos status
-  // de mesa (reservada, bloqueada, aguardando pagamento etc.) — a regra
-  // nunca olha `table.status`.
+  // `hasUnprocessedOrders`, em vez de `table.status`: desacoplado de
+  // propósito, continua funcionando sem nenhuma mudança aqui se um dia
+  // existirem novos status de mesa (reservada, bloqueada, aguardando
+  // pagamento etc.) — a regra nunca olha `table.status`.
+  //
+  // Sprint 13.11 (2026-08-13): removida a exceção "não toca no 1º pedido
+  // da mesa" que existia desde a Sprint original — reavaliada a pedido do
+  // dono, sem justificativa que se sustente (o som existe justamente pra
+  // avisar quando ninguém está olhando a tela; o 1º pedido de uma mesa é,
+  // se algo, o mais importante de não perder). `orderCount` continua
+  // guardado no sinal — não é mais usado pela regra de tocar, mas mantido
+  // por não ter custo e evitar um novo formato de sinal por uma remoção
+  // pequena.
   const currentSoundSignals = useMemo(() => {
     const map: Record<string, { orderCount: number; hasUnprocessedOrders: boolean }> = {};
     for (const table of tables) {
@@ -383,6 +397,24 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
 
   const prevSoundSignalsRef = useRef<Record<string, { orderCount: number; hasUnprocessedOrders: boolean }>>({});
 
+  // Sprint 13.11 — mudo persistido (sobrevive a recarregar a página),
+  // lido no mount a partir do localStorage. `typeof window` guard: mesmo
+  // padrão já usado em `play-new-order-chime.ts` (SSR-safe).
+  const [isSoundMuted, setIsSoundMuted] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(SOUND_MUTED_STORAGE_KEY) === "true";
+  });
+
+  function toggleSoundMuted() {
+    setIsSoundMuted((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(SOUND_MUTED_STORAGE_KEY, String(next));
+      }
+      return next;
+    });
+  }
+
   useEffect(() => {
     const previous = prevSoundSignalsRef.current;
 
@@ -394,22 +426,15 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
       const prior = previous[id];
       if (!prior) return false;
 
-      const justBecameUnprocessed = prior.hasUnprocessedOrders === false && current.hasUnprocessedOrders === true;
-      if (!justBecameUnprocessed) return false;
-
-      // Regra de negócio: não toca quando é o primeiro pedido da mesa
-      // (contagem saindo de 0) — qualquer pedido seguinte (1→2, 2→3, ...)
-      // toca. Baseado só na quantidade de pedidos, nunca em `table.status`.
-      const wasFirstOrderEver = prior.orderCount === 0;
-      return !wasFirstOrderEver;
+      return prior.hasUnprocessedOrders === false && current.hasUnprocessedOrders === true;
     });
 
     prevSoundSignalsRef.current = currentSoundSignals;
 
-    if (shouldPlay) {
-      playNewOrderChime();
+    if (shouldPlay && !isSoundMuted) {
+      void playNewOrderChime();
     }
-  }, [currentSoundSignals]);
+  }, [currentSoundSignals, isSoundMuted]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -732,6 +757,17 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
         </div>
         <div className="flex items-center gap-3">
           <RealtimeStatusIndicator status={realtimeStatus} />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSoundMuted}
+            aria-label={isSoundMuted ? "Ativar som de novos pedidos" : "Silenciar som de novos pedidos"}
+            aria-pressed={isSoundMuted}
+            title={isSoundMuted ? "Som desativado" : "Som ativado"}
+            className={focusRingClass}
+          >
+            {isSoundMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </Button>
           <Button onClick={openCreateModal} className={focusRingClass}>
             <Plus className="h-4 w-4" />
             Nova mesa
@@ -870,7 +906,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                   )}
                 />
 
-                <div className="absolute right-1 top-1 z-20 flex gap-1">
+                <div className="absolute right-1 top-1 z-20 flex gap-0.5">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -880,7 +916,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                     }}
                     aria-label={`Ver QR Code de ${table.name}`}
                     className={cn(
-                      "h-8 w-8 opacity-70 hover:opacity-100",
+                      "h-7 w-7 opacity-70 hover:opacity-100",
                       isFilled
                         ? isDarkOnLight
                           ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
@@ -889,7 +925,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                       focusRingClass,
                     )}
                   >
-                    <QrCode className="h-3.5 w-3.5" />
+                    <QrCode className="h-3 w-3" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -900,7 +936,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                     }}
                     aria-label={`Editar ${table.name}`}
                     className={cn(
-                      "h-8 w-8 opacity-70 hover:opacity-100",
+                      "h-7 w-7 opacity-70 hover:opacity-100",
                       isFilled
                         ? isDarkOnLight
                           ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
@@ -909,7 +945,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                       focusRingClass,
                     )}
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <Pencil className="h-3 w-3" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -920,7 +956,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                     }}
                     aria-label={`Excluir ${table.name}`}
                     className={cn(
-                      "h-8 w-8 opacity-70 hover:opacity-100",
+                      "h-7 w-7 opacity-70 hover:opacity-100",
                       isFilled
                         ? isDarkOnLight
                           ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
@@ -929,7 +965,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                       focusRingClass,
                     )}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                   {/* Sprint 13.4 — o botão "Abrir cardápio desta mesa"
                       morava dentro do Drawer (`table-drawer.tsx`), mas
@@ -949,7 +985,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                     onClick={(e) => e.stopPropagation()}
                     aria-label={`Abrir cardápio da ${table.name}`}
                     className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-ds2-sm opacity-70 hover:opacity-100",
+                      "flex h-7 w-7 items-center justify-center rounded-ds2-sm opacity-70 hover:opacity-100",
                       isFilled
                         ? isDarkOnLight
                           ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
@@ -958,7 +994,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                       focusRingClass,
                     )}
                   >
-                    <UtensilsCrossed className="h-3.5 w-3.5" />
+                    <UtensilsCrossed className="h-3 w-3" />
                   </a>
                 </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCircle2, ChefHat, Clock3, Hand, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -471,6 +471,32 @@ export function TableDrawer({
   const openedAt = orderTimestamps.length > 0 ? orderTimestamps.reduce((a, b) => (a < b ? a : b)) : null;
   const lastOrderAt = orderTimestamps.length > 0 ? orderTimestamps.reduce((a, b) => (a > b ? a : b)) : null;
 
+  // Sprint 13.10 — atendente em correria não pode precisar rolar pra achar
+  // o pedido mais urgente. `pending` ("Enviar para cozinha", a ação mais
+  // sensível ao tempo) sempre aparece primeiro na lista, antes de
+  // `preparing`/outros — sem mudar nada além da ORDEM (mesmos dados, mesmo
+  // card por pedido). `[...openOrders]` porque `.sort()` muta o array;
+  // comparação por índice original preserva a ordem relativa dentro de
+  // cada grupo (sort estável, garantido pela especificação do JS desde
+  // ES2019 — não é um detalhe de implementação incerto).
+  const sortedOpenOrders = useMemo(
+    () =>
+      [...openOrders].sort((a, b) => {
+        if (a.status === "pending" && b.status !== "pending") return -1;
+        if (a.status !== "pending" && b.status === "pending") return 1;
+        return 0;
+      }),
+    [openOrders],
+  );
+
+  // Sprint 13.10 — com 2+ pedidos abertos, cada card com a lista de itens
+  // inteira empilha altura rápido, empurrando o botão de ação (o mais
+  // urgente de achar) pra fora da primeira tela — exigia rolar pra
+  // encontrar, atrito real reportado no uso corrido. Com só 1 pedido, o
+  // espaço já sobra — mantém expandido, sem mudança de comportamento.
+  const shouldSummarizeOrders = openOrders.length > 1;
+
+
   const cardState = deriveTableCardState(
     table.status,
     openOrders.length > 0 ? { totalAmount: subtotal, itemCount, lastOrderAt, hasPendingOrder, hasPreparingOrder } : null,
@@ -701,7 +727,7 @@ export function TableDrawer({
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {openOrders.map((order) => {
+              {sortedOpenOrders.map((order) => {
                 const detail = details[order.id];
                 return (
                   <div
@@ -717,29 +743,53 @@ export function TableDrawer({
                     </div>
 
                     {detail ? (
-                      <ul className="flex flex-col gap-2">
-                        {detail.items.map((item) => (
-                          <li key={item.id} className="flex flex-col gap-0.5">
-                            <div className="flex items-center justify-between gap-2 text-sm">
-                              <span className="flex items-center gap-2 text-ds2-foreground">
-                                <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-ds2-sm bg-ds2-surface-hover px-1 font-numeric text-xs font-semibold text-ds2-foreground-muted">
-                                  {item.quantity}×
-                                </span>
-                                {item.name}
-                              </span>
-                              <span className="font-numeric font-medium text-ds2-foreground-muted">
-                                {formatCurrency(item.price * item.quantity)}
-                              </span>
-                            </div>
-                            {item.notes && (
-                              <span className="flex items-center gap-1 pl-7 text-xs italic text-ds2-foreground-muted">
+                      shouldSummarizeOrders ? (
+                        // Sprint 13.10 — versão compacta: 1-2 linhas em vez
+                        // de uma por item, pra caber mais pedido em tela
+                        // sem rolar. Observação ("sem cebola" etc.) NUNCA
+                        // fica escondida — informação crítica pra cozinha,
+                        // sempre visível mesmo no resumo.
+                        <div className="flex flex-col gap-1">
+                          <p className="text-sm text-ds2-foreground">
+                            {detail.items.map((item) => `${item.quantity}× ${item.name}`).join(", ")}
+                          </p>
+                          {detail.items
+                            .filter((item) => item.notes)
+                            .map((item) => (
+                              <span
+                                key={item.id}
+                                className="flex items-center gap-1 text-xs italic text-ds2-foreground-muted"
+                              >
                                 <StickyNote className="h-3 w-3 shrink-0" aria-hidden />
-                                {item.notes}
+                                {item.name}: {item.notes}
                               </span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
+                            ))}
+                        </div>
+                      ) : (
+                        <ul className="flex flex-col gap-2">
+                          {detail.items.map((item) => (
+                            <li key={item.id} className="flex flex-col gap-0.5">
+                              <div className="flex items-center justify-between gap-2 text-sm">
+                                <span className="flex items-center gap-2 text-ds2-foreground">
+                                  <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-ds2-sm bg-ds2-surface-hover px-1 font-numeric text-xs font-semibold text-ds2-foreground-muted">
+                                    {item.quantity}×
+                                  </span>
+                                  {item.name}
+                                </span>
+                                <span className="font-numeric font-medium text-ds2-foreground-muted">
+                                  {formatCurrency(item.price * item.quantity)}
+                                </span>
+                              </div>
+                              {item.notes && (
+                                <span className="flex items-center gap-1 pl-7 text-xs italic text-ds2-foreground-muted">
+                                  <StickyNote className="h-3 w-3 shrink-0" aria-hidden />
+                                  {item.notes}
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )
                     ) : (
                       <p className="text-xs text-ds2-foreground-muted">Itens indisponíveis.</p>
                     )}
