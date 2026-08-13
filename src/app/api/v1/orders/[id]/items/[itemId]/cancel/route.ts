@@ -51,14 +51,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       if (error.code === "P0001") {
         throw new AppError("NOT_FOUND", "Item não encontrado.");
       }
-      // DIAGNÓSTICO TEMPORÁRIO (remover depois de identificar a causa real):
-      // erro genérico estava escondendo a mensagem real do Postgres —
-      // expondo code/message/hint aqui pra sabermos exatamente o que está
-      // acontecendo, em vez de continuar tentando adivinhar.
-      throw new AppError(
-        "INTERNAL_ERROR",
-        `[DIAGNÓSTICO] code=${error.code ?? "?"} message=${error.message ?? "?"} hint=${error.hint ?? "-"} details=${error.details ?? "-"}`,
-      );
+      throw new AppError("INTERNAL_ERROR", "Não foi possível cancelar o item. Tente novamente.");
     }
 
     if (!data) {
