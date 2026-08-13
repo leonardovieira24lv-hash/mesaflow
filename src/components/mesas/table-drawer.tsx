@@ -144,6 +144,15 @@ export function TableDrawer({
   // esta ação agora vai direto preparing→delivered): mesmo raciocínio do
   // lock acima.
   const isMarkingDeliveredRef = useRef(false);
+  // Sprint 13.13 — cancelamento individual de pedido (antes só existia
+  // como efeito colateral automático de "Liberar mesa", que cancela TODOS
+  // os pedidos da mesa de uma vez). Mesmo raciocínio de lock síncrono dos
+  // dois acima; `confirmingCancelOrderId` guarda QUAL pedido está pedindo
+  // confirmação (não um boolean simples como `confirmingRelease`, porque
+  // existe mais de um pedido na lista, cada um podendo pedir confirmação
+  // independentemente).
+  const isCancelingOrderRef = useRef(false);
+  const [confirmingCancelOrderId, setConfirmingCancelOrderId] = useState<string | null>(null);
   // "Chamar garçom" / "Solicitar conta" — mesmo raciocínio de lock, para
   // não deixar um duplo toque em "Atendido"/"Conta entregue" disparar duas
   // requisições para o mesmo evento.
@@ -162,6 +171,21 @@ export function TableDrawer({
     const dialog = ref.current;
     if (!dialog) return;
     if (!dialog.open) dialog.showModal();
+
+    // Sprint 13.12 — `showModal()` bloqueia CLIQUE no que está atrás, mas
+    // não bloqueia ROLAGEM POR TOQUE em mobile — lacuna conhecida do
+    // próprio `<dialog>`. Sem isso, arrastar o dedo numa área do modal
+    // que não seja a lista rolável (ex.: o cabeçalho azul, ou entre um
+    // card e outro) "vaza" e rola a grade de mesas atrás. Trava
+    // `overflow` do body enquanto o drawer está aberto, restaura o valor
+    // original (não força sempre `""`, por segurança caso outra coisa já
+    // tivesse setado um `overflow` próprio antes) ao fechar/desmontar.
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+    };
   }, []);
 
   // Busca o detalhe completo (com itens) de cada pedido aberto da mesa —
@@ -279,6 +303,52 @@ export function TableDrawer({
     } finally {
       setUpdatingOrderId(null);
       isMarkingDeliveredRef.current = false;
+    }
+  }
+
+  /**
+   * Sprint 13.13 — antes, cancelar um pedido só acontecia como efeito
+   * colateral de "Liberar mesa" (cancela TODOS os pedidos abertos da mesa
+   * de uma vez, `handleReleaseTable` abaixo). Pedido pediu um jeito de
+   * cancelar SÓ um pedido específico, sem mexer no resto da mesa — mesma
+   * transição de status já válida (`pending`/`preparing`/`ready` →
+   * `cancelled`, `lib/orders/status-transitions.ts` não mudou), mesmo
+   * endpoint, só chamado por um botão próprio em vez de em laço. Como
+   * cancelar é mais consequente que "enviar pra cozinha"/"finalizar" (não
+   * tem como desfazer pela UI), passa por confirmação antes
+   * (`confirmingCancelOrderId`) — mesmo padrão já usado pra "Liberar mesa".
+   */
+  async function handleCancelOrder(orderId: string) {
+    if (isCancelingOrderRef.current) return;
+    isCancelingOrderRef.current = true;
+
+    setUpdatingOrderId(orderId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/v1/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        const isConflict = body?.error?.code === "CONFLICT";
+        setError(
+          isConflict
+            ? "Este pedido já tinha sido atualizado — a lista foi atualizada com o status mais recente."
+            : (body?.error?.message ?? "Não foi possível cancelar o pedido."),
+        );
+        onOrdersChanged();
+        return;
+      }
+      toast.success("Pedido cancelado");
+      onOrdersChanged();
+    } catch {
+      setError("Não foi possível conectar. Verifique sua internet e tente novamente.");
+    } finally {
+      setUpdatingOrderId(null);
+      setConfirmingCancelOrderId(null);
+      isCancelingOrderRef.current = false;
     }
   }
 
@@ -463,8 +533,19 @@ export function TableDrawer({
     }
   }
 
-  const subtotal = openOrders.reduce((sum, o) => sum + o.total_amount, 0);
-  const itemCount = openOrders.reduce((sum, o) => sum + o.item_count, 0);
+  // Correção: pedido cancelado continua aparecendo na lista de "Pedidos
+  // desta mesa" (histórico completo, correto o cliente/atendente ver que
+  // foi cancelado), mas não soma em "Valor atual"/"Total da mesa" nem na
+  // contagem de itens — nunca foi cobrado. Mesmo critério do Caixa
+  // (`close_cashier`, `lib/cashier/queries.ts`) e da agregação do card na
+  // grade de mesas (`aggregateByTable`, `tables-manager.tsx`) — as três
+  // fontes concordam agora.
+  const subtotal = openOrders
+    .filter((o) => o.status !== "cancelled")
+    .reduce((sum, o) => sum + o.total_amount, 0);
+  const itemCount = openOrders
+    .filter((o) => o.status !== "cancelled")
+    .reduce((sum, o) => sum + o.item_count, 0);
   const hasPendingOrder = openOrders.some((o) => o.status === "pending");
   const hasPreparingOrder = openOrders.some((o) => o.status === "preparing");
   const orderTimestamps = openOrders.map((o) => o.created_at);
@@ -710,7 +791,7 @@ export function TableDrawer({
             passar despercebido em uso corrido). Com `min-h-0`, o
             `overflow-y-auto` passa a valer de verdade: cabeçalho e
             rodapé (abaixo) ficam sempre visíveis, só esta lista rola. */}
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-5 py-4">
           {error && <Alert variant="destructive">{error}</Alert>}
 
           {openOrders.length > 0 && (
@@ -804,33 +885,62 @@ export function TableDrawer({
                       </span>
                     </div>
 
-                    {order.status === "pending" && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleSendToKitchen(order.id)}
-                        isLoading={updatingOrderId === order.id}
-                        className={cn("w-full justify-center", focusRingClass)}
-                      >
-                        <ChefHat className="h-3.5 w-3.5" />
-                        Enviar para cozinha
-                      </Button>
-                    )}
+                    {(order.status === "pending" ||
+                      order.status === "preparing" ||
+                      order.status === "ready") && (
+                      <div className="flex items-center gap-2">
+                        {order.status === "pending" && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSendToKitchen(order.id)}
+                            isLoading={updatingOrderId === order.id}
+                            className={cn("flex-1 justify-center", focusRingClass)}
+                          >
+                            <ChefHat className="h-3.5 w-3.5" />
+                            Enviar para cozinha
+                          </Button>
+                        )}
 
-                    {/* Sprint "Simplificação do Fluxo de Status" (2026-07-30): vai direto preparing→delivered. */}
-                    {order.status === "preparing" && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleMarkDelivered(order.id)}
-                        isLoading={updatingOrderId === order.id}
-                        className={cn("w-full justify-center", focusRingClass)}
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Finalizar pedido
-                      </Button>
+                        {/* Sprint "Simplificação do Fluxo de Status" (2026-07-30): vai direto preparing→delivered. */}
+                        {order.status === "preparing" && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMarkDelivered(order.id)}
+                            isLoading={updatingOrderId === order.id}
+                            className={cn("flex-1 justify-center", focusRingClass)}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Finalizar pedido
+                          </Button>
+                        )}
+
+                        {/* Sprint 13.13 — cancelar 1 pedido específico, sem
+                            precisar liberar a mesa inteira (que cancelaria
+                            todos). `ready` incluído aqui de propósito: é o
+                            único status sem nenhum botão de ação hoje
+                            (legado, nenhum pedido novo chega nele desde a
+                            Sprint 30/07) — cancelar dá ao atendente uma
+                            saída pra resolver um pedido antigo preso lá. */}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setConfirmingCancelOrderId(order.id)}
+                          disabled={updatingOrderId === order.id}
+                          aria-label="Cancelar este pedido"
+                          className={cn(
+                            "shrink-0 text-ds2-danger hover:bg-ds2-danger/10 hover:text-ds2-danger",
+                            focusRingClass,
+                          )}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
+                        </Button>
+                      </div>
                     )}
                   </div>
                 );
@@ -930,6 +1040,20 @@ export function TableDrawer({
         confirmLabel="Liberar"
         onConfirm={handleReleaseTable}
         isConfirming={isReleasing}
+      />
+
+      <ConfirmDialog
+        open={confirmingCancelOrderId !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmingCancelOrderId(null);
+        }}
+        title="Cancelar pedido"
+        description="Este pedido não entra mais no valor da mesa nem no caixa. Não é possível desfazer. Cancelar mesmo assim?"
+        confirmLabel="Cancelar pedido"
+        onConfirm={() => {
+          if (confirmingCancelOrderId) void handleCancelOrder(confirmingCancelOrderId);
+        }}
+        isConfirming={confirmingCancelOrderId !== null && updatingOrderId === confirmingCancelOrderId}
       />
 
       <CloseBillModal

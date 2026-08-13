@@ -117,7 +117,7 @@ interface SessionQueryRow {
   closed_at: string;
   payment_method: PaymentMethod | null;
   tables: { name: string } | null;
-  orders: { total_amount: number; order_items: { quantity: number }[] }[];
+  orders: { status: string; total_amount: number; order_items: { quantity: number }[] }[];
 }
 
 /**
@@ -148,7 +148,7 @@ export async function getCashierData(
   const { data, error } = await supabase
     .from("order_sessions")
     .select(
-      "id, table_id, opened_at, closed_at, payment_method, tables(name), orders(total_amount, order_items(quantity))",
+      "id, table_id, opened_at, closed_at, payment_method, tables(name), orders(status, total_amount, order_items(quantity))",
     )
     .eq("restaurant_id", restaurantId)
     .not("closed_at", "is", null)
@@ -167,24 +167,35 @@ export async function getCashierData(
   // consulta realmente devolve, não muda nenhum dado.
   const rows = (data ?? []) as unknown as SessionQueryRow[];
 
-  const allSessions: ClosedSessionRow[] = rows.map((row) => {
-    const totalAmount = row.orders.reduce((sum, order) => sum + order.total_amount, 0);
-    const itemCount = row.orders.reduce(
-      (sum, order) => sum + order.order_items.reduce((itemSum, item) => itemSum + item.quantity, 0),
-      0,
-    );
+  // Correção: pedido cancelado nunca deve contar como venda — nem no
+  // valor, nem nos itens, nem na sessão inteira aparecer como "comanda
+  // fechada" se TODOS os pedidos dela foram cancelados (mesa que só teve
+  // cancelamento não é uma venda que não aconteceu, é ruído no relatório).
+  // Mesmo critério usado em `close_cashier` (RPC, ajustada na mesma
+  // correção) — as duas fontes agora concordam.
+  const allSessions: ClosedSessionRow[] = rows
+    .map((row) => {
+      const validOrders = row.orders.filter((order) => order.status !== "cancelled");
+      const totalAmount = validOrders.reduce((sum, order) => sum + order.total_amount, 0);
+      const itemCount = validOrders.reduce(
+        (sum, order) => sum + order.order_items.reduce((itemSum, item) => itemSum + item.quantity, 0),
+        0,
+      );
 
-    return {
-      id: row.id,
-      tableId: row.table_id,
-      tableName: row.tables?.name ?? "—",
-      openedAt: row.opened_at,
-      closedAt: row.closed_at,
-      paymentMethod: row.payment_method,
-      totalAmount,
-      itemCount,
-    };
-  });
+      return {
+        id: row.id,
+        tableId: row.table_id,
+        tableName: row.tables?.name ?? "—",
+        openedAt: row.opened_at,
+        closedAt: row.closed_at,
+        paymentMethod: row.payment_method,
+        totalAmount,
+        itemCount,
+        hasValidOrders: validOrders.length > 0,
+      };
+    })
+    .filter((session) => session.hasValidOrders)
+    .map(({ hasValidOrders, ...session }) => session);
 
   const normalizedSearch = options.search?.trim().toLocaleLowerCase("pt-BR");
   const filtered = normalizedSearch
@@ -218,7 +229,7 @@ interface SessionDetailQueryRow {
   closed_at: string;
   payment_method: PaymentMethod | null;
   tables: { name: string } | null;
-  orders: { total_amount: number; order_items: { name: string; quantity: number; price: number }[] }[];
+  orders: { status: string; total_amount: number; order_items: { name: string; quantity: number; price: number }[] }[];
 }
 
 /** Detalhe de uma comanda fechada, para o modal "ao tocar em uma venda". */
@@ -230,7 +241,7 @@ export async function getCashierSessionDetail(
   const { data, error } = await supabase
     .from("order_sessions")
     .select(
-      "id, opened_at, closed_at, payment_method, tables(name), orders(total_amount, order_items(name, quantity, price))",
+      "id, opened_at, closed_at, payment_method, tables(name), orders(status, total_amount, order_items(name, quantity, price))",
     )
     .eq("id", sessionId)
     .eq("restaurant_id", restaurantId)
@@ -244,11 +255,15 @@ export async function getCashierSessionDetail(
 
   const row = data as unknown as SessionDetailQueryRow;
 
+  // Mesmo critério de getCashierData acima — pedido cancelado não aparece
+  // como item vendido nem entra no total desta comanda.
+  const validOrders = row.orders.filter((order) => order.status !== "cancelled");
+
   // Consolida itens iguais (mesmo nome+preço) vindos de pedidos diferentes
   // da mesma comanda numa linha só — mesmo critério já usado em
   // `close-bill-modal.tsx` pro resumo de fechamento.
   const linesByKey = new Map<string, { name: string; quantity: number; unitPrice: number }>();
-  for (const order of row.orders) {
+  for (const order of validOrders) {
     for (const item of order.order_items) {
       const key = `${item.name}__${item.price}`;
       const existing = linesByKey.get(key);
@@ -268,7 +283,7 @@ export async function getCashierSessionDetail(
     openedAt: row.opened_at,
     closedAt: row.closed_at,
     paymentMethod: row.payment_method,
-    totalAmount: row.orders.reduce((sum, order) => sum + order.total_amount, 0),
+    totalAmount: validOrders.reduce((sum, order) => sum + order.total_amount, 0),
     items,
   };
 }

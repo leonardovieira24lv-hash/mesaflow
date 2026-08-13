@@ -107,12 +107,19 @@ function aggregateByTable(orders: OrderListRow[]): Record<string, TableOperation
       };
     }
     const entry = map[tableId];
-    entry.totalAmount += order.total_amount;
-    entry.itemCount += order.item_count;
     entry.orders.push(order);
     if (!entry.lastOrderAt || order.created_at > entry.lastOrderAt) entry.lastOrderAt = order.created_at;
     if (order.status === "pending") entry.hasPendingOrder = true;
     if (order.status === "preparing") entry.hasPreparingOrder = true;
+    // Correção: pedido cancelado continua listado em `entry.orders` (a
+    // mesa/comanda precisa dele pra exibir o histórico completo), mas não
+    // soma no valor nem na contagem de itens mostrados — mesmo critério já
+    // aplicado no Caixa (RPC `close_cashier` e `lib/cashier/queries.ts`).
+    // Um pedido cancelado nunca foi cobrado, não é dinheiro "da mesa".
+    if (order.status !== "cancelled") {
+      entry.totalAmount += order.total_amount;
+      entry.itemCount += order.item_count;
+    }
   }
 
   return map;
