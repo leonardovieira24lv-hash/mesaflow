@@ -16,7 +16,11 @@ interface RouteParams {
 interface OpenSessionResponse {
   session_id: string;
   opened_at: string;
-  orders: { id: string; status: string; items: { name: string; quantity: number; price: number }[] }[];
+  orders: {
+    id: string;
+    status: string;
+    items: { name: string; quantity: number; price: number; cancelled_at: string | null }[];
+  }[];
 }
 
 /**

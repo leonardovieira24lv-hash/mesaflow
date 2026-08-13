@@ -22,7 +22,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const { data: order, error } = await supabase
       .from("orders")
       .select(
-        "id, status, total_amount, notes, created_at, table:tables(id, name), order_items(id, menu_item_id, name, price, quantity, notes)",
+        "id, status, total_amount, notes, created_at, table:tables(id, name), order_items(id, menu_item_id, name, price, quantity, notes, cancelled_at)",
       )
       .eq("id", id)
       .eq("restaurant_id", profile.restaurantId)
@@ -54,7 +54,15 @@ export async function GET(_request: Request, { params }: RouteParams) {
       created_at: string;
       table: { id: string; name: string } | null;
       order_items:
-        | { id: string; menu_item_id: string; name: string; price: number; quantity: number; notes: string | null }[]
+        | {
+            id: string;
+            menu_item_id: string;
+            name: string;
+            price: number;
+            quantity: number;
+            notes: string | null;
+            cancelled_at: string | null;
+          }[]
         | null;
     };
 
@@ -71,6 +79,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         price: item.price,
         quantity: item.quantity,
         notes: item.notes ?? undefined,
+        cancelled_at: item.cancelled_at,
       })),
       created_at: row.created_at,
     });

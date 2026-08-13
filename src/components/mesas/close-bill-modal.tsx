@@ -26,7 +26,11 @@ const PAYMENT_METHOD_OPTIONS: { value: PaymentMethod; label: string; icon: typeo
 interface OpenSessionResponse {
   session_id: string;
   opened_at: string;
-  orders: { id: string; status: string; items: { name: string; quantity: number; price: number }[] }[];
+  orders: {
+    id: string;
+    status: string;
+    items: { name: string; quantity: number; price: number; cancelled_at: string | null }[];
+  }[];
 }
 
 interface CloseBillModalProps {
@@ -48,10 +52,14 @@ interface ConsolidatedLine {
   unitPrice: number;
 }
 
+// Correção: item cancelado nunca deve aparecer no resumo de cobrança —
+// este é o valor que de fato vai ser cobrado do cliente. Mesmo critério já
+// aplicado no Caixa e nos totais mostrados no Painel de Mesas.
 function consolidate(orders: OpenSessionResponse["orders"]): ConsolidatedLine[] {
   const byKey = new Map<string, ConsolidatedLine>();
   for (const order of orders) {
     for (const item of order.items) {
+      if (item.cancelled_at) continue;
       const key = `${item.name}__${item.price}`;
       const existing = byKey.get(key);
       if (existing) existing.quantity += item.quantity;

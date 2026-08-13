@@ -59,7 +59,7 @@ export async function GET() {
         table: order.table,
         status: order.status,
         total_amount: order.totalAmount,
-        item_count: order.items.length,
+        item_count: order.items.filter((item) => !item.cancelled_at).length,
         created_at: order.createdAt,
       })),
     );

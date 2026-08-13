@@ -78,7 +78,7 @@ export interface OpenSessionOrder {
   status: OrderStatus;
   totalAmount: number;
   createdAt: string;
-  items: { name: string; quantity: number; price: number; notes: string | null }[];
+  items: { name: string; quantity: number; price: number; notes: string | null; cancelled_at: string | null }[];
 }
 
 /**
@@ -107,7 +107,7 @@ export async function getOrdersForSessions(
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, order_session_id, status, total_amount, created_at, table:tables(id, name), order_items(name, quantity, price, notes)",
+      "id, order_session_id, status, total_amount, created_at, table:tables(id, name), order_items(name, quantity, price, notes, cancelled_at)",
     )
     .in("order_session_id", sessionIds);
 
@@ -127,7 +127,7 @@ export async function getOrdersForSessions(
     total_amount: number;
     created_at: string;
     table: { id: string; name: string } | null;
-    order_items: { name: string; quantity: number; price: number; notes: string | null }[] | null;
+    order_items: { name: string; quantity: number; price: number; notes: string | null; cancelled_at: string | null }[] | null;
   }>;
 
   return rows.map((row) => ({
