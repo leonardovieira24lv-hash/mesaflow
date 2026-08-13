@@ -57,6 +57,12 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (error) {
+      // P0001 = "este período já foi fechado" (raise exception dentro da
+      // própria function, Sprint 13.9.2) — mensagem já pronta pro usuário
+      // final, só repassa. Mesmo padrão de PATCH /api/v1/tables/{id}/close-bill.
+      if (error.code === "P0001") {
+        throw new AppError("CONFLICT", error.message);
+      }
       throw new AppError("INTERNAL_ERROR", "Não foi possível fechar o caixa. Tente novamente.");
     }
     if (!data) {
