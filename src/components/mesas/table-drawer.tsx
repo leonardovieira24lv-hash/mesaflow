@@ -369,6 +369,22 @@ export function TableDrawer({
    * INTEIRA libera sozinha — olhando todos os pedidos dela, não só este)
    * vive na RPC `cancel_order_item` (migration 0034) — este handler só
    * chama o endpoint e atualiza a tela.
+   *
+   * Sprint 13.15 — correção de bug real, relatado na prática: o backend
+   * cancelava certo (confirmei lendo a RPC de novo, sem achar erro), mas
+   * a TELA continuava mostrando o item, e o total/contagem de itens
+   * pareciam não mudar. Causa: `details` (o detalhe COM os itens de cada
+   * pedido, usado aqui) vem de um `useEffect` separado (acima), que só
+   * refaz a busca quando o CONJUNTO DE IDs de pedido muda — cancelar um
+   * item não cria nem remove pedido, só altera um que já existia, então
+   * aquele efeito nunca disparava de novo, e a lista de itens ficava
+   * presa no estado de antes do cancelamento. `onOrdersChanged()`
+   * sozinho não resolvia isso — ele atualiza `openOrders` (a lista
+   * agregada, de onde vêm total/contagem no topo do drawer), mas não
+   * `details` (usado pela lista de itens em si). Agora, depois de
+   * cancelar com sucesso, busca de novo só o pedido afetado
+   * (`GET /api/v1/orders/{orderId}`) e atualiza `details` direto — sem
+   * depender daquele efeito, sem esperar o conjunto de IDs mudar.
    */
   async function handleCancelItem(orderId: string, itemId: string) {
     if (isCancelingItemRef.current) return;
@@ -386,6 +402,23 @@ export function TableDrawer({
         onOrdersChanged();
         return;
       }
+
+      // Rebusca só este pedido — não confia no useEffect de `details`
+      // (só reage a pedido entrando/saindo da mesa, não a item mudando
+      // dentro de um pedido que já existia).
+      try {
+        const detailResponse = await fetch(`/api/v1/orders/${orderId}`);
+        const detailBody = await detailResponse.json();
+        if (detailResponse.ok && detailBody?.data) {
+          setDetails((prev) => ({ ...prev, [orderId]: detailBody.data }));
+        }
+      } catch {
+        // Falha só nesta rebusca pontual não é crítica — `onOrdersChanged()`
+        // abaixo já corrige total/contagem no topo do drawer; na pior
+        // hipótese a lista de itens fica momentaneamente desatualizada até
+        // o próximo pedido/mesa disparar o efeito principal de novo.
+      }
+
       toast.success(body?.data?.tableReleased ? "Item cancelado — mesa liberada" : "Item cancelado");
       onOrdersChanged();
     } catch {
