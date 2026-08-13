@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,9 +31,29 @@ interface ModalProps {
  * `ds2-ease`, seção 10 do MesaFlow Visual Language) — não corrigido: essa
  * animação é compartilhada com telas públicas do Cardápio do cliente,
  * ajustar sua duração afeta lá também.
+ *
+ * Sprint 13.14 — renderizado via `createPortal` direto no `<body>`, não
+ * mais como filho normal de quem o chama. Antes, um `<ConfirmDialog>`
+ * (que usa este componente) aberto de dentro de outro `<dialog>` nativo já
+ * aberto (ex.: confirmar "Cancelar item" dentro do Drawer da mesa) ficava
+ * aninhado no DOM — `<dialog>` dentro de `<dialog>`, os dois abertos via
+ * `showModal()`. Relatado na prática: fechar o de confirmação (mesmo só
+ * dispensando, sem confirmar) às vezes fechava o de fora junto, voltando
+ * pra tela anterior sem motivo. `<dialog>` aninhado tem comportamento
+ * conhecidamente inconsistente entre navegadores — a correção padrão é
+ * não aninhar de verdade no DOM: o portal bota este `<dialog>` como
+ * filho direto do `<body>`, irmão do de fora, não descendente dele,
+ * então cada um fecha só o que é seu. `mounted`/`useEffect` abaixo é só
+ * pra isso funcionar em SSR (`document` não existe no servidor) — o
+ * componente não tenta usar portal antes de estar rodando no navegador.
  */
 export function Modal({ open, onClose, title, description, children, footer, hideHeader, className }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -45,7 +66,7 @@ export function Modal({ open, onClose, title, description, children, footer, hid
     }
   }, [open]);
 
-  return (
+  const dialogElement = (
     <dialog
       ref={ref}
       onClose={onClose}
@@ -94,4 +115,7 @@ export function Modal({ open, onClose, title, description, children, footer, hid
       {footer && <div className="flex items-center justify-end gap-3 p-7 pt-5">{footer}</div>}
     </dialog>
   );
+
+  if (!mounted) return null;
+  return createPortal(dialogElement, document.body);
 }
