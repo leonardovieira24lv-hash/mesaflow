@@ -12,6 +12,12 @@ export interface PublicOptionGroupItem {
 export interface PublicOptionGroup {
   id: string;
   name: string;
+  // Sistema de Opcionais, Fase 2 (2026-08-14) — ausentes = grupo da Fase 1
+  // (nunca acontece de verdade: migration 0037 preenche default em todo
+  // grupo já existente, mas o tipo aceita ausência por segurança).
+  selectionType: "single" | "multiple";
+  maxSelections: number | null;
+  required: boolean;
   options: PublicOptionGroupItem[];
 }
 
@@ -55,6 +61,9 @@ interface OptionGroupRow {
   name: string;
   category_id: string | null;
   menu_item_id: string | null;
+  selection_type: "single" | "multiple";
+  max_selections: number | null;
+  required: boolean;
   option_group_items: { id: string; name: string; price_delta: number }[];
 }
 
@@ -105,7 +114,9 @@ export async function getPublicMenu(
       .order("name", { ascending: true }),
     admin
       .from("option_groups")
-      .select("id, name, category_id, menu_item_id, option_group_items(id, name, price_delta)")
+      .select(
+        "id, name, category_id, menu_item_id, selection_type, max_selections, required, option_group_items(id, name, price_delta)",
+      )
       .eq("restaurant_id", restaurantId),
   ]);
 
@@ -128,6 +139,9 @@ export async function getPublicMenu(
       .map((group) => ({
         id: group.id,
         name: group.name,
+        selectionType: group.selection_type,
+        maxSelections: group.max_selections,
+        required: group.required,
         options: group.option_group_items.map((option) => ({
           id: option.id,
           name: option.name,

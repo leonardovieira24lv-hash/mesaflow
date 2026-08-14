@@ -7,7 +7,7 @@ import { formatCurrency } from "@/lib/format";
 import { useCart, type SelectedOption } from "@/components/cardapio-cliente/cart-context";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import type { PublicMenuItem } from "@/lib/orders/public-menu";
+import type { PublicMenuItem, PublicOptionGroup } from "@/lib/orders/public-menu";
 
 interface ProductDetailModalProps {
   item: PublicMenuItem | null;
@@ -68,7 +68,12 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
   // Sistema de Opcionais, Fase 1 (2026-08-14) — escolha única obrigatória
   // por grupo: `groupId -> optionId` escolhido. Um produto sem nenhum
   // `optionGroups` nunca usa isto (objeto fica vazio a vida toda).
-  const [selectedOptionIds, setSelectedOptionIds] = useState<Record<string, string>>({});
+  //
+  // Sistema de Opcionais, Fase 2 (2026-08-14) — cada grupo agora guarda
+  // um ARRAY de ids escolhidos, não mais 1 só: grupo `single` nunca tem
+  // mais de 1 item no array (mesmo efeito de antes, só a forma mudou);
+  // grupo `multiple` pode ter vários, até `maxSelections`.
+  const [selectedOptionIds, setSelectedOptionIds] = useState<Record<string, string[]>>({});
   const [imageLoaded, setImageLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
@@ -95,35 +100,62 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
   }, [item?.id]);
 
   const optionGroups = item?.optionGroups ?? [];
-  const missingRequiredGroup = optionGroups.some((group) => !selectedOptionIds[group.id]);
+  const missingRequiredGroup = optionGroups.some(
+    (group) => group.required && (selectedOptionIds[group.id]?.length ?? 0) === 0,
+  );
 
-  // Preço unitário = base + soma dos `priceDelta` de cada opção marcada —
-  // recalculado a cada escolha, pro cliente ver o valor final antes de
-  // adicionar (nunca só descobrir no carrinho).
+  // Preço unitário = base + soma dos `priceDelta` de TODAS as opções
+  // marcadas (Fase 2: pode ser mais de uma por grupo) — recalculado a
+  // cada escolha, pro cliente ver o valor final antes de adicionar
+  // (nunca só descobrir no carrinho).
   const optionsPriceDelta = optionGroups.reduce((sum, group) => {
-    const chosenOptionId = selectedOptionIds[group.id];
-    const option = group.options.find((o) => o.id === chosenOptionId);
-    return sum + (option?.priceDelta ?? 0);
+    const chosenIds = selectedOptionIds[group.id] ?? [];
+    const groupDelta = chosenIds.reduce((groupSum, optionId) => {
+      const option = group.options.find((o) => o.id === optionId);
+      return groupSum + (option?.priceDelta ?? 0);
+    }, 0);
+    return sum + groupDelta;
   }, 0);
   const unitPrice = (item?.price ?? 0) + optionsPriceDelta;
+
+  // Sistema de Opcionais, Fase 2 (2026-08-14) — grupo `single`: marcar
+  // uma opção substitui a anterior (array sempre com no máximo 1). Grupo
+  // `multiple`: marcar alterna (adiciona/remove), até `maxSelections` —
+  // clique além do limite não faz nada (o próprio `<input>` já vem
+  // `disabled` nesse caso, ver JSX abaixo; esta função é a segunda
+  // camada de segurança).
+  function toggleOption(group: PublicOptionGroup, optionId: string) {
+    setSelectedOptionIds((prev) => {
+      const current = prev[group.id] ?? [];
+      if (group.selectionType !== "multiple") {
+        return { ...prev, [group.id]: [optionId] };
+      }
+      if (current.includes(optionId)) {
+        return { ...prev, [group.id]: current.filter((id) => id !== optionId) };
+      }
+      if (group.maxSelections !== null && current.length >= group.maxSelections) {
+        return prev;
+      }
+      return { ...prev, [group.id]: [...current, optionId] };
+    });
+  }
 
   function handleAdd() {
     if (!item) return;
 
-    const selectedOptions: SelectedOption[] = optionGroups
-      .map((group) => {
-        const chosenOptionId = selectedOptionIds[group.id];
-        const option = group.options.find((o) => o.id === chosenOptionId);
-        if (!option) return null;
-        return {
+    const selectedOptions: SelectedOption[] = optionGroups.flatMap((group) => {
+      const chosenIds = selectedOptionIds[group.id] ?? [];
+      return chosenIds
+        .map((optionId) => group.options.find((o) => o.id === optionId))
+        .filter((option): option is (typeof group.options)[number] => option !== undefined)
+        .map((option) => ({
           groupId: group.id,
           groupName: group.name,
           optionId: option.id,
           optionName: option.name,
           priceDelta: option.priceDelta,
-        };
-      })
-      .filter((o): o is SelectedOption => o !== null);
+        }));
+    });
 
     addItem({
       menuItemId: item.id,
@@ -232,42 +264,66 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
 
               {/* Sistema de Opcionais, Fase 1 (2026-08-14) — só renderiza
                   quando o produto tem pelo menos 1 grupo aplicável (a
-                  grande maioria não tem nenhum ainda). Escolha única
-                  obrigatória: `<input type="radio">` nativo, mesmo
-                  raciocínio de "não depender de componente novo" já usado
-                  no resto deste modal. */}
-              {optionGroups.map((group) => (
-                <div key={group.id} className="flex flex-col gap-2">
-                  <span className="text-sm font-medium text-foreground">{group.name}</span>
-                  <div className="flex flex-col gap-1.5">
-                    {group.options.map((option) => (
-                      <label
-                        key={option.id}
-                        className={cn(
-                          "flex cursor-pointer items-center justify-between rounded-xl border px-3.5 py-2.5 text-sm transition",
-                          selectedOptionIds[group.id] === option.id
-                            ? "border-emerald-500 bg-emerald-50"
-                            : "border-border bg-background",
-                        )}
-                      >
-                        <span className="flex items-center gap-2.5">
-                          <input
-                            type="radio"
-                            name={`option-group-${group.id}`}
-                            checked={selectedOptionIds[group.id] === option.id}
-                            onChange={() => setSelectedOptionIds((prev) => ({ ...prev, [group.id]: option.id }))}
-                            className="h-4 w-4 accent-emerald-500"
-                          />
-                          <span className="text-foreground">{option.name}</span>
+                  grande maioria não tem nenhum ainda).
+                  Fase 2 (2026-08-14): grupo `single` continua
+                  `<input type="radio">` (igual sempre foi); grupo
+                  `multiple` vira `<input type="checkbox">`, com contador
+                  "X/Y selecionados" no título e opções não marcadas
+                  desabilitando sozinhas ao bater o limite — mesmo
+                  raciocínio de "não depender de componente novo" já
+                  usado no resto deste modal. */}
+              {optionGroups.map((group) => {
+                const chosenIds = selectedOptionIds[group.id] ?? [];
+                return (
+                  <div key={group.id} className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-foreground">
+                      {group.name}
+                      {!group.required && <span className="font-normal text-muted-foreground"> (opcional)</span>}
+                      {group.selectionType === "multiple" && (
+                        <span className="font-normal text-muted-foreground">
+                          {" "}
+                          ({chosenIds.length}/{group.maxSelections} selecionados)
                         </span>
-                        <span className="tabular-nums text-muted-foreground">
-                          {option.priceDelta > 0 ? `+${formatCurrency(option.priceDelta)}` : "Sem custo"}
-                        </span>
-                      </label>
-                    ))}
+                      )}
+                    </span>
+                    <div className="flex flex-col gap-1.5">
+                      {group.options.map((option) => {
+                        const isChecked = chosenIds.includes(option.id);
+                        const isLimitReached =
+                          group.selectionType === "multiple" &&
+                          !isChecked &&
+                          group.maxSelections !== null &&
+                          chosenIds.length >= group.maxSelections;
+                        return (
+                          <label
+                            key={option.id}
+                            className={cn(
+                              "flex items-center justify-between rounded-xl border px-3.5 py-2.5 text-sm transition",
+                              isChecked ? "border-emerald-500 bg-emerald-50" : "border-border bg-background",
+                              isLimitReached ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                            )}
+                          >
+                            <span className="flex items-center gap-2.5">
+                              <input
+                                type={group.selectionType === "multiple" ? "checkbox" : "radio"}
+                                name={`option-group-${group.id}`}
+                                checked={isChecked}
+                                disabled={isLimitReached}
+                                onChange={() => toggleOption(group, option.id)}
+                                className="h-4 w-4 accent-emerald-500"
+                              />
+                              <span className="text-foreground">{option.name}</span>
+                            </span>
+                            <span className="tabular-nums text-muted-foreground">
+                              {option.priceDelta > 0 ? `+${formatCurrency(option.priceDelta)}` : "Sem custo"}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {/* Campo de observação — label/textarea/hint em HTML nativo, sem depender de FormField/Textarea. */}
               <div className="flex flex-col gap-1.5">

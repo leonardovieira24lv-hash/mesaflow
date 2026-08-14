@@ -39,6 +39,23 @@ interface OptionGroupItemRow {
   option_groups: { id: string; name: string; category_id: string | null; menu_item_id: string | null } | null;
 }
 
+// Sistema de Opcionais, Fase 2 (2026-08-14) — grupo completo (não só a
+// opção escolhida), necessário pra validar "obrigatório" (grupo que o
+// cliente não tocou em nada) e "limite" (grupo múltiplo com mais
+// selecionados do que o permitido). A Fase 1 nunca buscava isto: só
+// resolvia as opções que o cliente mandou, sem checar se algum grupo
+// obrigatório tinha ficado vazio — a regra "obrigatório" só existia no
+// front-end (botão desabilitado), nunca no servidor.
+interface OptionGroupRow {
+  id: string;
+  name: string;
+  category_id: string | null;
+  menu_item_id: string | null;
+  selection_type: "single" | "multiple";
+  max_selections: number | null;
+  required: boolean;
+}
+
 /**
  * Cria um pedido do cliente (contrato seção 3.3), revalidando preço e
  * disponibilidade no servidor — nunca confiando no que o front-end carregou
@@ -171,27 +188,102 @@ export async function createPublicOrder({
     }
   }
 
+  // Sistema de Opcionais, Fase 2 (2026-08-14) — busca TODOS os grupos que
+  // se aplicam a algum item deste pedido (não só os que o cliente
+  // selecionou algo), pra poder detectar um grupo obrigatório que o
+  // cliente deixou vazio. Mesmo critério de "se aplica" usado no
+  // Cardápio Público (`public-menu.ts`): vinculado ao produto OU à
+  // categoria dele.
+  const orderedCategoryIds = [...new Set(input.items.map((item) => menuItemById.get(item.menu_item_id)!.category_id))];
+  const { data: applicableGroupsData, error: applicableGroupsError } = await admin
+    .from("option_groups")
+    .select("id, name, category_id, menu_item_id, selection_type, max_selections, required")
+    .eq("restaurant_id", restaurantId)
+    .or(`menu_item_id.in.(${menuItemIds.join(",")}),category_id.in.(${orderedCategoryIds.join(",")})`);
+
+  if (applicableGroupsError) {
+    throw new AppError("INTERNAL_ERROR", "Não foi possível validar os grupos de opção.");
+  }
+
+  const applicableGroups = (applicableGroupsData ?? []) as OptionGroupRow[];
+
+  function groupsForMenuItem(menuItem: MenuItemRow): OptionGroupRow[] {
+    return applicableGroups.filter(
+      (group) => group.menu_item_id === menuItem.id || group.category_id === menuItem.category_id,
+    );
+  }
+
   // Só aceita uma opção escolhida se o grupo dela realmente se aplica a
   // ESTE produto (o mesmo `menu_item_id`, ou a categoria do produto) —
   // qualquer id que não bater (adulterado, de outro restaurante, de um
   // grupo que não tem nada a ver com este produto) é silenciosamente
   // ignorado, não derruba o pedido inteiro.
-  function resolveSelectedOptions(
-    item: { menu_item_id: string; selected_option_ids?: string[] },
-    menuItem: MenuItemRow,
-  ) {
-    return (item.selected_option_ids ?? [])
+  //
+  // Fase 2: depois de filtrar pela validade, agrupa por `option_group_id`
+  // e aplica o limite de cada grupo — `single` mantém só a 1ª escolha
+  // válida, `multiple` mantém só as N primeiras (N = `max_selections`).
+  // Excesso é truncado silenciosamente, mesmo espírito de "dado
+  // adulterado não derruba o pedido" já usado acima; a checagem de
+  // "obrigatório vazio" é o único caso que rejeita o pedido de verdade
+  // (ver `requiredGroupErrors` abaixo), porque aí o preço final ficaria
+  // incompleto/errado, não é só um excesso inofensivo.
+  function resolveSelectedOptions(item: { menu_item_id: string; selected_option_ids?: string[] }, menuItem: MenuItemRow) {
+    const validRows = (item.selected_option_ids ?? [])
       .map((optionId) => optionItemById.get(optionId))
       .filter((row): row is OptionGroupItemRow => {
         if (!row?.option_groups) return false;
         const group = row.option_groups;
         return group.menu_item_id === menuItem.id || group.category_id === menuItem.category_id;
+      });
+
+    const rowsByGroupId = new Map<string, OptionGroupItemRow[]>();
+    for (const row of validRows) {
+      const bucket = rowsByGroupId.get(row.option_group_id) ?? [];
+      bucket.push(row);
+      rowsByGroupId.set(row.option_group_id, bucket);
+    }
+
+    const truncatedRows: OptionGroupItemRow[] = [];
+    for (const [groupId, rows] of rowsByGroupId) {
+      const group = applicableGroups.find((g) => g.id === groupId);
+      const limit = !group ? rows.length : group.selection_type === "multiple" ? (group.max_selections ?? rows.length) : 1;
+      truncatedRows.push(...rows.slice(0, limit));
+    }
+
+    return truncatedRows.map((row) => ({
+      group_name: row.option_groups!.name,
+      option_name: row.name,
+      price_delta: row.price_delta,
+    }));
+  }
+
+  // Fase 2 — grupo obrigatório sem nenhuma escolha válida rejeita o
+  // pedido inteiro (`VALIDATION_ERROR`, mesmo código já usado pro corpo
+  // da requisição) em vez de silenciosamente seguir sem a opção — errar
+  // pra esse lado evita cobrar um preço incompleto por engano.
+  const requiredGroupErrors = input.items.flatMap((item) => {
+    const menuItem = menuItemById.get(item.menu_item_id)!;
+    const selectedIdsForItem = new Set(item.selected_option_ids ?? []);
+    return groupsForMenuItem(menuItem)
+      .filter((group) => group.required)
+      .filter((group) => {
+        const hasValidSelectionInGroup = [...selectedIdsForItem].some(
+          (optionId) => optionItemById.get(optionId)?.option_group_id === group.id,
+        );
+        return !hasValidSelectionInGroup;
       })
-      .map((row) => ({
-        group_name: row.option_groups!.name,
-        option_name: row.name,
-        price_delta: row.price_delta,
+      .map((group) => ({
+        field: item.menu_item_id,
+        issue: `Escolha uma opção em "${group.name}" para ${menuItem.name}.`,
       }));
+  });
+
+  if (requiredGroupErrors.length > 0) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Alguns produtos têm opções obrigatórias não preenchidas. Revise o carrinho.",
+      requiredGroupErrors,
+    );
   }
 
   const orderItemsToInsert = input.items.map((item) => {
