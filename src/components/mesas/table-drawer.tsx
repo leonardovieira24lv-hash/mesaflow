@@ -30,13 +30,48 @@ type PaymentMethod = (typeof PAYMENT_METHOD_VALUES)[number];
 /**
  * Sistema de Opcionais, Fase 1, Passo 4 (2026-08-14) — texto curto pra
  * exibir a escolha do cliente junto do item (ex.: "Borda: Catupiry").
- * Várias escolhas (Fase 2 futura) ficam separadas por vírgula.
+ *
+ * Sistema de Opcionais, Fase 2 (2026-08-14, ajuste de exibição): com
+ * múltipla escolha, um mesmo grupo pode aparecer várias vezes no array
+ * de `selected_options` (ex.: 3 complementos escolhidos = 3 entradas com
+ * `group_name: "Complemento"` repetido). Sem agrupar, a tela mostrava
+ * "Complemento: leite em pó, Complemento: amendoim, Complemento: ..." —
+ * o nome do grupo repetido 3x, confuso pra ler rápido (cozinha inclusa).
+ * `groupSelectedOptions` resolve isso: agrupa por `group_name` PRESERVANDO
+ * a ordem de primeira aparição, devolvendo cada grupo junto de todas as
+ * opções escolhidas nele. `formatSelectedOptions` usa isto por baixo pra
+ * continuar devolvendo uma linha só (usado nos lugares compactos: resumo
+ * em chips e comanda impressa); a lista expandida usa
+ * `groupSelectedOptions` diretamente pra empilhar cada opção em sua
+ * própria linha (mais fácil de bater o olho rápido).
  */
+interface GroupedSelectedOptions {
+  groupName: string;
+  optionNames: string[];
+}
+
+function groupSelectedOptions(
+  options: { group_name: string; option_name: string; price_delta: number }[] | undefined,
+): GroupedSelectedOptions[] {
+  if (!options || options.length === 0) return [];
+  const order: string[] = [];
+  const byGroup = new Map<string, string[]>();
+  for (const option of options) {
+    if (!byGroup.has(option.group_name)) {
+      byGroup.set(option.group_name, []);
+      order.push(option.group_name);
+    }
+    byGroup.get(option.group_name)!.push(option.option_name);
+  }
+  return order.map((groupName) => ({ groupName, optionNames: byGroup.get(groupName)! }));
+}
+
 function formatSelectedOptions(
   options: { group_name: string; option_name: string; price_delta: number }[] | undefined,
 ): string | null {
-  if (!options || options.length === 0) return null;
-  return options.map((o) => `${o.group_name}: ${o.option_name}`).join(", ");
+  const grouped = groupSelectedOptions(options);
+  if (grouped.length === 0) return null;
+  return grouped.map((g) => `${g.groupName}: ${g.optionNames.join(", ")}`).join(" · ");
 }
 
 interface OrderDetail {
@@ -1082,11 +1117,14 @@ export function TableDrawer({
                                   </span>
                                 )}
                               </div>
-                              {formatSelectedOptions(item.selected_options) && (
-                                <span className="pl-7 text-xs text-ds2-foreground-muted">
-                                  {formatSelectedOptions(item.selected_options)}
-                                </span>
-                              )}
+                              {groupSelectedOptions(item.selected_options).map((group) => (
+                                <div key={group.groupName} className="pl-7 text-xs text-ds2-foreground-muted">
+                                  <span className="font-medium">{group.groupName}:</span>
+                                  {group.optionNames.map((optionName) => (
+                                    <div key={optionName}>{optionName}</div>
+                                  ))}
+                                </div>
+                              ))}
                               {item.notes && (
                                 <span className="flex items-center gap-1 pl-7 text-xs italic text-ds2-foreground-muted">
                                   <StickyNote className="h-3 w-3 shrink-0" aria-hidden />
