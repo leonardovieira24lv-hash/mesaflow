@@ -252,6 +252,12 @@ export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLog
                     {order.items.map((item, index) => (
                       <li key={`${order.id}-${item.name}-${index}`} className="text-xs text-muted-foreground">
                         <span className="font-semibold text-foreground">{item.quantity}×</span> {item.name}
+                        {item.selectedOptions && item.selectedOptions.length > 0 && (
+                          <span>
+                            {" "}
+                            ({item.selectedOptions.map((o) => `${o.group_name}: ${o.option_name}`).join(", ")})
+                          </span>
+                        )}
                         {item.notes && <span className="italic"> — {item.notes}</span>}
                       </li>
                     ))}

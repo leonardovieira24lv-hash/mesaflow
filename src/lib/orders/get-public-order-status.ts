@@ -14,6 +14,9 @@ export interface PublicOrderStatusItem {
   // que a observação realmente foi registrada — podia gerar chamada de
   // garçom desnecessária. `null` quando o item não tem observação.
   notes: string | null;
+  // Sistema de Opcionais, Fase 1, Passo 4 (2026-08-14) — escolhas feitas
+  // pelo cliente (ex.: Borda: Catupiry), resolvidas no servidor.
+  selectedOptions: { group_name: string; option_name: string; price_delta: number }[] | null;
 }
 
 export interface PublicOrderStatus {
@@ -55,7 +58,7 @@ export async function getPublicOrderStatus(
 
   const { data: items, error: itemsError } = await admin
     .from("order_items")
-    .select("name, quantity, notes")
+    .select("name, quantity, notes, selected_options")
     .eq("order_id", order.id);
 
   if (itemsError) {
@@ -65,6 +68,11 @@ export async function getPublicOrderStatus(
   return {
     id: order.id,
     status: order.status as OrderStatus,
-    items: (items ?? []).map((item) => ({ name: item.name, quantity: item.quantity, notes: item.notes })),
+    items: (items ?? []).map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      notes: item.notes,
+      selectedOptions: item.selected_options,
+    })),
   };
 }

@@ -27,13 +27,35 @@ import type { PAYMENT_METHOD_VALUES } from "@/lib/validations/tables";
 
 type PaymentMethod = (typeof PAYMENT_METHOD_VALUES)[number];
 
+/**
+ * Sistema de Opcionais, Fase 1, Passo 4 (2026-08-14) — texto curto pra
+ * exibir a escolha do cliente junto do item (ex.: "Borda: Catupiry").
+ * Várias escolhas (Fase 2 futura) ficam separadas por vírgula.
+ */
+function formatSelectedOptions(
+  options: { group_name: string; option_name: string; price_delta: number }[] | undefined,
+): string | null {
+  if (!options || options.length === 0) return null;
+  return options.map((o) => `${o.group_name}: ${o.option_name}`).join(", ");
+}
+
 interface OrderDetail {
   id: string;
   status: OrderListRow["status"];
   total_amount: number;
   notes?: string;
   created_at: string;
-  items: { id: string; name: string; quantity: number; price: number; notes?: string; cancelled_at: string | null }[];
+  items: {
+    id: string;
+    name: string;
+    quantity: number;
+    price: number;
+    notes?: string;
+    cancelled_at: string | null;
+    // Sistema de Opcionais, Fase 1, Passo 4 (2026-08-14) — escolhas feitas
+    // pelo cliente (ex.: Borda: Catupiry), resolvidas no servidor.
+    selected_options?: { group_name: string; option_name: string; price_delta: number }[];
+  }[];
 }
 
 interface TableDrawerProps {
@@ -987,6 +1009,13 @@ export function TableDrawer({
                                 {item.name}: {item.notes}
                               </span>
                             ))}
+                          {detail.items
+                            .filter((item) => item.selected_options?.length)
+                            .map((item) => (
+                              <span key={`${item.id}-options`} className="text-xs text-ds2-foreground-muted">
+                                {item.name}: {formatSelectedOptions(item.selected_options)}
+                              </span>
+                            ))}
                         </div>
                       ) : (
                         <ul className="flex flex-col gap-2">
@@ -1053,6 +1082,11 @@ export function TableDrawer({
                                   </span>
                                 )}
                               </div>
+                              {formatSelectedOptions(item.selected_options) && (
+                                <span className="pl-7 text-xs text-ds2-foreground-muted">
+                                  {formatSelectedOptions(item.selected_options)}
+                                </span>
+                              )}
                               {item.notes && (
                                 <span className="flex items-center gap-1 pl-7 text-xs italic text-ds2-foreground-muted">
                                   <StickyNote className="h-3 w-3 shrink-0" aria-hidden />
@@ -1152,6 +1186,9 @@ export function TableDrawer({
               {(details[order.id]?.items ?? []).map((item) => (
                 <p key={item.id}>
                   {item.quantity}x {item.name} — {formatCurrency(item.price * item.quantity)}
+                  {formatSelectedOptions(item.selected_options) && (
+                    <> ({formatSelectedOptions(item.selected_options)})</>
+                  )}
                 </p>
               ))}
             </div>

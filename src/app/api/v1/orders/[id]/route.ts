@@ -22,7 +22,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const { data: order, error } = await supabase
       .from("orders")
       .select(
-        "id, status, total_amount, notes, created_at, table:tables(id, name), order_items(id, menu_item_id, name, price, quantity, notes, cancelled_at)",
+        "id, status, total_amount, notes, created_at, table:tables(id, name), order_items(id, menu_item_id, name, price, quantity, notes, cancelled_at, selected_options)",
       )
       .eq("id", id)
       .eq("restaurant_id", profile.restaurantId)
@@ -62,6 +62,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
             quantity: number;
             notes: string | null;
             cancelled_at: string | null;
+            // Sistema de Opcionais, Fase 1 (2026-08-14) — gravado por
+            // create-order.ts como { group_name, option_name, price_delta }[],
+            // ou null quando o produto não tinha opção aplicável.
+            selected_options: { group_name: string; option_name: string; price_delta: number }[] | null;
           }[]
         | null;
     };
@@ -80,6 +84,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         quantity: item.quantity,
         notes: item.notes ?? undefined,
         cancelled_at: item.cancelled_at,
+        selected_options: item.selected_options ?? undefined,
       })),
       created_at: row.created_at,
     });

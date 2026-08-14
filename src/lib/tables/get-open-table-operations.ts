@@ -78,7 +78,16 @@ export interface OpenSessionOrder {
   status: OrderStatus;
   totalAmount: number;
   createdAt: string;
-  items: { name: string; quantity: number; price: number; notes: string | null; cancelled_at: string | null }[];
+  items: {
+    name: string;
+    quantity: number;
+    price: number;
+    notes: string | null;
+    cancelled_at: string | null;
+    // Sistema de Opcionais, Fase 1, Passo 4 (2026-08-14) — campo aditivo,
+    // consumidores que ainda não usam simplesmente ignoram.
+    selected_options: { group_name: string; option_name: string; price_delta: number }[] | null;
+  }[];
 }
 
 /**
@@ -107,7 +116,7 @@ export async function getOrdersForSessions(
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, order_session_id, status, total_amount, created_at, table:tables(id, name), order_items(name, quantity, price, notes, cancelled_at)",
+      "id, order_session_id, status, total_amount, created_at, table:tables(id, name), order_items(name, quantity, price, notes, cancelled_at, selected_options)",
     )
     .in("order_session_id", sessionIds);
 
@@ -127,7 +136,16 @@ export async function getOrdersForSessions(
     total_amount: number;
     created_at: string;
     table: { id: string; name: string } | null;
-    order_items: { name: string; quantity: number; price: number; notes: string | null; cancelled_at: string | null }[] | null;
+    order_items:
+      | {
+          name: string;
+          quantity: number;
+          price: number;
+          notes: string | null;
+          cancelled_at: string | null;
+          selected_options: { group_name: string; option_name: string; price_delta: number }[] | null;
+        }[]
+      | null;
   }>;
 
   return rows.map((row) => ({

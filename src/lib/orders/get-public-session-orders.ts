@@ -57,7 +57,12 @@ export async function getPublicSessionOrders(
     .map((sessionOrder) => ({
       id: sessionOrder.id,
       status: sessionOrder.status,
-      items: sessionOrder.items.map((item) => ({ name: item.name, quantity: item.quantity, notes: item.notes })),
+      items: sessionOrder.items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        notes: item.notes,
+        selectedOptions: item.selected_options,
+      })),
       totalAmount: sessionOrder.totalAmount,
       createdAt: sessionOrder.createdAt,
     }))

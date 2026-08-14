@@ -107,7 +107,11 @@ export function CaixaSessionDetailModal({ sessionId, onClose }: CaixaSessionDeta
               <Card className="flex flex-col overflow-hidden p-0">
                 {detail.items.map((item: CashierSessionDetail["items"][number], index: number) => (
                   <div
-                    key={`${item.name}-${item.unitPrice}`}
+                    // Sistema de Opcionais, Fase 1, Passo 4 (2026-08-14): a
+                    // key antiga (nome+preço) deixou de ser única — duas
+                    // opções diferentes podem ter o mesmo preço final e
+                    // agora viram linhas separadas de propósito.
+                    key={`${item.name}-${item.unitPrice}-${index}`}
                     className={
                       "flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm" +
                       (index > 0 ? " border-t border-ds2-border" : "")
@@ -117,7 +121,14 @@ export function CaixaSessionDetailModal({ sessionId, onClose }: CaixaSessionDeta
                       <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-ds2-sm bg-ds2-surface-hover px-1 font-numeric text-xs font-semibold text-ds2-foreground-muted">
                         {item.quantity}×
                       </span>
-                      <span className="truncate text-ds2-foreground">{item.name}</span>
+                      <div className="flex min-w-0 flex-col">
+                        <span className="truncate text-ds2-foreground">{item.name}</span>
+                        {item.selectedOptions && item.selectedOptions.length > 0 && (
+                          <span className="truncate text-xs text-ds2-foreground-muted">
+                            {item.selectedOptions.map((o) => `${o.group_name}: ${o.option_name}`).join(", ")}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
                       <span className="text-xs text-ds2-foreground-muted">{formatCurrency(item.unitPrice)} un.</span>

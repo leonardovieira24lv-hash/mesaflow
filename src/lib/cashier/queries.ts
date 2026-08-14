@@ -52,7 +52,14 @@ export interface CashierSessionDetail {
   closedAt: string;
   paymentMethod: PaymentMethod | null;
   totalAmount: number;
-  items: { name: string; quantity: number; unitPrice: number; lineTotal: number }[];
+  items: {
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+    // Sistema de Opcionais, Fase 1, Passo 4 (2026-08-14).
+    selectedOptions?: { group_name: string; option_name: string; price_delta: number }[];
+  }[];
 }
 
 /**
@@ -229,7 +236,16 @@ interface SessionDetailQueryRow {
   closed_at: string;
   payment_method: PaymentMethod | null;
   tables: { name: string } | null;
-  orders: { status: string; total_amount: number; order_items: { name: string; quantity: number; price: number }[] }[];
+  orders: {
+    status: string;
+    total_amount: number;
+    order_items: {
+      name: string;
+      quantity: number;
+      price: number;
+      selected_options: { group_name: string; option_name: string; price_delta: number }[] | null;
+    }[];
+  }[];
 }
 
 /** Detalhe de uma comanda fechada, para o modal "ao tocar em uma venda". */
@@ -241,7 +257,7 @@ export async function getCashierSessionDetail(
   const { data, error } = await supabase
     .from("order_sessions")
     .select(
-      "id, opened_at, closed_at, payment_method, tables(name), orders(status, total_amount, order_items(name, quantity, price))",
+      "id, opened_at, closed_at, payment_method, tables(name), orders(status, total_amount, order_items(name, quantity, price, selected_options))",
     )
     .eq("id", sessionId)
     .eq("restaurant_id", restaurantId)
@@ -259,16 +275,46 @@ export async function getCashierSessionDetail(
   // como item vendido nem entra no total desta comanda.
   const validOrders = row.orders.filter((order) => order.status !== "cancelled");
 
-  // Consolida itens iguais (mesmo nome+preço) vindos de pedidos diferentes
-  // da mesma comanda numa linha só — mesmo critério já usado em
-  // `close-bill-modal.tsx` pro resumo de fechamento.
-  const linesByKey = new Map<string, { name: string; quantity: number; unitPrice: number }>();
+  // Consolida itens iguais (mesmo nome+preço+opções escolhidas) vindos de
+  // pedidos diferentes da mesma comanda numa linha só — mesmo critério já
+  // usado em `close-bill-modal.tsx` pro resumo de fechamento.
+  //
+  // Sistema de Opcionais, Fase 1, Passo 4 (2026-08-14): nome+preço sozinhos
+  // não bastam mais pra identificar "o mesmo item" — o preço já inclui o
+  // price_delta da opção escolhida, então duas opções diferentes com o
+  // mesmo delta (ex.: "Catupiry +R$5" e "Cheddar +R$5") cairiam na mesma
+  // chave e se misturariam numa venda fechada. A assinatura das opções
+  // entra na chave, mesmo princípio de `optionsSignature` no carrinho.
+  function optionsKeyPart(
+    options: { group_name: string; option_name: string; price_delta: number }[] | null,
+  ): string {
+    return (options ?? [])
+      .map((o) => `${o.group_name}:${o.option_name}`)
+      .sort()
+      .join(",");
+  }
+
+  const linesByKey = new Map<
+    string,
+    {
+      name: string;
+      quantity: number;
+      unitPrice: number;
+      selectedOptions?: { group_name: string; option_name: string; price_delta: number }[];
+    }
+  >();
   for (const order of validOrders) {
     for (const item of order.order_items) {
-      const key = `${item.name}__${item.price}`;
+      const key = `${item.name}__${item.price}__${optionsKeyPart(item.selected_options)}`;
       const existing = linesByKey.get(key);
       if (existing) existing.quantity += item.quantity;
-      else linesByKey.set(key, { name: item.name, quantity: item.quantity, unitPrice: item.price });
+      else
+        linesByKey.set(key, {
+          name: item.name,
+          quantity: item.quantity,
+          unitPrice: item.price,
+          selectedOptions: item.selected_options ?? undefined,
+        });
     }
   }
 
