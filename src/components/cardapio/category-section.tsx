@@ -23,11 +23,9 @@ interface CategorySectionProps {
   onDuplicateProduct: (item: MenuItem) => void;
   onDeleteProduct: (item: MenuItem) => void;
   onRestoreProduct: (item: MenuItem) => void;
-  onArchiveProduct: (item: MenuItem) => void;
   onToggleAvailability: (item: MenuItem) => void;
   duplicatingItemId: string | null;
   restoringItemId: string | null;
-  archivingItemId: string | null;
   // Reordenar categorias (drag-and-drop já existente, só reaproveitado no novo cabeçalho).
   onDragStart: (event: DragEvent<HTMLDivElement>) => void;
   onDragOver: (event: DragEvent<HTMLDivElement>) => void;
@@ -72,11 +70,9 @@ export function CategorySection({
   onDuplicateProduct,
   onDeleteProduct,
   onRestoreProduct,
-  onArchiveProduct,
   onToggleAvailability,
   duplicatingItemId,
   restoringItemId,
-  archivingItemId,
   onDragStart,
   onDragOver,
   onDragEnd,
@@ -137,11 +133,9 @@ export function CategorySection({
                 onDuplicate={onDuplicateProduct}
                 onDelete={onDeleteProduct}
                 onRestore={onRestoreProduct}
-                onArchive={onArchiveProduct}
                 onToggleAvailability={onToggleAvailability}
                 isDuplicating={duplicatingItemId === item.id}
                 isRestoring={restoringItemId === item.id}
-                isArchiving={archivingItemId === item.id}
               />
             ))
           )}

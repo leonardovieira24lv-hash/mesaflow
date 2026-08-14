@@ -83,7 +83,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
   const [isDeletingItem, setIsDeletingItem] = useState(false);
   const [duplicatingItemId, setDuplicatingItemId] = useState<string | null>(null);
   const [restoringItemId, setRestoringItemId] = useState<string | null>(null);
-  const [archivingItemId, setArchivingItemId] = useState<string | null>(null);
+  const [isArchivingItem, setIsArchivingItem] = useState(false);
 
   function itemsForCategory(categoryId: string) {
     return items
@@ -400,19 +400,17 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
 
   /**
    * Parada técnica — reorganização do fluxo de Cardápio (2026-08-14):
-   * antes só existia "Excluir" (que arquiva automaticamente SE o produto
-   * já tiver pedido no histórico, senão apaga de vez — decisão implícita,
-   * fora do controle de quem clica) e "Disponível para pedidos" (esconde
-   * do Cardápio Público, mas o produto continua na lista de Ativos pra
-   * gerenciar). Faltava um jeito explícito de "não quero excluir, só não
-   * quero que ele apareça pra gerenciar agora" — sem risco de apagar de
-   * vez sem querer. Reaproveita o mesmo `PATCH` de `handleRestoreProduct`,
-   * só invertido (`is_archived: true`).
+   * "Arquivar" mora dentro do mesmo modal de "Excluir" (não um ícone à
+   * parte) — clica no lixo, o modal abre com as DUAS opções lado a lado,
+   * escolhe uma. Reaproveita o mesmo `deletingItem` que já abre o modal;
+   * reaproveita o mesmo `PATCH` de `handleRestoreProduct`, só invertido
+   * (`is_archived: true`).
    */
-  async function handleArchiveProduct(item: MenuItem) {
-    setArchivingItemId(item.id);
+  async function handleArchiveProduct() {
+    if (!deletingItem) return;
+    setIsArchivingItem(true);
     try {
-      const response = await fetch(`/api/v1/menu/items/${item.id}`, {
+      const response = await fetch(`/api/v1/menu/items/${deletingItem.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_archived: true }),
@@ -425,12 +423,13 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
         return;
       }
 
-      setItems((prev) => prev.map((i) => (i.id === item.id ? menuItemFromDto(body.data as MenuItemDto) : i)));
+      setItems((prev) => prev.map((i) => (i.id === deletingItem.id ? menuItemFromDto(body.data as MenuItemDto) : i)));
       toast.success("Produto arquivado", "Ele sai da lista de Ativos, mas pode ser restaurado quando quiser.");
+      setDeletingItem(null);
     } catch {
       toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
     } finally {
-      setArchivingItemId(null);
+      setIsArchivingItem(false);
     }
   }
 
@@ -473,11 +472,9 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
               onDuplicateProduct={handleDuplicateProduct}
               onDeleteProduct={setDeletingItem}
               onRestoreProduct={handleRestoreProduct}
-              onArchiveProduct={handleArchiveProduct}
               onToggleAvailability={handleToggleAvailability}
               duplicatingItemId={duplicatingItemId}
               restoringItemId={restoringItemId}
-              archivingItemId={archivingItemId}
               onDragStart={handleCategoryDragStart(index)}
               onDragOver={handleCategoryDragOver(index)}
               onDragEnd={handleCategoryDragEnd}
@@ -560,15 +557,39 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
         </div>
       </Modal>
 
-      <ConfirmDialog
+      {/* Parada técnica — reorganização do fluxo de Cardápio (2026-08-14):
+          antes era um `<ConfirmDialog>` genérico só com Excluir. Agora tem
+          3 caminhos — Cancelar, Arquivar (tira de Ativos sem apagar nada,
+          novo) e Excluir (apaga de vez, ou arquiva sozinho se já tiver
+          pedido no histórico — comportamento antigo, intacto). Não usa
+          `<ConfirmDialog>` porque esse componente só sabe fazer 2 botões
+          (cancelar/confirmar) — é usado em vários outros lugares do app
+          (excluir categoria, cancelar pedido) que continuam com 2 botões
+          normalmente; só aqui precisava de um terceiro caminho. */}
+      <Modal
         open={Boolean(deletingItem)}
-        onOpenChange={(open) => !open && setDeletingItem(null)}
-        title="Excluir produto"
-        description={`Tem certeza que deseja excluir "${deletingItem?.name}"? Se ele já tiver pedidos no histórico, será arquivado em vez de apagado (dá para restaurar depois).`}
-        variant="destructive"
-        confirmLabel="Excluir"
-        onConfirm={handleDeleteProduct}
-        isConfirming={isDeletingItem}
+        onClose={() => {
+          if (!isDeletingItem && !isArchivingItem) setDeletingItem(null);
+        }}
+        title="Excluir ou arquivar produto"
+        description={`O que fazer com "${deletingItem?.name}"? Arquivar tira da lista de Ativos sem apagar nada — dá pra restaurar depois. Excluir apaga de vez (a menos que já tenha pedido no histórico, aí é arquivado automaticamente).`}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setDeletingItem(null)}
+              disabled={isDeletingItem || isArchivingItem}
+            >
+              Cancelar
+            </Button>
+            <Button variant="secondary" onClick={handleArchiveProduct} isLoading={isArchivingItem} disabled={isDeletingItem}>
+              Arquivar
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteProduct} isLoading={isDeletingItem} disabled={isArchivingItem}>
+              Excluir
+            </Button>
+          </>
+        }
       />
     </div>
   );
