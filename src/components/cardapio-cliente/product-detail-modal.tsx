@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Minus, Plus, UtensilsCrossed, X } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
-import { useCart } from "@/components/cardapio-cliente/cart-context";
+import { useCart, type SelectedOption } from "@/components/cardapio-cliente/cart-context";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import type { PublicMenuItem } from "@/lib/orders/public-menu";
@@ -65,6 +65,10 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
+  // Sistema de Opcionais, Fase 1 (2026-08-14) — escolha única obrigatória
+  // por grupo: `groupId -> optionId` escolhido. Um produto sem nenhum
+  // `optionGroups` nunca usa isto (objeto fica vazio a vida toda).
+  const [selectedOptionIds, setSelectedOptionIds] = useState<Record<string, string>>({});
   const [imageLoaded, setImageLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
@@ -80,24 +84,54 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
     }
   }, [item]);
 
-  // Reseta quantidade/observação/estado da imagem sempre que um produto
-  // diferente é aberto.
+  // Reseta quantidade/observação/opções/estado da imagem sempre que um
+  // produto diferente é aberto.
   useEffect(() => {
     setQuantity(1);
     setNotes("");
+    setSelectedOptionIds({});
     setImageLoaded(false);
     setHasError(false);
   }, [item?.id]);
 
+  const optionGroups = item?.optionGroups ?? [];
+  const missingRequiredGroup = optionGroups.some((group) => !selectedOptionIds[group.id]);
+
+  // Preço unitário = base + soma dos `priceDelta` de cada opção marcada —
+  // recalculado a cada escolha, pro cliente ver o valor final antes de
+  // adicionar (nunca só descobrir no carrinho).
+  const optionsPriceDelta = optionGroups.reduce((sum, group) => {
+    const chosenOptionId = selectedOptionIds[group.id];
+    const option = group.options.find((o) => o.id === chosenOptionId);
+    return sum + (option?.priceDelta ?? 0);
+  }, 0);
+  const unitPrice = (item?.price ?? 0) + optionsPriceDelta;
+
   function handleAdd() {
     if (!item) return;
+
+    const selectedOptions: SelectedOption[] = optionGroups
+      .map((group) => {
+        const chosenOptionId = selectedOptionIds[group.id];
+        const option = group.options.find((o) => o.id === chosenOptionId);
+        if (!option) return null;
+        return {
+          groupId: group.id,
+          groupName: group.name,
+          optionId: option.id,
+          optionName: option.name,
+          priceDelta: option.priceDelta,
+        };
+      })
+      .filter((o): o is SelectedOption => o !== null);
 
     addItem({
       menuItemId: item.id,
       name: item.name,
-      price: item.price,
+      price: unitPrice,
       quantity,
       notes: notes.trim() || undefined,
+      selectedOptions: selectedOptions.length > 0 ? selectedOptions : undefined,
       imageUrl: item.image_url ?? undefined,
     });
 
@@ -196,6 +230,45 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                 </div>
               </div>
 
+              {/* Sistema de Opcionais, Fase 1 (2026-08-14) — só renderiza
+                  quando o produto tem pelo menos 1 grupo aplicável (a
+                  grande maioria não tem nenhum ainda). Escolha única
+                  obrigatória: `<input type="radio">` nativo, mesmo
+                  raciocínio de "não depender de componente novo" já usado
+                  no resto deste modal. */}
+              {optionGroups.map((group) => (
+                <div key={group.id} className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-foreground">{group.name}</span>
+                  <div className="flex flex-col gap-1.5">
+                    {group.options.map((option) => (
+                      <label
+                        key={option.id}
+                        className={cn(
+                          "flex cursor-pointer items-center justify-between rounded-xl border px-3.5 py-2.5 text-sm transition",
+                          selectedOptionIds[group.id] === option.id
+                            ? "border-emerald-500 bg-emerald-50"
+                            : "border-border bg-background",
+                        )}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <input
+                            type="radio"
+                            name={`option-group-${group.id}`}
+                            checked={selectedOptionIds[group.id] === option.id}
+                            onChange={() => setSelectedOptionIds((prev) => ({ ...prev, [group.id]: option.id }))}
+                            className="h-4 w-4 accent-emerald-500"
+                          />
+                          <span className="text-foreground">{option.name}</span>
+                        </span>
+                        <span className="tabular-nums text-muted-foreground">
+                          {option.priceDelta > 0 ? `+${formatCurrency(option.priceDelta)}` : "Sem custo"}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
               {/* Campo de observação — label/textarea/hint em HTML nativo, sem depender de FormField/Textarea. */}
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="product-notes" className="text-sm font-medium text-foreground">
@@ -219,10 +292,11 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
             <button
               type="button"
               onClick={handleAdd}
-              className="flex min-h-11 w-full items-center justify-between rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-600 active:scale-[0.98]"
+              disabled={missingRequiredGroup}
+              className="flex min-h-11 w-full items-center justify-between rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-600 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
             >
-              <span>Adicionar ao carrinho</span>
-              <span className="tabular-nums">{formatCurrency(item.price * quantity)}</span>
+              <span>{missingRequiredGroup ? "Escolha as opções acima" : "Adicionar ao carrinho"}</span>
+              <span className="tabular-nums">{formatCurrency(unitPrice * quantity)}</span>
             </button>
           </div>
         </div>

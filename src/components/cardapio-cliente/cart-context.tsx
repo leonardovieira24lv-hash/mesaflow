@@ -10,12 +10,29 @@ import {
   type ReactNode,
 } from "react";
 
+export interface SelectedOption {
+  groupId: string;
+  groupName: string;
+  optionId: string;
+  optionName: string;
+  priceDelta: number;
+}
+
 export interface CartItem {
   menuItemId: string;
   name: string;
   price: number;
   quantity: number;
   notes?: string;
+  /**
+   * Sistema de Opcionais, Fase 1 (2026-08-14) — escolhas feitas nos
+   * grupos de opção deste produto (ex.: Borda: Catupiry). Vazio/ausente
+   * quando o produto não tem nenhum grupo aplicável. `price` acima já
+   * vem com o(s) `priceDelta` somado — este array é só para exibição
+   * (mostrar "Catupiry" na linha do carrinho) e para o pedido saber o
+   * que gravar em `order_items.selected_options`.
+   */
+  selectedOptions?: SelectedOption[];
   /**
    * Puramente de apresentação (miniatura na linha do carrinho) — não faz
    * parte do contrato de `POST /orders` (seção 3.3, só `menu_item_id` /
@@ -32,8 +49,13 @@ interface CartContextValue {
   itemCount: number;
   subtotal: number;
   addItem: (item: CartItem) => void;
-  updateQuantity: (menuItemId: string, notes: string | undefined, quantity: number) => void;
-  removeItem: (menuItemId: string, notes: string | undefined) => void;
+  updateQuantity: (
+    menuItemId: string,
+    notes: string | undefined,
+    selectedOptions: SelectedOption[] | undefined,
+    quantity: number,
+  ) => void;
+  removeItem: (menuItemId: string, notes: string | undefined, selectedOptions: SelectedOption[] | undefined) => void;
   clear: () => void;
 }
 
@@ -43,9 +65,36 @@ function cartStorageKey(slug: string, tableToken: string | null): string {
   return `mesaflow:cart:${slug}:${tableToken ?? "sem-mesa"}`;
 }
 
-/** Duas linhas do carrinho são "a mesma linha" se forem o mesmo produto com a mesma observação. */
-function sameLine(a: Pick<CartItem, "menuItemId" | "notes">, b: Pick<CartItem, "menuItemId" | "notes">): boolean {
-  return a.menuItemId === b.menuItemId && (a.notes ?? "") === (b.notes ?? "");
+/**
+ * Sistema de Opcionais, Fase 1 (2026-08-14) — "assinatura" estável das
+ * opções escolhidas, pra comparar duas linhas: ids ordenados (a ordem que
+ * o cliente marcou nunca deveria importar) e concatenados. `undefined`/
+ * array vazio viram a mesma string (`""`) — produto sem opção nenhuma.
+ */
+function optionsSignature(options: SelectedOption[] | undefined): string {
+  return (options ?? [])
+    .map((o) => o.optionId)
+    .sort()
+    .join(",");
+}
+
+/**
+ * Duas linhas do carrinho são "a mesma linha" se forem o mesmo produto,
+ * com a mesma observação, E a mesma escolha de opções — pedido explícito
+ * do dono: "a lista deve separar o item toda vez que houver observações
+ * diferentes, pra cozinha diferenciar". Antes de Opcionais, só
+ * `menuItemId`+`notes` decidiam isso; `optionsSignature` agora entra na
+ * mesma checagem, exatamente com o mesmo peso.
+ */
+function sameLine(
+  a: Pick<CartItem, "menuItemId" | "notes" | "selectedOptions">,
+  b: Pick<CartItem, "menuItemId" | "notes" | "selectedOptions">,
+): boolean {
+  return (
+    a.menuItemId === b.menuItemId &&
+    (a.notes ?? "") === (b.notes ?? "") &&
+    optionsSignature(a.selectedOptions) === optionsSignature(b.selectedOptions)
+  );
 }
 
 interface CartProviderProps {
@@ -108,16 +157,24 @@ export function CartProvider({ slug, tableToken, children }: CartProviderProps) 
     });
   }, []);
 
-  const updateQuantity = useCallback((menuItemId: string, notes: string | undefined, quantity: number) => {
-    setItems((prev) => {
-      if (quantity <= 0) return prev.filter((line) => !sameLine(line, { menuItemId, notes }));
-      return prev.map((line) => (sameLine(line, { menuItemId, notes }) ? { ...line, quantity } : line));
-    });
-  }, []);
+  const updateQuantity = useCallback(
+    (menuItemId: string, notes: string | undefined, selectedOptions: SelectedOption[] | undefined, quantity: number) => {
+      setItems((prev) => {
+        if (quantity <= 0) return prev.filter((line) => !sameLine(line, { menuItemId, notes, selectedOptions }));
+        return prev.map((line) =>
+          sameLine(line, { menuItemId, notes, selectedOptions }) ? { ...line, quantity } : line,
+        );
+      });
+    },
+    [],
+  );
 
-  const removeItem = useCallback((menuItemId: string, notes: string | undefined) => {
-    setItems((prev) => prev.filter((line) => !sameLine(line, { menuItemId, notes })));
-  }, []);
+  const removeItem = useCallback(
+    (menuItemId: string, notes: string | undefined, selectedOptions: SelectedOption[] | undefined) => {
+      setItems((prev) => prev.filter((line) => !sameLine(line, { menuItemId, notes, selectedOptions })));
+    },
+    [],
+  );
 
   const clear = useCallback(() => setItems([]), []);
 

@@ -3,6 +3,18 @@ import { AppError } from "@/lib/api/errors";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
+export interface PublicOptionGroupItem {
+  id: string;
+  name: string;
+  priceDelta: number;
+}
+
+export interface PublicOptionGroup {
+  id: string;
+  name: string;
+  options: PublicOptionGroupItem[];
+}
+
 export interface PublicMenuItem {
   id: string;
   name: string;
@@ -10,6 +22,16 @@ export interface PublicMenuItem {
   price: number;
   image_url?: string;
   is_available: boolean;
+  /**
+   * Sistema de Opcionais, Fase 1 (2026-08-14) — grupos que se aplicam a
+   * este produto: os vinculados diretamente a ele (`menu_item_id`) MAIS
+   * os vinculados à categoria inteira (`category_id`) — os dois tipos
+   * juntos, não um substituindo o outro. Vazio na grande maioria dos
+   * produtos hoje (a maioria não tem opcional nenhum cadastrado ainda) —
+   * o modal de produto só mostra a seção de opções quando este array não
+   * está vazio.
+   */
+  optionGroups: PublicOptionGroup[];
 }
 
 export interface PublicMenuCategory {
@@ -26,6 +48,14 @@ interface MenuItemRow {
   price: number;
   image_url: string | null;
   is_available: boolean;
+}
+
+interface OptionGroupRow {
+  id: string;
+  name: string;
+  category_id: string | null;
+  menu_item_id: string | null;
+  option_group_items: { id: string; name: string; price_delta: number }[];
 }
 
 /**
@@ -49,12 +79,19 @@ interface MenuItemRow {
  * diretamente em vez de chamar sua própria API) reaproveite exatamente a
  * mesma query, em vez de duplicá-la. O comportamento e a resposta do
  * endpoint HTTP não mudaram — só a implementação interna foi movida para cá.
+ *
+ * Sistema de Opcionais, Fase 1 (2026-08-14): terceira busca em paralelo,
+ * `option_groups` (com `option_group_items` aninhado). Usa o cliente
+ * admin (mesmo dos outros dois) — ignora RLS de propósito, igual sempre:
+ * cliente do Cardápio Público nunca tem sessão/perfil, a policy de
+ * leitura de `option_groups` (`0036`) exige perfil autenticado, então só
+ * funciona aqui porque o admin client não passa pela RLS.
  */
 export async function getPublicMenu(
   admin: AdminClient,
   restaurantId: string,
 ): Promise<PublicMenuCategory[]> {
-  const [categoriesResult, itemsResult] = await Promise.all([
+  const [categoriesResult, itemsResult, optionGroupsResult] = await Promise.all([
     admin
       .from("menu_categories")
       .select("id, name, position")
@@ -66,9 +103,13 @@ export async function getPublicMenu(
       .eq("restaurant_id", restaurantId)
       .eq("is_archived", false)
       .order("name", { ascending: true }),
+    admin
+      .from("option_groups")
+      .select("id, name, category_id, menu_item_id, option_group_items(id, name, price_delta)")
+      .eq("restaurant_id", restaurantId),
   ]);
 
-  if (categoriesResult.error || itemsResult.error) {
+  if (categoriesResult.error || itemsResult.error || optionGroupsResult.error) {
     throw new AppError("INTERNAL_ERROR", "Não foi possível carregar o cardápio.");
   }
 
@@ -77,6 +118,22 @@ export async function getPublicMenu(
     const bucket = itemsByCategory.get(item.category_id) ?? [];
     bucket.push(item);
     itemsByCategory.set(item.category_id, bucket);
+  }
+
+  const optionGroups = (optionGroupsResult.data ?? []) as OptionGroupRow[];
+
+  function optionGroupsForItem(itemId: string, categoryId: string): PublicOptionGroup[] {
+    return optionGroups
+      .filter((group) => group.menu_item_id === itemId || group.category_id === categoryId)
+      .map((group) => ({
+        id: group.id,
+        name: group.name,
+        options: group.option_group_items.map((option) => ({
+          id: option.id,
+          name: option.name,
+          priceDelta: option.price_delta,
+        })),
+      }));
   }
 
   return (categoriesResult.data ?? []).map((category) => ({
@@ -89,6 +146,7 @@ export async function getPublicMenu(
       price: item.price,
       image_url: item.image_url ?? undefined,
       is_available: item.is_available,
+      optionGroups: optionGroupsForItem(item.id, category.id),
     })),
   }));
 }

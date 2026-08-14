@@ -36,6 +36,13 @@ export const createOrderItemSchema = z.object({
     .int("A quantidade deve ser um número inteiro.")
     .positive("A quantidade deve ser maior que zero."),
   notes: orderNotesSchema,
+  // Sistema de Opcionais, Fase 1 (2026-08-14) — ids das opções escolhidas
+  // (ex.: id de "Catupiry" dentro do grupo "Borda"). Só ids — nome e
+  // preço são sempre resolvidos no servidor a partir do banco
+  // (`create-order.ts`), nunca confiando no que o cliente mandar; um id
+  // que não pertence a nenhum grupo aplicável a este produto é
+  // silenciosamente ignorado, não derruba o pedido inteiro.
+  selected_option_ids: z.array(z.string().uuid()).optional(),
 });
 export type CreateOrderItemInput = z.infer<typeof createOrderItemSchema>;
 

@@ -119,6 +119,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
             menu_item_id: item.menuItemId,
             quantity: item.quantity,
             notes: item.notes,
+            selected_option_ids: item.selectedOptions?.map((o) => o.optionId),
           })),
         }),
       });

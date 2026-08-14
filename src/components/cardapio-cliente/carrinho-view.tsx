@@ -151,8 +151,8 @@ function CarrinhoContent({
                 key={`${item.menuItemId}:${item.notes ?? ""}`}
                 item={item}
                 editable
-                onUpdateQuantity={(quantity) => updateQuantity(item.menuItemId, item.notes, quantity)}
-                onRemove={() => removeItem(item.menuItemId, item.notes)}
+                onUpdateQuantity={(quantity) => updateQuantity(item.menuItemId, item.notes, item.selectedOptions, quantity)}
+                onRemove={() => removeItem(item.menuItemId, item.notes, item.selectedOptions)}
               />
             ))}
           </div>

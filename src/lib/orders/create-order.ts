@@ -24,10 +24,19 @@ interface CreatedOrderSummary {
 
 interface MenuItemRow {
   id: string;
+  category_id: string;
   name: string;
   price: number;
   is_available: boolean;
   is_archived: boolean;
+}
+
+interface OptionGroupItemRow {
+  id: string;
+  name: string;
+  price_delta: number;
+  option_group_id: string;
+  option_groups: { id: string; name: string; category_id: string | null; menu_item_id: string | null } | null;
 }
 
 /**
@@ -96,7 +105,7 @@ export async function createPublicOrder({
 
   const { data: menuItems, error: menuItemsError } = await admin
     .from("menu_items")
-    .select("id, name, price, is_available, is_archived")
+    .select("id, category_id, name, price, is_available, is_archived")
     .eq("restaurant_id", restaurantId)
     .in("id", menuItemIds);
 
@@ -140,15 +149,63 @@ export async function createPublicOrder({
     );
   }
 
+  // Sistema de Opcionais, Fase 1 (2026-08-14) — resolve as opções
+  // escolhidas (ids) contra o banco: nome e `price_delta` sempre vêm
+  // daqui, nunca do que o cliente mandou. Uma única busca pra todos os
+  // ids de todos os itens do pedido, evitando 1 consulta por item.
+  const allSelectedOptionIds = [...new Set(input.items.flatMap((item) => item.selected_option_ids ?? []))];
+
+  const optionItemById = new Map<string, OptionGroupItemRow>();
+  if (allSelectedOptionIds.length > 0) {
+    const { data: optionItems, error: optionItemsError } = await admin
+      .from("option_group_items")
+      .select("id, name, price_delta, option_group_id, option_groups(id, name, category_id, menu_item_id)")
+      .in("id", allSelectedOptionIds);
+
+    if (optionItemsError) {
+      throw new AppError("INTERNAL_ERROR", "Não foi possível validar as opções escolhidas.");
+    }
+
+    for (const row of (optionItems ?? []) as unknown as OptionGroupItemRow[]) {
+      optionItemById.set(row.id, row);
+    }
+  }
+
+  // Só aceita uma opção escolhida se o grupo dela realmente se aplica a
+  // ESTE produto (o mesmo `menu_item_id`, ou a categoria do produto) —
+  // qualquer id que não bater (adulterado, de outro restaurante, de um
+  // grupo que não tem nada a ver com este produto) é silenciosamente
+  // ignorado, não derruba o pedido inteiro.
+  function resolveSelectedOptions(
+    item: { menu_item_id: string; selected_option_ids?: string[] },
+    menuItem: MenuItemRow,
+  ) {
+    return (item.selected_option_ids ?? [])
+      .map((optionId) => optionItemById.get(optionId))
+      .filter((row): row is OptionGroupItemRow => {
+        if (!row?.option_groups) return false;
+        const group = row.option_groups;
+        return group.menu_item_id === menuItem.id || group.category_id === menuItem.category_id;
+      })
+      .map((row) => ({
+        group_name: row.option_groups!.name,
+        option_name: row.name,
+        price_delta: row.price_delta,
+      }));
+  }
+
   const orderItemsToInsert = input.items.map((item) => {
     // Non-null: todo `menu_item_id` já passou pela checagem acima.
     const menuItem = menuItemById.get(item.menu_item_id)!;
+    const selectedOptions = resolveSelectedOptions(item, menuItem);
+    const optionsPriceDelta = selectedOptions.reduce((sum, o) => sum + o.price_delta, 0);
     return {
       menu_item_id: menuItem.id,
       name: menuItem.name,
-      price: menuItem.price,
+      price: menuItem.price + optionsPriceDelta,
       quantity: item.quantity,
       notes: item.notes || null,
+      selected_options: selectedOptions.length > 0 ? selectedOptions : null,
     };
   });
 

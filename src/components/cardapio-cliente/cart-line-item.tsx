@@ -76,6 +76,11 @@ export function CartLineItem({ item, editable = false, onUpdateQuantity, onRemov
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="truncate font-semibold text-foreground">{item.name}</p>
+        {item.selectedOptions && item.selectedOptions.length > 0 && (
+          <p className="truncate text-xs text-muted-foreground">
+            {item.selectedOptions.map((o) => o.optionName).join(", ")}
+          </p>
+        )}
         {item.notes && <p className="truncate text-xs text-muted-foreground">Obs.: {item.notes}</p>}
         <span className="text-sm font-bold tabular-nums text-soft-success-foreground">{formatCurrency(lineTotal)}</span>
       </div>
