@@ -287,3 +287,79 @@ export async function getCashierSessionDetail(
     items,
   };
 }
+
+export interface CashierClosingRow {
+  id: string;
+  closedAt: string;
+  periodType: CashierPeriod;
+  periodFrom: string;
+  periodTo: string;
+  revenue: number;
+  closedSessionsCount: number;
+  averageTicket: number;
+  tablesServedCount: number;
+  observations: string | null;
+}
+
+export interface CashierClosingsResult {
+  closings: CashierClosingRow[];
+  meta: { page: number; perPage: number; total: number; totalPages: number };
+}
+
+/**
+ * Histórico de fechamentos de caixa (feature "Histórico de Fechamentos",
+ * 2026-08-14) — lê `cashier_closings` (existe desde a Sprint 2 de
+ * Persistência do Fechamento, mas nunca tinha sido lida de volta por
+ * nenhuma tela: só era gravada). Índice já existe pra exatamente esta
+ * consulta (`cashier_closings_restaurant_closed_at_idx`,
+ * `0023_create_cashier_closings.sql`) — "fechamentos deste restaurante,
+ * mais recentes primeiro", sem precisar de migration nova.
+ *
+ * Só leitura, sem filtro de busca nesta primeira versão (paridade com o
+ * pedido original: "consultar o histórico", não uma tabela cheia de
+ * filtros). `closed_by` (quem fechou) não é resolvido aqui de propósito —
+ * exigiria `admin.auth.admin.getUserById` por fechamento (mesmo padrão de
+ * `getTeamMembers`), custo N+1 desnecessário pra esta etapa; fica como
+ * possível adição futura, não bloqueia o essencial pedido agora.
+ */
+export async function getCashierClosings(
+  supabase: SupabaseClient<Database>,
+  restaurantId: string,
+  { page, perPage }: { page: number; perPage: number },
+): Promise<CashierClosingsResult> {
+  const from = (page - 1) * perPage;
+  const to = from + perPage - 1;
+
+  const { data, error, count } = await supabase
+    .from("cashier_closings")
+    .select(
+      "id, closed_at, period_type, period_from, period_to, revenue, closed_sessions_count, average_ticket, tables_served_count, observations",
+      { count: "exact" },
+    )
+    .eq("restaurant_id", restaurantId)
+    .order("closed_at", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    throw new AppError("INTERNAL_ERROR", "Não foi possível carregar o histórico de fechamentos.");
+  }
+
+  const total = count ?? 0;
+
+  return {
+    closings: (data ?? []).map((row) => ({
+      id: row.id,
+      closedAt: row.closed_at,
+      periodType: row.period_type as CashierPeriod,
+      periodFrom: row.period_from,
+      periodTo: row.period_to,
+      revenue: row.revenue,
+      closedSessionsCount: row.closed_sessions_count,
+      averageTicket: row.average_ticket,
+      tablesServedCount: row.tables_served_count,
+      observations: row.observations,
+    })),
+    meta: { page, perPage, total, totalPages: Math.max(1, Math.ceil(total / perPage)) },
+  };
+}
+

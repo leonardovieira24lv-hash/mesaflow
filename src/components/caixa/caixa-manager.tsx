@@ -19,6 +19,7 @@ import { formatCurrency, formatDurationBetween } from "@/lib/format";
 import { CASHIER_PERIOD_VALUES, type CashierPeriod } from "@/lib/validations/cashier";
 import { PAYMENT_METHOD_LABELS, type CashierListResult, type ClosedSessionRow } from "@/lib/cashier/queries";
 import { CaixaSessionDetailModal } from "@/components/caixa/caixa-session-detail-modal";
+import { CaixaClosingsList } from "@/components/caixa/caixa-closings-list";
 import type { ApiError, ApiSuccess } from "@/types/api";
 
 const PERIOD_LABELS: Record<CashierPeriod, string> = {
@@ -49,6 +50,12 @@ interface CaixaManagerProps {
  * chama a mesma função/rota, só trocando o formato da resposta.
  */
 export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) {
+  // Feature "Histórico de Fechamentos" (2026-08-14) — alterna entre a
+  // visão ao vivo (o que já existia) e o histórico de fechamentos (novo).
+  // Estado só de UI, nada aqui muda o que já era buscado/exibido na aba
+  // "Ao vivo" — ela continua exatamente como antes.
+  const [activeTab, setActiveTab] = useState<"live" | "closings">("live");
+
   const [period, setPeriod] = useState<CashierPeriod>(initialPeriod);
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -176,6 +183,39 @@ export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) 
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Feature "Histórico de Fechamentos" (2026-08-14) — alternador de
+          abas. Estilo emprestado do padrão de pill/segmented control já
+          usado no resto do painel (ex.: filtros da grade de Mesas), não
+          um componente novo de Design System. */}
+      <div className="flex w-fit gap-1 rounded-ds2-md bg-ds2-surface p-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab("live")}
+          className={
+            activeTab === "live"
+              ? "rounded-ds2-sm bg-ds2-background px-4 py-1.5 text-sm font-semibold text-ds2-foreground shadow-ds2-sm"
+              : "rounded-ds2-sm px-4 py-1.5 text-sm font-medium text-ds2-foreground-muted"
+          }
+        >
+          Ao vivo
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("closings")}
+          className={
+            activeTab === "closings"
+              ? "rounded-ds2-sm bg-ds2-background px-4 py-1.5 text-sm font-semibold text-ds2-foreground shadow-ds2-sm"
+              : "rounded-ds2-sm px-4 py-1.5 text-sm font-medium text-ds2-foreground-muted"
+          }
+        >
+          Fechamentos
+        </button>
+      </div>
+
+      {activeTab === "closings" && <CaixaClosingsList />}
+
+      {activeTab === "live" && (
+        <>
       <div className="flex justify-end">
         <Button variant="outline" onClick={() => setIsClosingModalOpen(true)}>
           <Lock className="h-4 w-4" aria-hidden />
@@ -305,6 +345,8 @@ export function CaixaManager({ initialData, initialPeriod }: CaixaManagerProps) 
       </Card>
 
       <Pagination page={meta.page} totalPages={meta.totalPages} onPageChange={setPage} />
+        </>
+      )}
 
       <CaixaSessionDetailModal sessionId={selectedSessionId} onClose={() => setSelectedSessionId(null)} />
 

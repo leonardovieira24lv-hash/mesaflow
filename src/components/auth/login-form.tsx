@@ -122,6 +122,7 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={isSubmitting}
+            className="focus-visible:!border-[#E63946] focus-visible:!ring-[#E63946]"
           />
         </FormField>
 
@@ -134,6 +135,7 @@ export function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={isSubmitting}
+            className="focus-visible:!border-[#E63946] focus-visible:!ring-[#E63946]"
           />
         </FormField>
 

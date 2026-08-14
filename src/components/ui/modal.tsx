@@ -32,27 +32,41 @@ interface ModalProps {
  * animação é compartilhada com telas públicas do Cardápio do cliente,
  * ajustar sua duração afeta lá também.
  *
- * Sprint 13.14 — renderizado via `createPortal` direto no `<body>`, não
- * mais como filho normal de quem o chama. Antes, um `<ConfirmDialog>`
- * (que usa este componente) aberto de dentro de outro `<dialog>` nativo já
- * aberto (ex.: confirmar "Cancelar item" dentro do Drawer da mesa) ficava
- * aninhado no DOM — `<dialog>` dentro de `<dialog>`, os dois abertos via
+ * Sprint 13.14 — renderizado via `createPortal`, não mais como filho
+ * normal de quem o chama. Antes, um `<ConfirmDialog>` (que usa este
+ * componente) aberto de dentro de outro `<dialog>` nativo já aberto (ex.:
+ * confirmar "Cancelar item" dentro do Drawer da mesa) ficava aninhado no
+ * DOM — `<dialog>` dentro de `<dialog>`, os dois abertos via
  * `showModal()`. Relatado na prática: fechar o de confirmação (mesmo só
  * dispensando, sem confirmar) às vezes fechava o de fora junto, voltando
  * pra tela anterior sem motivo. `<dialog>` aninhado tem comportamento
  * conhecidamente inconsistente entre navegadores — a correção padrão é
- * não aninhar de verdade no DOM: o portal bota este `<dialog>` como
- * filho direto do `<body>`, irmão do de fora, não descendente dele,
- * então cada um fecha só o que é seu. `mounted`/`useEffect` abaixo é só
- * pra isso funcionar em SSR (`document` não existe no servidor) — o
- * componente não tenta usar portal antes de estar rodando no navegador.
+ * não aninhar de verdade no DOM.
+ *
+ * Sprint 13.17 — correção da correção acima: portar sempre pra
+ * `document.body` resolvia o aninhamento, mas criava um bug novo, só
+ * percebido depois — `document.body` fica FORA da `<div class="ds2-dark">`
+ * que carrega o tema vermelho do painel administrativo (aplicada só uma
+ * vez, no layout raiz do admin). Todo modal (Fechar Caixa, Liberar mesa,
+ * Cancelar pedido, Excluir categoria...) passou a resolver `ds2-*` pela
+ * "ponte" do Cardápio Público em `:root` (verde), não pelo vermelho do
+ * admin — regressão real, relatada como "o modal ainda tem tom de verde".
+ * Agora, em vez de portar sempre pro `<body>`, um `<span>` invisível fica
+ * na posição NORMAL da árvore (nunca aparece, só existe pra achar onde
+ * este componente "estaria" no DOM) — na montagem, sobe a árvore
+ * (`closest`) procurando `.ds2-dark`/`.menu-dark`; se achar, porta ali
+ * dentro (preserva o tema, e ainda resolve o aninhamento — o alvo é o
+ * wrapper do layout, nunca outro `<dialog>`); se não achar (ex.: tela de
+ * Login, sem nenhum dos dois), cai em `document.body` como antes.
  */
 export function Modal({ open, onClose, title, description, children, footer, hideHeader, className }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [mounted, setMounted] = useState(false);
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
 
   useEffect(() => {
-    setMounted(true);
+    const themedAncestor = anchorRef.current?.closest(".ds2-dark, .menu-dark");
+    setPortalTarget(themedAncestor ?? document.body);
   }, []);
 
   useEffect(() => {
@@ -116,6 +130,11 @@ export function Modal({ open, onClose, title, description, children, footer, hid
     </dialog>
   );
 
-  if (!mounted) return null;
-  return createPortal(dialogElement, document.body);
+  if (!portalTarget) return <span ref={anchorRef} aria-hidden className="hidden" />;
+  return (
+    <>
+      <span ref={anchorRef} aria-hidden className="hidden" />
+      {createPortal(dialogElement, portalTarget)}
+    </>
+  );
 }
