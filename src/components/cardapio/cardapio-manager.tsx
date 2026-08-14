@@ -21,10 +21,11 @@ interface CategoryDto {
   id: string;
   name: string;
   position: number;
+  allowsHalfAndHalf: boolean;
 }
 
 function categoryFromDto(dto: CategoryDto): MenuCategory {
-  return { id: dto.id, name: dto.name, position: dto.position };
+  return { id: dto.id, name: dto.name, position: dto.position, allowsHalfAndHalf: dto.allowsHalfAndHalf };
 }
 
 interface CardapioManagerProps {
@@ -70,6 +71,10 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
   const [categoryName, setCategoryName] = useState("");
+  // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). Confirmado
+  // com o dono: ativação é por categoria inteira (ex.: "Pizzas"), não
+  // produto por produto.
+  const [categoryAllowsHalfAndHalf, setCategoryAllowsHalfAndHalf] = useState(false);
   const [categoryFormError, setCategoryFormError] = useState<string | null>(null);
   const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState<MenuCategory | null>(null);
@@ -109,6 +114,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
   function openCreateCategoryModal() {
     setEditingCategory(null);
     setCategoryName("");
+    setCategoryAllowsHalfAndHalf(false);
     setCategoryFormError(null);
     setCategoryModalOpen(true);
   }
@@ -116,6 +122,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
   function openEditCategoryModal(category: MenuCategory) {
     setEditingCategory(category);
     setCategoryName(category.name);
+    setCategoryAllowsHalfAndHalf(category.allowsHalfAndHalf);
     setCategoryFormError(null);
     setCategoryModalOpen(true);
   }
@@ -124,7 +131,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
     event.preventDefault();
     setCategoryFormError(null);
 
-    const result = createCategorySchema.safeParse({ name: categoryName });
+    const result = createCategorySchema.safeParse({ name: categoryName, allowsHalfAndHalf: categoryAllowsHalfAndHalf });
     if (!result.success) {
       setCategoryFormError(result.error.issues[0]?.message ?? "Nome inválido.");
       return;
@@ -138,7 +145,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
         {
           method: isEditing ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: result.data.name }),
+          body: JSON.stringify({ name: result.data.name, allowsHalfAndHalf: result.data.allowsHalfAndHalf }),
         },
       );
       const body = await response.json();
@@ -506,6 +513,21 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
               // `<dialog>`, sem o conflito.
             />
           </FormField>
+
+          {/* Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). Só
+              faz sentido pra categorias de produto principal (ex.:
+              pizza), mas é uma escolha do dono, não uma trava por nome
+              de categoria — funciona em qualquer uma que ele marcar. */}
+          <label className="flex items-center gap-2 text-sm text-ds2-foreground">
+            <input
+              type="checkbox"
+              checked={categoryAllowsHalfAndHalf}
+              onChange={(e) => setCategoryAllowsHalfAndHalf(e.target.checked)}
+              disabled={isSavingCategory}
+              className="h-4 w-4 accent-ds2-primary"
+            />
+            Aceita meio a meio (ex.: pizza — cliente combina 2 sabores)
+          </label>
 
           <div className="flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={() => setCategoryModalOpen(false)} disabled={isSavingCategory}>

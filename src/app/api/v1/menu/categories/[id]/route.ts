@@ -17,16 +17,20 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const { id } = await params;
     const { profile } = await requireOwner();
     const body = await request.json();
-    const { name } = parseOrThrow(updateCategorySchema, body);
+    const { name, allowsHalfAndHalf } = parseOrThrow(updateCategorySchema, body);
 
     const supabase = await createClient();
 
+    const updates: Record<string, unknown> = {};
+    if (name !== undefined) updates.name = name;
+    if (allowsHalfAndHalf !== undefined) updates.allows_half_and_half = allowsHalfAndHalf;
+
     const { data: updated, error } = await supabase
       .from("menu_categories")
-      .update(name !== undefined ? { name } : {})
+      .update(updates)
       .eq("id", id)
       .eq("restaurant_id", profile.restaurantId)
-      .select("id, name, position")
+      .select("id, name, position, allows_half_and_half")
       .maybeSingle();
 
     if (error) {
@@ -44,7 +48,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       throw new AppError("NOT_FOUND", "Categoria não encontrada.");
     }
 
-    return apiSuccess({ id: updated.id, name: updated.name, position: updated.position });
+    return apiSuccess({
+      id: updated.id,
+      name: updated.name,
+      position: updated.position,
+      allowsHalfAndHalf: updated.allows_half_and_half,
+    });
   } catch (err) {
     return handleRouteError(err);
   }

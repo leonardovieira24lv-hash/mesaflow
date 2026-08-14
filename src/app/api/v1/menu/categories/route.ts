@@ -13,7 +13,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("menu_categories")
-      .select("id, name, position")
+      .select("id, name, position, allows_half_and_half")
       .eq("restaurant_id", profile.restaurantId)
       .order("position", { ascending: true });
 
@@ -21,7 +21,9 @@ export async function GET() {
       throw new AppError("INTERNAL_ERROR", "Não foi possível carregar as categorias.");
     }
 
-    return apiSuccess(data.map((c) => ({ id: c.id, name: c.name, position: c.position })));
+    return apiSuccess(
+      data.map((c) => ({ id: c.id, name: c.name, position: c.position, allowsHalfAndHalf: c.allows_half_and_half })),
+    );
   } catch (err) {
     return handleRouteError(err);
   }
@@ -40,7 +42,7 @@ export async function POST(request: Request) {
   try {
     const { profile } = await requireOwner();
     const body = await request.json();
-    const { name } = parseOrThrow(createCategorySchema, body);
+    const { name, allowsHalfAndHalf } = parseOrThrow(createCategorySchema, body);
 
     const supabase = await createClient();
 
@@ -63,8 +65,8 @@ export async function POST(request: Request) {
 
     const { data: created, error: insertError } = await supabase
       .from("menu_categories")
-      .insert({ restaurant_id: profile.restaurantId, name, position: nextPosition })
-      .select("id, name, position")
+      .insert({ restaurant_id: profile.restaurantId, name, position: nextPosition, allows_half_and_half: allowsHalfAndHalf })
+      .select("id, name, position, allows_half_and_half")
       .single();
 
     if (insertError) {
@@ -76,7 +78,12 @@ export async function POST(request: Request) {
       throw new AppError("INTERNAL_ERROR", "Não foi possível criar a categoria. Tente novamente.");
     }
 
-    return apiCreated({ id: created.id, name: created.name, position: created.position });
+    return apiCreated({
+      id: created.id,
+      name: created.name,
+      position: created.position,
+      allowsHalfAndHalf: created.allows_half_and_half,
+    });
   } catch (err) {
     return handleRouteError(err);
   }

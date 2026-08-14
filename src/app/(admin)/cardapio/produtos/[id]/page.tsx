@@ -21,7 +21,7 @@ export default async function ProdutoDetalhePage({ params }: { params: Promise<{
       .maybeSingle(),
     supabase
       .from("menu_categories")
-      .select("id, name, position")
+      .select("id, name, position, allows_half_and_half")
       .eq("restaurant_id", profile.restaurantId)
       .order("position", { ascending: true }),
   ]);
@@ -47,6 +47,7 @@ export default async function ProdutoDetalhePage({ params }: { params: Promise<{
     id: c.id,
     name: c.name,
     position: c.position,
+    allowsHalfAndHalf: c.allows_half_and_half,
   }));
 
   return (

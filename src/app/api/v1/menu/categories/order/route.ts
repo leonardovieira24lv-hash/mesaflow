@@ -71,7 +71,7 @@ export async function PATCH(request: Request) {
 
     const { data: reordered, error: reorderedError } = await supabase
       .from("menu_categories")
-      .select("id, name, position")
+      .select("id, name, position, allows_half_and_half")
       .eq("restaurant_id", profile.restaurantId)
       .order("position", { ascending: true });
 
@@ -79,7 +79,9 @@ export async function PATCH(request: Request) {
       throw new AppError("INTERNAL_ERROR", "Categorias reordenadas, mas não foi possível confirmar a nova ordem.");
     }
 
-    return apiSuccess(reordered.map((c) => ({ id: c.id, name: c.name, position: c.position })));
+    return apiSuccess(
+      reordered.map((c) => ({ id: c.id, name: c.name, position: c.position, allowsHalfAndHalf: c.allows_half_and_half })),
+    );
   } catch (err) {
     return handleRouteError(err);
   }

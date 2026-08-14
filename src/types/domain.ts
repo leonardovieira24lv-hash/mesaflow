@@ -36,6 +36,8 @@ export interface MenuCategory {
   id: string;
   name: string;
   position: number;
+  // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14).
+  allowsHalfAndHalf: boolean;
 }
 
 export interface MenuItem {
