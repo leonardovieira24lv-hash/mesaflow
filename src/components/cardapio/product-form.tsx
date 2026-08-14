@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Layers } from "lucide-react";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { ProductImageUpload } from "@/components/cardapio/product-image-upload";
+import { OptionGroupsManager } from "@/components/cardapio/option-groups-manager";
 import { deleteProductImage } from "@/lib/storage/product-images";
 import { createMenuItemSchema, updateMenuItemSchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
@@ -185,6 +187,28 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
           Disponível para pedidos
         </Label>
       </div>
+
+      {/* Parada técnica — reorganização do fluxo de Cardápio (2026-08-14):
+          opcional vinculado a ESTE produto específico (ex.: "Ponto da
+          carne" só no X-Tudo, não a categoria Lanches inteira) — antes
+          ficava escondido na aba "Grupos de opção" antiga, sem nenhuma
+          pista visual de que existia. Só aparece editando um produto já
+          salvo: produto novo ainda não tem `item.id` pra vincular o
+          grupo (a opção pertence ao PRODUTO, precisa existir primeiro). */}
+      {isEditing && item && (
+        <div className="flex flex-col gap-2 rounded-ds2-lg bg-ds2-danger/[0.04] p-3 ring-1 ring-ds2-danger/10">
+          <div className="flex items-center gap-1.5">
+            <Layers className="h-3.5 w-3.5 text-ds2-danger" aria-hidden />
+            <span className="text-xs font-semibold uppercase tracking-wide text-ds2-danger">
+              Opcionais só deste produto
+            </span>
+          </div>
+          <p className="text-xs text-ds2-foreground-muted">
+            Além dos opcionais da categoria inteira — use aqui só quando for algo exclusivo deste produto.
+          </p>
+          <OptionGroupsManager filterMenuItemId={item.id} compact />
+        </div>
+      )}
 
       <div className="flex justify-end gap-3 pt-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>

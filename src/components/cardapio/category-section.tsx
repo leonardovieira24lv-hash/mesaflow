@@ -1,11 +1,12 @@
 "use client";
 
 import type { DragEvent } from "react";
-import { Archive, GripVertical, Package, Pencil, Plus, Trash2 } from "lucide-react";
+import { Archive, GripVertical, Layers, Package, Pencil, Plus, Trash2 } from "lucide-react";
 import { AccordionItem } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProductCard } from "@/components/cardapio/product-card";
+import { OptionGroupsManager } from "@/components/cardapio/option-groups-manager";
 import type { ProductStatusFilterValue } from "@/components/cardapio/product-status-filter";
 import type { MenuCategory, MenuItem } from "@/types/domain";
 
@@ -47,6 +48,14 @@ interface CategorySectionProps {
  * adaptar a mensagem do estado vazio e esconder "+ Adicionar Produto"
  * quando o filtro é "Arquivados" (criar produto novo não faz sentido
  * numa visão que é só sobre restaurar).
+ *
+ * Parada técnica — reorganização do fluxo de Cardápio (2026-08-14):
+ * "Opcionais desta categoria" passou a viver AQUI DENTRO, no corpo do
+ * acordeão, junto dos produtos — antes ficava numa aba própria no topo
+ * (`CardapioManager`), obrigando trocar de tela pra achar o grupo certo
+ * no meio de todos os outros. `<OptionGroupsManager filterCategoryId
+ * compact>` já resolve toda a exibição/CRUD filtrada sozinho, só
+ * passando o id desta categoria — sem lógica nova aqui.
  */
 export function CategorySection({
   category,
@@ -136,6 +145,18 @@ export function CategorySection({
               <Plus className="h-4 w-4" />
               Adicionar Produto
             </Button>
+          )}
+
+          {statusFilter !== "archived" && (
+            <div className="mt-1 flex flex-col gap-2 rounded-ds2-lg bg-ds2-danger/[0.04] p-3 ring-1 ring-ds2-danger/10">
+              <div className="flex items-center gap-1.5">
+                <Layers className="h-3.5 w-3.5 text-ds2-danger" aria-hidden />
+                <span className="text-xs font-semibold uppercase tracking-wide text-ds2-danger">
+                  Opcionais desta categoria
+                </span>
+              </div>
+              <OptionGroupsManager filterCategoryId={category.id} compact />
+            </div>
           )}
         </div>
       </AccordionItem>

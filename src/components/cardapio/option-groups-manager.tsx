@@ -35,8 +35,27 @@ interface OptionGroupDto {
 }
 
 interface OptionGroupsManagerProps {
-  categories: MenuCategory[];
-  items: MenuItem[];
+  categories?: MenuCategory[];
+  items?: MenuItem[];
+  /**
+   * Parada técnica — reorganização do fluxo de Cardápio (2026-08-14):
+   * antes, "Grupos de opção" era uma aba separada no topo, mostrando TODOS
+   * os grupos do restaurante numa lista só (achava-se o grupo certo "na
+   * unha", rolando e comparando categoria/produto). Agora este componente
+   * é renderizado DENTRO do acordeão de cada categoria (`category-section.tsx`)
+   * — `filterCategoryId` filtra a exibição só pros grupos daquela
+   * categoria, e novo grupo já nasce vinculado a ela (alvo fixo, sem
+   * mostrar o seletor "Vale para").
+   */
+  filterCategoryId?: string;
+  /**
+   * Mesma ideia, pro caso de opcional vinculado a 1 produto específico
+   * (ex.: "Ponto da carne" só no X-Tudo) — renderizado dentro do
+   * formulário de edição do produto, não mais escondido na aba antiga.
+   */
+  filterMenuItemId?: string;
+  /** Esconde o parágrafo de instrução e deixa o cabeçalho mais discreto — usado nos dois casos acima, onde o contexto (categoria/produto) já está óbvio ao redor. */
+  compact?: boolean;
 }
 
 /**
@@ -50,7 +69,13 @@ interface OptionGroupsManagerProps {
  * `CardapioManager` pai) para montar o seletor de alvo do grupo, sem
  * duplicar essa busca.
  */
-export function OptionGroupsManager({ categories, items }: OptionGroupsManagerProps) {
+export function OptionGroupsManager({
+  categories = [],
+  items = [],
+  filterCategoryId,
+  filterMenuItemId,
+  compact,
+}: OptionGroupsManagerProps) {
   const [groups, setGroups] = useState<OptionGroupDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,8 +133,20 @@ export function OptionGroupsManager({ categories, items }: OptionGroupsManagerPr
   function openCreateGroupModal() {
     setEditingGroup(null);
     setGroupName("");
-    setTargetType("category");
-    setTargetId("");
+    // Parada técnica (2026-08-14) — quando renderizado dentro de uma
+    // categoria/produto (`filterCategoryId`/`filterMenuItemId`), o alvo já
+    // nasce fixo nesse contexto: não faz sentido perguntar "vale para
+    // qual categoria" se o grupo já está sendo criado de dentro dela.
+    if (filterCategoryId !== undefined) {
+      setTargetType("category");
+      setTargetId(filterCategoryId);
+    } else if (filterMenuItemId !== undefined) {
+      setTargetType("item");
+      setTargetId(filterMenuItemId);
+    } else {
+      setTargetType("category");
+      setTargetId("");
+    }
     setSelectionType("single");
     setMaxSelections("");
     setIsRequired(true);
@@ -280,14 +317,28 @@ export function OptionGroupsManager({ categories, items }: OptionGroupsManagerPr
     return `Produto: ${item?.name ?? "—"}`;
   }
 
+  // Parada técnica — reorganização do fluxo de Cardápio (2026-08-14): a
+  // busca (`fetchGroups`) continua trazendo TODOS os grupos do
+  // restaurante — o filtro é só de exibição, aqui. Manter a busca cheia
+  // (em vez de mandar o filtro pro backend) foi escolha deliberada: mais
+  // simples, e o volume de grupos por restaurante é baixo o bastante pra
+  // não valer a pena uma rota nova só pra isso agora.
+  const visibleGroups = groups.filter((group) => {
+    if (filterCategoryId !== undefined) return group.categoryId === filterCategoryId;
+    if (filterMenuItemId !== undefined) return group.menuItemId === filterMenuItemId;
+    return true;
+  });
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-ds2-foreground-muted">
-          Grupos de opção — ex.: &quot;Borda&quot;, &quot;Ponto da carne&quot;, &quot;Tamanho&quot;. Cada grupo define se o
-          cliente escolhe 1 opção ou várias (com limite), e se é obrigatório ou opcional.
-        </p>
-        <Button onClick={openCreateGroupModal}>
+      <div className="flex items-center justify-between gap-3">
+        {!compact && (
+          <p className="text-sm text-ds2-foreground-muted">
+            Grupos de opção — ex.: &quot;Borda&quot;, &quot;Ponto da carne&quot;, &quot;Tamanho&quot;. Cada grupo define se o
+            cliente escolhe 1 opção ou várias (com limite), e se é obrigatório ou opcional.
+          </p>
+        )}
+        <Button onClick={openCreateGroupModal} size={compact ? "sm" : "md"} variant={compact ? "outline" : "primary"}>
           <Plus className="h-4 w-4" aria-hidden />
           Novo grupo
         </Button>
@@ -296,23 +347,31 @@ export function OptionGroupsManager({ categories, items }: OptionGroupsManagerPr
       {error && <Alert variant="destructive">{error}</Alert>}
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Spinner className="h-6 w-6" />
+        <div className="flex items-center justify-center py-6">
+          <Spinner className="h-5 w-5" />
         </div>
-      ) : groups.length === 0 ? (
-        <EmptyState
-          icon={Layers}
-          title="Nenhum grupo de opção ainda"
-          description='Crie o primeiro, ex.: "Borda", vinculado à categoria de pizzas.'
-        />
+      ) : visibleGroups.length === 0 ? (
+        compact ? (
+          <p className="text-xs text-ds2-foreground-muted">
+            Nenhum grupo cadastrado ainda — ex.: borda, tamanho, complementos.
+          </p>
+        ) : (
+          <EmptyState
+            icon={Layers}
+            title="Nenhum grupo de opção ainda"
+            description='Crie o primeiro, ex.: "Borda", vinculado à categoria de pizzas.'
+          />
+        )
       ) : (
         <div className="flex flex-col gap-4">
-          {groups.map((group) => (
+          {visibleGroups.map((group) => (
             <div key={group.id} className="rounded-ds2-lg border border-ds2-border bg-ds2-surface p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-semibold text-ds2-foreground">{group.name}</h3>
-                  <p className="text-xs text-ds2-foreground-muted">{targetLabel(group)}</p>
+                  {filterCategoryId === undefined && filterMenuItemId === undefined && (
+                    <p className="text-xs text-ds2-foreground-muted">{targetLabel(group)}</p>
+                  )}
                   <p className="text-xs text-ds2-foreground-muted">
                     {group.selectionType === "multiple"
                       ? `Múltipla escolha (até ${group.maxSelections})`
@@ -427,7 +486,7 @@ export function OptionGroupsManager({ categories, items }: OptionGroupsManagerPr
               definido na criação; trocar depois teria que decidir o que
               fazer com pedidos antigos que referenciam as opções deste
               grupo, fora do escopo. Por isso some ao editar. */}
-          {!editingGroup && (
+          {!editingGroup && filterCategoryId === undefined && filterMenuItemId === undefined && (
             <>
               <FormField label="Vale para">
                 <Select
