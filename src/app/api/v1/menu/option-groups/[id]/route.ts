@@ -9,26 +9,45 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// PATCH /api/v1/menu/option-groups/{id} — só o nome é editável aqui; a
-// categoria/produto vinculado não muda depois de criado nesta Fase 1 (se
-// o dono errou o alvo, a ação é excluir e criar de novo — trocar o alvo
-// de um grupo já em uso teria que decidir o que fazer com os pedidos
-// antigos que referenciam as opções dele, fora do escopo desta fase).
+// PATCH /api/v1/menu/option-groups/{id} — nome e configuração de seleção
+// (Fase 2, 2026-08-14) são editáveis aqui; a categoria/produto vinculado
+// não muda depois de criado (se o dono errou o alvo, a ação é excluir e
+// criar de novo — trocar o alvo de um grupo já em uso teria que decidir
+// o que fazer com os pedidos antigos que referenciam as opções dele, fora
+// do escopo desta fase). `selectionType`/`maxSelections`/`required` não
+// têm essa restrição: `order_items.selected_options` grava uma cópia
+// (nome+preço) no momento da compra, não uma referência viva ao grupo —
+// mudar a regra de seleção depois não afeta pedidos antigos.
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
     const { profile } = await requireOwner();
     const body = await request.json();
-    const { name } = parseOrThrow(updateOptionGroupSchema, body);
+    const { name, selectionType, maxSelections, required } = parseOrThrow(updateOptionGroupSchema, body);
 
     const supabase = await createClient();
 
+    const updates: Record<string, unknown> = {};
+    if (name !== undefined) updates.name = name;
+    if (selectionType !== undefined) {
+      updates.selection_type = selectionType;
+      // Grupo virou 'single': zera o limite antigo (senão a constraint
+      // `option_groups_selection_shape` do banco rejeitaria a escrita).
+      // Continua 'multiple': só mexe no limite se um novo valor veio
+      // junto — não apaga o limite existente por omissão.
+      if (selectionType === "single") updates.max_selections = null;
+      else if (maxSelections !== undefined) updates.max_selections = maxSelections;
+    } else if (maxSelections !== undefined) {
+      updates.max_selections = maxSelections;
+    }
+    if (required !== undefined) updates.required = required;
+
     const { data: updated, error } = await supabase
       .from("option_groups")
-      .update(name !== undefined ? { name } : {})
+      .update(updates)
       .eq("id", id)
       .eq("restaurant_id", profile.restaurantId)
-      .select("id, name, category_id, menu_item_id")
+      .select("id, name, category_id, menu_item_id, selection_type, max_selections, required")
       .maybeSingle();
 
     if (error) {
@@ -44,6 +63,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       name: updated.name,
       categoryId: updated.category_id,
       menuItemId: updated.menu_item_id,
+      selectionType: updated.selection_type,
+      maxSelections: updated.max_selections,
+      required: updated.required,
     });
   } catch (err) {
     return handleRouteError(err);

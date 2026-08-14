@@ -20,7 +20,9 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("option_groups")
-      .select("id, name, category_id, menu_item_id, option_group_items(id, name, price_delta, position)")
+      .select(
+        "id, name, category_id, menu_item_id, selection_type, max_selections, required, option_group_items(id, name, price_delta, position)",
+      )
       .eq("restaurant_id", profile.restaurantId)
       .order("created_at", { ascending: true });
 
@@ -34,6 +36,9 @@ export async function GET() {
         name: group.name,
         categoryId: group.category_id,
         menuItemId: group.menu_item_id,
+        selectionType: group.selection_type,
+        maxSelections: group.max_selections,
+        required: group.required,
         items: (group.option_group_items ?? [])
           .slice()
           .sort((a, b) => a.position - b.position)
@@ -53,7 +58,10 @@ export async function POST(request: Request) {
   try {
     const { profile } = await requireOwner();
     const body = await request.json();
-    const { name, categoryId, menuItemId } = parseOrThrow(createOptionGroupSchema, body);
+    const { name, categoryId, menuItemId, selectionType, maxSelections, required } = parseOrThrow(
+      createOptionGroupSchema,
+      body,
+    );
 
     const supabase = await createClient();
 
@@ -64,8 +72,11 @@ export async function POST(request: Request) {
         name,
         category_id: categoryId ?? null,
         menu_item_id: menuItemId ?? null,
+        selection_type: selectionType,
+        max_selections: maxSelections ?? null,
+        required,
       })
-      .select("id, name, category_id, menu_item_id")
+      .select("id, name, category_id, menu_item_id, selection_type, max_selections, required")
       .single();
 
     if (error) {
@@ -77,6 +88,9 @@ export async function POST(request: Request) {
       name: created.name,
       categoryId: created.category_id,
       menuItemId: created.menu_item_id,
+      selectionType: created.selection_type,
+      maxSelections: created.max_selections,
+      required: created.required,
       items: [],
     });
   } catch (err) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus, Trash2, ListPlus, Layers } from "lucide-react";
+import { Plus, Trash2, Pencil, ListPlus, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -27,6 +27,10 @@ interface OptionGroupDto {
   name: string;
   categoryId: string | null;
   menuItemId: string | null;
+  // Sistema de Opcionais, Fase 2 (2026-08-14).
+  selectionType: "single" | "multiple";
+  maxSelections: number | null;
+  required: boolean;
   items: OptionGroupItemDto[];
 }
 
@@ -52,9 +56,16 @@ export function OptionGroupsManager({ categories, items }: OptionGroupsManagerPr
   const [error, setError] = useState<string | null>(null);
 
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  // Sistema de Opcionais, Fase 2 (2026-08-14) — `null` = criando um grupo
+  // novo; um `OptionGroupDto` = editando esse grupo (modal reaproveitado
+  // pros dois casos, mesmo formulário).
+  const [editingGroup, setEditingGroup] = useState<OptionGroupDto | null>(null);
   const [groupName, setGroupName] = useState("");
   const [targetType, setTargetType] = useState<"category" | "item">("category");
   const [targetId, setTargetId] = useState("");
+  const [selectionType, setSelectionType] = useState<"single" | "multiple">("single");
+  const [maxSelections, setMaxSelections] = useState("");
+  const [isRequired, setIsRequired] = useState(true);
   const [isSavingGroup, setIsSavingGroup] = useState(false);
   const [groupFormError, setGroupFormError] = useState<string | null>(null);
 
@@ -95,39 +106,77 @@ export function OptionGroupsManager({ categories, items }: OptionGroupsManagerPr
   }
 
   function openCreateGroupModal() {
+    setEditingGroup(null);
     setGroupName("");
     setTargetType("category");
     setTargetId("");
+    setSelectionType("single");
+    setMaxSelections("");
+    setIsRequired(true);
     setGroupFormError(null);
     setIsGroupModalOpen(true);
   }
 
-  async function handleCreateGroup(e: FormEvent) {
+  function openEditGroupModal(group: OptionGroupDto) {
+    setEditingGroup(group);
+    setGroupName(group.name);
+    setTargetType(group.categoryId ? "category" : "item");
+    setTargetId(group.categoryId ?? group.menuItemId ?? "");
+    setSelectionType(group.selectionType);
+    setMaxSelections(group.maxSelections != null ? String(group.maxSelections) : "");
+    setIsRequired(group.required);
+    setGroupFormError(null);
+    setIsGroupModalOpen(true);
+  }
+
+  async function handleSaveGroup(e: FormEvent) {
     e.preventDefault();
-    if (!targetId) {
+    if (!editingGroup && !targetId) {
       setGroupFormError(targetType === "category" ? "Escolha uma categoria." : "Escolha um produto.");
       return;
+    }
+    let maxSelectionsValue: number | undefined;
+    if (selectionType === "multiple") {
+      maxSelectionsValue = Number(maxSelections);
+      if (!Number.isInteger(maxSelectionsValue) || maxSelectionsValue < 1) {
+        setGroupFormError("Informe até quantas opções o cliente pode marcar (mínimo 1).");
+        return;
+      }
     }
     setIsSavingGroup(true);
     setGroupFormError(null);
     try {
-      const response = await fetch("/api/v1/menu/option-groups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: groupName,
-          categoryId: targetType === "category" ? targetId : undefined,
-          menuItemId: targetType === "item" ? targetId : undefined,
-        }),
-      });
+      const response = await fetch(
+        editingGroup ? `/api/v1/menu/option-groups/${editingGroup.id}` : "/api/v1/menu/option-groups",
+        {
+          method: editingGroup ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: groupName,
+            ...(editingGroup
+              ? {}
+              : { categoryId: targetType === "category" ? targetId : undefined, menuItemId: targetType === "item" ? targetId : undefined }),
+            selectionType,
+            maxSelections: selectionType === "multiple" ? maxSelectionsValue : undefined,
+            required: isRequired,
+          }),
+        },
+      );
       const body: ApiSuccess<OptionGroupDto> | ApiError = await response.json();
       if (!response.ok || "error" in body) {
-        setGroupFormError(("error" in body && body.error?.message) || "Não foi possível criar o grupo.");
+        setGroupFormError(
+          ("error" in body && body.error?.message) ||
+            `Não foi possível ${editingGroup ? "atualizar" : "criar"} o grupo.`,
+        );
         return;
       }
-      setGroups((prev) => [...prev, body.data]);
+      setGroups((prev) =>
+        editingGroup
+          ? prev.map((g) => (g.id === editingGroup.id ? { ...g, ...body.data } : g))
+          : [...prev, body.data],
+      );
       setIsGroupModalOpen(false);
-      toast.success("Grupo de opção criado.");
+      toast.success(editingGroup ? "Grupo atualizado." : "Grupo de opção criado.");
     } catch {
       setGroupFormError("Não foi possível conectar. Verifique sua internet e tente novamente.");
     } finally {
@@ -235,8 +284,8 @@ export function OptionGroupsManager({ categories, items }: OptionGroupsManagerPr
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-ds2-foreground-muted">
-          Grupos de opção — ex.: &quot;Borda&quot;, &quot;Ponto da carne&quot;, &quot;Tamanho&quot;. O cliente
-          escolhe 1 opção obrigatoriamente entre as cadastradas em cada grupo.
+          Grupos de opção — ex.: &quot;Borda&quot;, &quot;Ponto da carne&quot;, &quot;Tamanho&quot;. Cada grupo define se o
+          cliente escolhe 1 opção ou várias (com limite), e se é obrigatório ou opcional.
         </p>
         <Button onClick={openCreateGroupModal}>
           <Plus className="h-4 w-4" aria-hidden />
@@ -264,10 +313,22 @@ export function OptionGroupsManager({ categories, items }: OptionGroupsManagerPr
                 <div>
                   <h3 className="font-semibold text-ds2-foreground">{group.name}</h3>
                   <p className="text-xs text-ds2-foreground-muted">{targetLabel(group)}</p>
+                  <p className="text-xs text-ds2-foreground-muted">
+                    {group.selectionType === "multiple"
+                      ? `Múltipla escolha (até ${group.maxSelections})`
+                      : "Escolha única"}
+                    {" · "}
+                    {group.required ? "Obrigatório" : "Opcional"}
+                  </p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setDeletingGroup(group)} aria-label="Excluir grupo">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => openEditGroupModal(group)} aria-label="Editar grupo">
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setDeletingGroup(group)} aria-label="Excluir grupo">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="mt-3 flex flex-col gap-1.5">
@@ -342,7 +403,7 @@ export function OptionGroupsManager({ categories, items }: OptionGroupsManagerPr
         onClose={() => {
           if (!isSavingGroup) setIsGroupModalOpen(false);
         }}
-        title="Novo grupo de opção"
+        title={editingGroup ? "Editar grupo de opção" : "Novo grupo de opção"}
         description='Ex.: "Borda", "Ponto da carne", "Tamanho".'
         footer={
           <>
@@ -350,47 +411,88 @@ export function OptionGroupsManager({ categories, items }: OptionGroupsManagerPr
               Cancelar
             </Button>
             <Button type="submit" form="create-option-group-form" isLoading={isSavingGroup}>
-              Criar grupo
+              {editingGroup ? "Salvar alterações" : "Criar grupo"}
             </Button>
           </>
         }
       >
-        <form id="create-option-group-form" onSubmit={handleCreateGroup} className="flex flex-col gap-4 pb-2">
+        <form id="create-option-group-form" onSubmit={handleSaveGroup} className="flex flex-col gap-4 pb-2">
           {groupFormError && <Alert variant="destructive">{groupFormError}</Alert>}
 
           <FormField label="Nome do grupo">
             <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Ex.: Borda" required />
           </FormField>
 
-          <FormField label="Vale para">
+          {/* Sistema de Opcionais, Fase 1 — o alvo (categoria/produto) só é
+              definido na criação; trocar depois teria que decidir o que
+              fazer com pedidos antigos que referenciam as opções deste
+              grupo, fora do escopo. Por isso some ao editar. */}
+          {!editingGroup && (
+            <>
+              <FormField label="Vale para">
+                <Select
+                  value={targetType}
+                  onChange={(e) => {
+                    setTargetType(e.target.value as "category" | "item");
+                    setTargetId("");
+                  }}
+                >
+                  <option value="category">Uma categoria inteira</option>
+                  <option value="item">Só 1 produto específico</option>
+                </Select>
+              </FormField>
+
+              <FormField label={targetType === "category" ? "Categoria" : "Produto"}>
+                <Select value={targetId} onChange={(e) => setTargetId(e.target.value)}>
+                  <option value="">Selecione...</option>
+                  {targetType === "category"
+                    ? categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))
+                    : items.map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {i.name}
+                        </option>
+                      ))}
+                </Select>
+              </FormField>
+            </>
+          )}
+
+          {/* Sistema de Opcionais, Fase 2 (2026-08-14). */}
+          <FormField label="Tipo de seleção">
             <Select
-              value={targetType}
-              onChange={(e) => {
-                setTargetType(e.target.value as "category" | "item");
-                setTargetId("");
-              }}
+              value={selectionType}
+              onChange={(e) => setSelectionType(e.target.value as "single" | "multiple")}
             >
-              <option value="category">Uma categoria inteira</option>
-              <option value="item">Só 1 produto específico</option>
+              <option value="single">Escolha única (ex.: borda, tamanho)</option>
+              <option value="multiple">Múltipla escolha (ex.: adicionais)</option>
             </Select>
           </FormField>
 
-          <FormField label={targetType === "category" ? "Categoria" : "Produto"}>
-            <Select value={targetId} onChange={(e) => setTargetId(e.target.value)}>
-              <option value="">Selecione...</option>
-              {targetType === "category"
-                ? categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))
-                : items.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.name}
-                    </option>
-                  ))}
-            </Select>
-          </FormField>
+          {selectionType === "multiple" && (
+            <FormField label="Até quantas opções o cliente pode marcar">
+              <Input
+                value={maxSelections}
+                onChange={(e) => setMaxSelections(e.target.value.replace(/\D/g, ""))}
+                placeholder="Ex.: 3"
+                inputMode="numeric"
+                required
+              />
+            </FormField>
+          )}
+
+          <label className="flex items-center gap-2 text-sm text-ds2-foreground">
+            <input
+              type="checkbox"
+              checked={isRequired}
+              onChange={(e) => setIsRequired(e.target.checked)}
+              className="h-4 w-4 accent-ds2-primary"
+            />
+            Cliente é obrigado a escolher pelo menos 1 opção deste grupo
+          </label>
         </form>
       </Modal>
 
