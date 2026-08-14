@@ -195,7 +195,7 @@ export async function getCashierData(
       };
     })
     .filter((session) => session.hasValidOrders)
-    .map(({ hasValidOrders, ...session }) => session);
+    .map(({ hasValidOrders: _hasValidOrders, ...session }) => session);
 
   const normalizedSearch = options.search?.trim().toLocaleLowerCase("pt-BR");
   const filtered = normalizedSearch

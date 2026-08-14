@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/toast";
 import { CategorySection } from "@/components/cardapio/category-section";
 import { ProductStatusFilter, type ProductStatusFilterValue } from "@/components/cardapio/product-status-filter";
 import { ProductForm } from "@/components/cardapio/product-form";
+import { OptionGroupsManager } from "@/components/cardapio/option-groups-manager";
 import { menuItemFromDto, type MenuItemDto } from "@/types/menu-item-dto";
 import { createCategorySchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
@@ -53,6 +54,11 @@ interface CardapioManagerProps {
  * buscar do zero a cada mudança.
  */
 export function CardapioManager({ restaurantId, initialCategories, initialItems }: CardapioManagerProps) {
+  // Sistema de Opcionais, Fase 1 (2026-08-14) — alterna entre o Cardápio
+  // (o que já existia) e a configuração de Grupos de Opção (novo). Estado
+  // só de UI, mesmo padrão de abas já usado em `caixa-manager.tsx`.
+  const [activeTab, setActiveTab] = useState<"cardapio" | "opcionais">("cardapio");
+
   const [categories, setCategories] = useState<MenuCategory[]>(initialCategories);
   const [items, setItems] = useState<MenuItem[]>(initialItems);
   const [openCategoryIds, setOpenCategoryIds] = useState<Set<string>>(new Set());
@@ -394,6 +400,35 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex w-fit gap-1 rounded-ds2-md bg-ds2-surface p-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab("cardapio")}
+          className={
+            activeTab === "cardapio"
+              ? "rounded-ds2-sm bg-ds2-background px-4 py-1.5 text-sm font-semibold text-ds2-foreground shadow-ds2-sm"
+              : "rounded-ds2-sm px-4 py-1.5 text-sm font-medium text-ds2-foreground-muted"
+          }
+        >
+          Cardápio
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("opcionais")}
+          className={
+            activeTab === "opcionais"
+              ? "rounded-ds2-sm bg-ds2-background px-4 py-1.5 text-sm font-semibold text-ds2-foreground shadow-ds2-sm"
+              : "rounded-ds2-sm px-4 py-1.5 text-sm font-medium text-ds2-foreground-muted"
+          }
+        >
+          Grupos de opção
+        </button>
+      </div>
+
+      {activeTab === "opcionais" && <OptionGroupsManager categories={categories} items={items} />}
+
+      {activeTab === "cardapio" && (
+        <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ProductStatusFilter value={statusFilter} onChange={setStatusFilter} />
         <Button onClick={openCreateCategoryModal}>
@@ -440,6 +475,8 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
             />
           ))}
         </div>
+      )}
+        </>
       )}
 
       {/* Modal de categoria */}
