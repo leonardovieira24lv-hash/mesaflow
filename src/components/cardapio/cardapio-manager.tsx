@@ -83,6 +83,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
   const [isDeletingItem, setIsDeletingItem] = useState(false);
   const [duplicatingItemId, setDuplicatingItemId] = useState<string | null>(null);
   const [restoringItemId, setRestoringItemId] = useState<string | null>(null);
+  const [archivingItemId, setArchivingItemId] = useState<string | null>(null);
 
   function itemsForCategory(categoryId: string) {
     return items
@@ -397,6 +398,42 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
     }
   }
 
+  /**
+   * Parada técnica — reorganização do fluxo de Cardápio (2026-08-14):
+   * antes só existia "Excluir" (que arquiva automaticamente SE o produto
+   * já tiver pedido no histórico, senão apaga de vez — decisão implícita,
+   * fora do controle de quem clica) e "Disponível para pedidos" (esconde
+   * do Cardápio Público, mas o produto continua na lista de Ativos pra
+   * gerenciar). Faltava um jeito explícito de "não quero excluir, só não
+   * quero que ele apareça pra gerenciar agora" — sem risco de apagar de
+   * vez sem querer. Reaproveita o mesmo `PATCH` de `handleRestoreProduct`,
+   * só invertido (`is_archived: true`).
+   */
+  async function handleArchiveProduct(item: MenuItem) {
+    setArchivingItemId(item.id);
+    try {
+      const response = await fetch(`/api/v1/menu/items/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_archived: true }),
+      });
+      const body = await response.json();
+
+      if (!response.ok) {
+        const apiError = body as ApiError;
+        toast.error("Não foi possível arquivar", apiError.error?.message);
+        return;
+      }
+
+      setItems((prev) => prev.map((i) => (i.id === item.id ? menuItemFromDto(body.data as MenuItemDto) : i)));
+      toast.success("Produto arquivado", "Ele sai da lista de Ativos, mas pode ser restaurado quando quiser.");
+    } catch {
+      toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
+    } finally {
+      setArchivingItemId(null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -436,9 +473,11 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
               onDuplicateProduct={handleDuplicateProduct}
               onDeleteProduct={setDeletingItem}
               onRestoreProduct={handleRestoreProduct}
+              onArchiveProduct={handleArchiveProduct}
               onToggleAvailability={handleToggleAvailability}
               duplicatingItemId={duplicatingItemId}
               restoringItemId={restoringItemId}
+              archivingItemId={archivingItemId}
               onDragStart={handleCategoryDragStart(index)}
               onDragOver={handleCategoryDragOver(index)}
               onDragEnd={handleCategoryDragEnd}

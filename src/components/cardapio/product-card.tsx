@@ -15,9 +15,11 @@ interface ProductCardProps {
   onDuplicate: (item: MenuItem) => void;
   onDelete: (item: MenuItem) => void;
   onRestore: (item: MenuItem) => void;
+  onArchive: (item: MenuItem) => void;
   onToggleAvailability: (item: MenuItem) => void;
   isDuplicating?: boolean;
   isRestoring?: boolean;
+  isArchiving?: boolean;
 }
 
 /**
@@ -46,9 +48,11 @@ export function ProductCard({
   onDuplicate,
   onDelete,
   onRestore,
+  onArchive,
   onToggleAvailability,
   isDuplicating,
   isRestoring,
+  isArchiving,
 }: ProductCardProps) {
   const isArchived = item.isArchived;
 
@@ -111,6 +115,20 @@ export function ProductCard({
               aria-label={`Duplicar ${item.name}`}
             >
               <Copy className="h-4 w-4" />
+            </Button>
+            {/* Parada técnica — reorganização do fluxo de Cardápio
+                (2026-08-14): botão novo, distinto de "Excluir" — arquiva
+                por opção própria (não excluir de vez, só tirar da lista de
+                Ativos por enquanto), sem depender do produto já ter
+                pedido no histórico. */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onArchive(item)}
+              disabled={isArchiving}
+              aria-label={`Arquivar ${item.name}`}
+            >
+              <Archive className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -63,6 +63,19 @@ export function Modal({ open, onClose, title, description, children, footer, hid
   const ref = useRef<HTMLDialogElement>(null);
   const anchorRef = useRef<HTMLSpanElement>(null);
   const [portalTarget, setPortalTarget] = useState<Element | null>(null);
+  // Bug real encontrado (2026-08-14): `id="modal-title"` era fixo, igual
+  // em toda instância de `<Modal>`. Nunca deu problema enquanto só existia
+  // 1 modal montado por vez na tela inteira — mas o próprio `<dialog>`
+  // NUNCA desmonta quando fechado (só `showModal()`/`close()`, olhe o
+  // efeito abaixo), então a partir do momento em que passamos a ter mais
+  // de 1 `<Modal>` montado ao mesmo tempo na mesma tela (Sistema de
+  // Opcionais embutido por categoria, Parada técnica de reorganização),
+  // vários `id="modal-title"` idênticos coexistiam no HTML — e
+  // formulários com `form="algum-id-fixo"` fora do próprio `<form>`
+  // (como o de criar grupo de opção) passaram a se ligar ao PRIMEIRO
+  // elemento com aquele id no documento, não necessariamente ao do modal
+  // realmente aberto. `useId()` torna isto único por instância, sempre.
+  const titleId = useId();
 
   useEffect(() => {
     const themedAncestor = anchorRef.current?.closest(".ds2-dark, .menu-dark");
@@ -95,7 +108,7 @@ export function Modal({ open, onClose, title, description, children, footer, hid
       // tela. Sprint 10 (auditoria): nenhum consumidor usa `hideHeader` hoje,
       // mas corrigido aqui porque é o tipo de bug que só aparece quando
       // alguém finalmente usar a opção — melhor não deixar a armadilha.
-      aria-labelledby={hideHeader ? undefined : "modal-title"}
+      aria-labelledby={hideHeader ? undefined : titleId}
       aria-label={hideHeader ? title : undefined}
       className={cn(
         "m-auto w-full max-w-md rounded-ds2-lg border border-ds2-border bg-ds2-surface p-0 text-ds2-foreground shadow-ds2-lg",
@@ -107,7 +120,7 @@ export function Modal({ open, onClose, title, description, children, footer, hid
       {!hideHeader && (
         <div className="flex items-start justify-between gap-4 p-7 pb-4">
           <div className="flex flex-col gap-1.5">
-            <h2 id="modal-title" className="font-display text-xl font-semibold tracking-tight text-ds2-foreground">
+            <h2 id={titleId} className="font-display text-xl font-semibold tracking-tight text-ds2-foreground">
               {title}
             </h2>
             {description && <p className="text-sm text-ds2-foreground-muted">{description}</p>}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { Plus, Trash2, Pencil, ListPlus, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -77,6 +77,17 @@ export function OptionGroupsManager({
   compact,
 }: OptionGroupsManagerProps) {
   const [groups, setGroups] = useState<OptionGroupDto[]>([]);
+  // Bug real encontrado (2026-08-14): este componente agora pode montar
+  // várias vezes AO MESMO TEMPO na mesma tela (1 por categoria aberta,
+  // desde a Parada técnica de reorganização) — `id="create-option-group-form"`
+  // era fixo, então com 2+ categorias abertas ao mesmo tempo existiam 2+
+  // formulários com o MESMO id no HTML. O botão "Criar grupo" (fora do
+  // `<form>`, ligado via `form={id}`) se conectava ao primeiro do
+  // documento, não necessariamente ao da categoria realmente aberta —
+  // por isso "o botão não responde" quando não era a primeira categoria
+  // da lista. `useId()` resolve isso de vez, mesmo raciocínio já usado em
+  // `modal.tsx` pro `id="modal-title"`.
+  const formId = useId();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -469,13 +480,13 @@ export function OptionGroupsManager({
             <Button type="button" variant="outline" onClick={() => setIsGroupModalOpen(false)} disabled={isSavingGroup}>
               Cancelar
             </Button>
-            <Button type="submit" form="create-option-group-form" isLoading={isSavingGroup}>
+            <Button type="submit" form={formId} isLoading={isSavingGroup}>
               {editingGroup ? "Salvar alterações" : "Criar grupo"}
             </Button>
           </>
         }
       >
-        <form id="create-option-group-form" onSubmit={handleSaveGroup} className="flex flex-col gap-4 pb-2">
+        <form id={formId} onSubmit={handleSaveGroup} className="flex flex-col gap-4 pb-2">
           {groupFormError && <Alert variant="destructive">{groupFormError}</Alert>}
 
           <FormField label="Nome do grupo">
