@@ -35,7 +35,7 @@ export default async function CardapioPage() {
   const [categoriesResult, itemsResult] = await Promise.all([
     supabase
       .from("menu_categories")
-      .select("id, name, position, allows_half_and_half")
+      .select("id, name, position, allows_half_and_half, is_compact")
       .eq("restaurant_id", profile.restaurantId)
       .order("position", { ascending: true }),
     supabase
@@ -50,6 +50,7 @@ export default async function CardapioPage() {
     name: c.name,
     position: c.position,
     allowsHalfAndHalf: c.allows_half_and_half,
+    isCompact: c.is_compact,
   }));
 
   const items: MenuItem[] = (itemsResult.data ?? []).map((i) => ({

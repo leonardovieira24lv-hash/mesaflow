@@ -22,10 +22,17 @@ interface CategoryDto {
   name: string;
   position: number;
   allowsHalfAndHalf: boolean;
+  isCompact: boolean;
 }
 
 function categoryFromDto(dto: CategoryDto): MenuCategory {
-  return { id: dto.id, name: dto.name, position: dto.position, allowsHalfAndHalf: dto.allowsHalfAndHalf };
+  return {
+    id: dto.id,
+    name: dto.name,
+    position: dto.position,
+    allowsHalfAndHalf: dto.allowsHalfAndHalf,
+    isCompact: dto.isCompact,
+  };
 }
 
 interface CardapioManagerProps {
@@ -75,6 +82,11 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
   // com o dono: ativação é por categoria inteira (ex.: "Pizzas"), não
   // produto por produto.
   const [categoryAllowsHalfAndHalf, setCategoryAllowsHalfAndHalf] = useState(false);
+  // Layout compacto por categoria (2026-08-15) — mesmo raciocínio do
+  // meio a meio: interruptor por categoria inteira, não travado no nome
+  // "bebidas". Toda categoria marcada assim exibe seus produtos numa
+  // grade 2 colunas, foto pequena, sem descrição, no Cardápio Público.
+  const [categoryIsCompact, setCategoryIsCompact] = useState(false);
   const [categoryFormError, setCategoryFormError] = useState<string | null>(null);
   const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState<MenuCategory | null>(null);
@@ -124,6 +136,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
     setEditingCategory(null);
     setCategoryName("");
     setCategoryAllowsHalfAndHalf(false);
+    setCategoryIsCompact(false);
     setCategoryFormError(null);
     setCategoryModalOpen(true);
   }
@@ -132,6 +145,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
     setEditingCategory(category);
     setCategoryName(category.name);
     setCategoryAllowsHalfAndHalf(category.allowsHalfAndHalf);
+    setCategoryIsCompact(category.isCompact);
     setCategoryFormError(null);
     setCategoryModalOpen(true);
   }
@@ -140,7 +154,11 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
     event.preventDefault();
     setCategoryFormError(null);
 
-    const result = createCategorySchema.safeParse({ name: categoryName, allowsHalfAndHalf: categoryAllowsHalfAndHalf });
+    const result = createCategorySchema.safeParse({
+      name: categoryName,
+      allowsHalfAndHalf: categoryAllowsHalfAndHalf,
+      isCompact: categoryIsCompact,
+    });
     if (!result.success) {
       setCategoryFormError(result.error.issues[0]?.message ?? "Nome inválido.");
       return;
@@ -154,7 +172,11 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
         {
           method: isEditing ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: result.data.name, allowsHalfAndHalf: result.data.allowsHalfAndHalf }),
+          body: JSON.stringify({
+            name: result.data.name,
+            allowsHalfAndHalf: result.data.allowsHalfAndHalf,
+            isCompact: result.data.isCompact,
+          }),
         },
       );
       const body = await response.json();
@@ -538,6 +560,22 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
               className="h-4 w-4 accent-ds2-primary"
             />
             Aceita meio a meio (ex.: pizza — cliente combina 2 sabores)
+          </label>
+
+          {/* Layout compacto por categoria (2026-08-15). Ideia do dono,
+              comparando com outros cardápios: produto de base sempre
+              igual (bebida, adicional) não precisa do card grande —
+              mockup aprovado antes de codar. Mesmo raciocínio do meio a
+              meio acima: escolha do dono, não travado por nome. */}
+          <label className="flex items-center gap-2 text-sm text-ds2-foreground">
+            <input
+              type="checkbox"
+              checked={categoryIsCompact}
+              onChange={(e) => setCategoryIsCompact(e.target.checked)}
+              disabled={isSavingCategory}
+              className="h-4 w-4 accent-ds2-primary"
+            />
+            Layout compacto (ex.: bebidas — cards pequenos, grade de 2 colunas)
           </label>
 
           <div className="flex justify-end gap-3">

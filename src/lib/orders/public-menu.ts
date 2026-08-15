@@ -52,6 +52,8 @@ export interface PublicMenuCategory {
   // com o dono: ativação por categoria inteira (ex.: "Pizzas"), não
   // produto por produto.
   allowsHalfAndHalf: boolean;
+  // Layout compacto por categoria (2026-08-15) — mesmo raciocínio.
+  isCompact: boolean;
   items: PublicMenuItem[];
 }
 
@@ -112,7 +114,7 @@ export async function getPublicMenu(
   const [categoriesResult, itemsResult, optionGroupsResult] = await Promise.all([
     admin
       .from("menu_categories")
-      .select("id, name, position, allows_half_and_half")
+      .select("id, name, position, allows_half_and_half, is_compact")
       .eq("restaurant_id", restaurantId)
       .order("position", { ascending: true }),
     admin
@@ -163,6 +165,7 @@ export async function getPublicMenu(
     id: category.id,
     name: category.name,
     allowsHalfAndHalf: category.allows_half_and_half,
+    isCompact: category.is_compact,
     items: (itemsByCategory.get(category.id) ?? []).map((item) => ({
       id: item.id,
       categoryId: category.id,

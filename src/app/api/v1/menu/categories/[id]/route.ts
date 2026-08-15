@@ -17,20 +17,21 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const { id } = await params;
     const { profile } = await requireOwner();
     const body = await request.json();
-    const { name, allowsHalfAndHalf } = parseOrThrow(updateCategorySchema, body);
+    const { name, allowsHalfAndHalf, isCompact } = parseOrThrow(updateCategorySchema, body);
 
     const supabase = await createClient();
 
     const updates: Record<string, unknown> = {};
     if (name !== undefined) updates.name = name;
     if (allowsHalfAndHalf !== undefined) updates.allows_half_and_half = allowsHalfAndHalf;
+    if (isCompact !== undefined) updates.is_compact = isCompact;
 
     const { data: updated, error } = await supabase
       .from("menu_categories")
       .update(updates)
       .eq("id", id)
       .eq("restaurant_id", profile.restaurantId)
-      .select("id, name, position, allows_half_and_half")
+      .select("id, name, position, allows_half_and_half, is_compact")
       .maybeSingle();
 
     if (error) {
@@ -53,6 +54,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       name: updated.name,
       position: updated.position,
       allowsHalfAndHalf: updated.allows_half_and_half,
+      isCompact: updated.is_compact,
     });
   } catch (err) {
     return handleRouteError(err);

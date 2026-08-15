@@ -13,7 +13,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("menu_categories")
-      .select("id, name, position, allows_half_and_half")
+      .select("id, name, position, allows_half_and_half, is_compact")
       .eq("restaurant_id", profile.restaurantId)
       .order("position", { ascending: true });
 
@@ -22,7 +22,13 @@ export async function GET() {
     }
 
     return apiSuccess(
-      data.map((c) => ({ id: c.id, name: c.name, position: c.position, allowsHalfAndHalf: c.allows_half_and_half })),
+      data.map((c) => ({
+        id: c.id,
+        name: c.name,
+        position: c.position,
+        allowsHalfAndHalf: c.allows_half_and_half,
+        isCompact: c.is_compact,
+      })),
     );
   } catch (err) {
     return handleRouteError(err);
@@ -42,7 +48,7 @@ export async function POST(request: Request) {
   try {
     const { profile } = await requireOwner();
     const body = await request.json();
-    const { name, allowsHalfAndHalf } = parseOrThrow(createCategorySchema, body);
+    const { name, allowsHalfAndHalf, isCompact } = parseOrThrow(createCategorySchema, body);
 
     const supabase = await createClient();
 
@@ -65,8 +71,14 @@ export async function POST(request: Request) {
 
     const { data: created, error: insertError } = await supabase
       .from("menu_categories")
-      .insert({ restaurant_id: profile.restaurantId, name, position: nextPosition, allows_half_and_half: allowsHalfAndHalf })
-      .select("id, name, position, allows_half_and_half")
+      .insert({
+        restaurant_id: profile.restaurantId,
+        name,
+        position: nextPosition,
+        allows_half_and_half: allowsHalfAndHalf,
+        is_compact: isCompact,
+      })
+      .select("id, name, position, allows_half_and_half, is_compact")
       .single();
 
     if (insertError) {
@@ -83,6 +95,7 @@ export async function POST(request: Request) {
       name: created.name,
       position: created.position,
       allowsHalfAndHalf: created.allows_half_and_half,
+      isCompact: created.is_compact,
     });
   } catch (err) {
     return handleRouteError(err);

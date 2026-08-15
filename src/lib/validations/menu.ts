@@ -11,6 +11,8 @@ export const createCategorySchema = z.object({
   // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). Default
   // `false`, mesmo comportamento de sempre pra quem não mexer nisso.
   allowsHalfAndHalf: z.boolean().default(false),
+  // Layout compacto por categoria (2026-08-15) — mesmo raciocínio.
+  isCompact: z.boolean().default(false),
 });
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 
@@ -20,6 +22,7 @@ export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 export const updateCategorySchema = z.object({
   name: z.string().trim().min(1, "Informe o nome da categoria.").optional(),
   allowsHalfAndHalf: z.boolean().optional(),
+  isCompact: z.boolean().optional(),
 });
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
 

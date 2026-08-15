@@ -38,6 +38,8 @@ export interface MenuCategory {
   position: number;
   // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14).
   allowsHalfAndHalf: boolean;
+  // Layout compacto por categoria (2026-08-15).
+  isCompact: boolean;
 }
 
 export interface MenuItem {

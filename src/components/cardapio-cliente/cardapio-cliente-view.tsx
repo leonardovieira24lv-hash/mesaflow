@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { RestaurantHeader } from "@/components/cardapio-cliente/restaurant-header";
 import { CategoryNav, categorySectionId } from "@/components/cardapio-cliente/category-nav";
 import { MenuItemCard } from "@/components/cardapio-cliente/menu-item-card";
+import { MenuItemCardCompact } from "@/components/cardapio-cliente/menu-item-card-compact";
 import { ProductDetailModal } from "@/components/cardapio-cliente/product-detail-modal";
 import { CartProvider } from "@/components/cardapio-cliente/cart-context";
 import { CartSummaryBar } from "@/components/cardapio-cliente/cart-summary-bar";
@@ -266,16 +267,35 @@ export function CardapioClienteView({
               >
                 <h2 className="text-base font-bold tracking-tight text-foreground">{category.name}</h2>
 
-                <div className="flex flex-col gap-3.5">
-                  {category.items.map((item) => (
-                    <MenuItemCard
-                      key={item.id}
-                      item={item}
-                      onSelect={() => handleCardTap(item, category)}
-                      selectedSlot={getSelectedSlot(item, category)}
-                    />
-                  ))}
-                </div>
+                {/* Layout compacto por categoria (2026-08-15) — mockup
+                    aprovado antes de codar. Só muda a apresentação (grade
+                    2 colunas, card menor); a lógica de seleção (toque
+                    normal ou meio a meio) é exatamente a mesma dos dois
+                    lados, `handleCardTap`/`getSelectedSlot` não sabem
+                    nem precisam saber qual card renderizou o toque. */}
+                {category.isCompact ? (
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {category.items.map((item) => (
+                      <MenuItemCardCompact
+                        key={item.id}
+                        item={item}
+                        onSelect={() => handleCardTap(item, category)}
+                        selectedSlot={getSelectedSlot(item, category)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3.5">
+                    {category.items.map((item) => (
+                      <MenuItemCard
+                        key={item.id}
+                        item={item}
+                        onSelect={() => handleCardTap(item, category)}
+                        selectedSlot={getSelectedSlot(item, category)}
+                      />
+                    ))}
+                  </div>
+                )}
               </section>
             ))
           )}
