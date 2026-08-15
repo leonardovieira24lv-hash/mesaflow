@@ -159,6 +159,24 @@ export function CardapioClienteView({
     setHalfAndHalfSelection([]);
   }
 
+  /**
+   * Repensado (2026-08-15): a 1ª versão só dizia "selecionado ou não"
+   * (check genérico) — o dono relatou confusão testando: tocar 2x no
+   * mesmo sabor "parecia bugado", sem nada diferenciando "marquei a 1ª
+   * metade" de "marquei a 2ª". Agora devolve a posição exata: `1`/`2`
+   * conforme o índice em `halfAndHalfSelection`, ou `"both"` quando o
+   * mesmo sabor ocupa as duas posições (pizza inteira).
+   */
+  function getSelectedSlot(item: PublicMenuItem, category: PublicMenuCategory): 1 | 2 | "both" | null {
+    if (halfAndHalfCategoryId !== category.id) return null;
+    const isFirst = halfAndHalfSelection[0] === item.id;
+    const isSecond = halfAndHalfSelection.length > 1 && halfAndHalfSelection[1] === item.id;
+    if (isFirst && isSecond) return "both";
+    if (isFirst) return 1;
+    if (isSecond) return 2;
+    return null;
+  }
+
   const halfAndHalfCategory = categories.find((c) => c.id === halfAndHalfCategoryId);
   const halfAndHalfFlavors = halfAndHalfSelection
     .map((id) => halfAndHalfCategory?.items.find((i) => i.id === id))
@@ -254,7 +272,7 @@ export function CardapioClienteView({
                       key={item.id}
                       item={item}
                       onSelect={() => handleCardTap(item, category)}
-                      selected={halfAndHalfCategoryId === category.id && halfAndHalfSelection.includes(item.id)}
+                      selectedSlot={getSelectedSlot(item, category)}
                     />
                   ))}
                 </div>

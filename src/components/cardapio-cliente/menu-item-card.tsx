@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Image from "next/image";
-import { Check, ImageOff, Plus } from "lucide-react";
+import { ImageOff, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
 import type { PublicMenuItem } from "@/lib/orders/public-menu";
@@ -11,10 +11,16 @@ interface MenuItemCardProps {
   /**
    * Sistema de Opcionais, Fase 3 — meio a meio, Opção C (2026-08-15).
    * Numa categoria "aceita meio a meio", tocar no card não abre mais o
-   * modal direto — seleciona o sabor (destaque visual aqui). Ausente/
-   * `false` em toda categoria comum: nenhuma mudança de comportamento.
+   * modal direto — seleciona o sabor. `null` = não selecionado; `1`/`2`
+   * = ocupa a 1ª/2ª metade da pizza; `"both"` = mesmo sabor nas duas
+   * metades (pizza inteira daquele sabor).
+   *
+   * Repensado (2026-08-15): a 1ª versão usava um selo de "check" genérico
+   * — o dono relatou confusão real testando: tocar 2x no mesmo sabor
+   * "parecia bugado" porque nada distinguia visualmente "marquei a 1ª
+   * metade" de "marquei a 2ª". Números tornam a ordem explícita.
    */
-  selected?: boolean;
+  selectedSlot?: 1 | 2 | "both" | null;
 }
 
 /**
@@ -91,11 +97,12 @@ interface MenuItemCardProps {
  * de contraste do Mesas — se ainda não for suficiente, o ajuste correto é
  * nos valores de `:root`/`.menu-dark`, fora do escopo desta etapa.
  */
-export function MenuItemCard({ item, onSelect, selected }: MenuItemCardProps) {
+export function MenuItemCard({ item, onSelect, selectedSlot = null }: MenuItemCardProps) {
   const isAvailable = item.is_available;
   const [imageLoaded, setImageLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const showImage = Boolean(item.image_url) && !hasError;
+  const isSelected = selectedSlot !== null;
 
   return (
     <button
@@ -105,7 +112,7 @@ export function MenuItemCard({ item, onSelect, selected }: MenuItemCardProps) {
       aria-label={isAvailable ? `Ver detalhes de ${item.name}` : `${item.name} — indisponível no momento`}
       className={cn(
         "group flex w-full items-stretch gap-4 rounded-2xl border border-border bg-surface p-3.5 text-left elevation-card",
-        selected && "border-emerald-500 ring-1 ring-emerald-500",
+        isSelected && "border-emerald-500 ring-1 ring-emerald-500",
         isAvailable
           ? "hover:-translate-y-1 active:translate-y-0 active:scale-[0.99] active:shadow-card"
           : "cursor-not-allowed opacity-60",
@@ -139,13 +146,20 @@ export function MenuItemCard({ item, onSelect, selected }: MenuItemCardProps) {
         )}
 
         {/* Sistema de Opcionais, Fase 3 — meio a meio, Opção C (2026-08-15):
-            selo de "escolhido" sobre a foto, mesma linguagem visual do
-            mockup aprovado — só aparece em categoria de meio a meio. */}
-        {selected && (
+            número da metade em vez de um check genérico — "1" na 1ª
+            escolha, "2" na 2ª, "Inteira" quando o mesmo sabor ocupa as
+            duas (mais claro que "1"+"2" juntos no mesmo card). */}
+        {isSelected && (
           <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/30">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md">
-              <Check className="h-5 w-5" strokeWidth={3} />
-            </span>
+            {selectedSlot === "both" ? (
+              <span className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white shadow-md">
+                Inteira
+              </span>
+            ) : (
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-base font-bold text-white shadow-md">
+                {selectedSlot}
+              </span>
+            )}
           </div>
         )}
 
