@@ -84,6 +84,15 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [productModalCategoryId, setProductModalCategoryId] = useState<string | undefined>(undefined);
+  // Recaída do bug de 2026-07-29 (relatada pelo dono, 2026-08-15): o
+  // `key` do <ProductForm> abaixo usava só `categoria` pra decidir se
+  // precisava remontar — resolvia "trocar de categoria", mas criar um
+  // 2º produto SEGUIDO na MESMA categoria gerava o mesmo `key` de antes,
+  // então o React reaproveitava o formulário "vivo" com nome/preço do
+  // produto anterior ainda preenchidos. Contador que sobe a cada abertura
+  // (criar OU editar) garante um `key` sempre novo, mesmo repetindo
+  // categoria — força remontagem de verdade toda vez.
+  const [productModalNonce, setProductModalNonce] = useState(0);
   const [deletingItem, setDeletingItem] = useState<MenuItem | null>(null);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
   const [duplicatingItemId, setDuplicatingItemId] = useState<string | null>(null);
@@ -256,12 +265,14 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
   function openCreateProductModal(categoryId: string) {
     setEditingItem(null);
     setProductModalCategoryId(categoryId);
+    setProductModalNonce((n) => n + 1);
     setProductModalOpen(true);
   }
 
   function openEditProductModal(item: MenuItem) {
     setEditingItem(item);
     setProductModalCategoryId(undefined);
+    setProductModalNonce((n) => n + 1);
     setProductModalOpen(true);
   }
 
@@ -558,17 +569,18 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
         title={editingItem ? "Editar produto" : "Novo produto"}
       >
         <div className="pb-6">
-          {/* Bug real encontrado (2026-07-29): <ProductForm> nunca desmonta
-              (fica sempre dentro do <Modal>, que existe permanentemente no
-              DOM). Sem `key`, o `useState(categoryId inicial)` só roda uma
-              vez — reabrir o modal depois, para criar em outra categoria ou
-              editar outro produto, nunca reinicializava esse estado. O
-              `key` abaixo força um remount a cada abertura para um
-              produto/categoria diferente, garantindo que os valores
-              iniciais (categoria pré-selecionada incluída) fiquem sempre
-              corretos. */}
+          {/* Bug real encontrado (2026-07-29), recaída corrigida
+              (2026-08-15): <ProductForm> nunca desmonta (fica sempre
+              dentro do <Modal>, que existe permanentemente no DOM). O
+              `key` antigo só considerava categoria/produto — criar 2
+              produtos seguidos na MESMA categoria gerava o mesmo `key`,
+              reaproveitando o formulário "vivo" com os dados do produto
+              anterior ainda preenchidos. `productModalNonce` (sobe a
+              cada abertura) garante um `key` sempre novo, mesmo
+              repetindo categoria — força remontagem de verdade toda
+              vez que o modal abre, criar ou editar. */}
           <ProductForm
-            key={editingItem?.id ?? `new-${productModalCategoryId ?? "none"}`}
+            key={`${editingItem?.id ?? `new-${productModalCategoryId ?? "none"}`}-${productModalNonce}`}
             categories={categories}
             restaurantId={restaurantId}
             item={editingItem ?? undefined}
