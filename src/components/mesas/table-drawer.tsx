@@ -1391,13 +1391,16 @@ export function TableDrawer({
           )}
 
           {openOrders.length > 0 && (
-            // Corrigido a pedido do dono (2026-08-15, 2ª rodada): mesmo
-            // com `ButtonLink`, `variant="outline"` (só borda fina) ainda
-            // não ficava óbvio o bastante como botão — trocado por
-            // `secondary` (fundo sólido cinza), garantia visual mais
-            // forte de que é clicável, sem competir com o vermelho da
-            // ação principal ("Fechar conta").
-            <ButtonLink href={ROUTES.pedidoDetalhe(openOrders[0]!.id)} variant="secondary" className="w-full">
+            // Corrigido a pedido do dono (2026-08-15, 3ª rodada) — prova
+            // concreta na própria foto que ele mandou: "Imprimir" e
+            // "Liberar mesa" (que ELE reconhece como botões de verdade)
+            // usam `variant="outline"`. Minha 2ª tentativa (`secondary`)
+            // piorou: nesse tema claro, `ds2-surface-hover` (96% de
+            // claridade) fica quase idêntico ao fundo ao redor (90%),
+            // quase invisível — `outline` tem borda explícita
+            // (`border-ds2-border`), funciona porque tem contorno
+            // definido, não depende de contraste de preenchimento sutil.
+            <ButtonLink href={ROUTES.pedidoDetalhe(openOrders[0]!.id)} variant="outline" className="w-full">
               Ver histórico completo de pedidos desta mesa
             </ButtonLink>
           )}
