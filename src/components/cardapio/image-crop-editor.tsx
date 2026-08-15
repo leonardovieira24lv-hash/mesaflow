@@ -1,8 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
-import { Crosshair, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
-import { Modal } from "@/components/ui/modal";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent as ReactWheelEvent,
+} from "react";
+import { createPortal } from "react-dom";
+import { Crosshair, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 
@@ -41,11 +49,11 @@ function pointsOf(map: Map<number, Point>): Point[] {
 }
 
 /**
- * Editor de enquadramento da foto do produto (Sprint "Editor de
- * Enquadramento da Foto do Produto", 2026-07-29) — passo novo entre
- * selecionar o arquivo e o upload de verdade: `<ProductImageUpload>` abre
+ * Editor de enquadramento da foto (Sprint "Editor de Enquadramento da Foto
+ * do Produto", 2026-07-29) — passo novo entre selecionar o arquivo e o
+ * upload de verdade: `<ProductImageUpload>`/`<CategoryImageUpload>` abrem
  * este editor com o arquivo escolhido; só ao clicar em "Salvar" o recorte
- * vira um Blob e segue pro Storage (`uploadCroppedProductImage`).
+ * vira um Blob e segue pro Storage.
  *
  * Implementação 100% nativa (Pointer Events + Canvas 2D) — nenhuma
  * biblioteca de recorte adicionada, por pedido explícito de manter uma
@@ -62,10 +70,32 @@ function pointsOf(map: Map<number, Point>): Point[] {
  * quadrado inteiro — é isso que garante que a imagem "nunca fique
  * distorcida" (a escala em X e em Y é sempre a mesma, só translação e
  * zoom uniforme, nunca esticar um eixo mais que o outro).
+ *
+ * Bug real encontrado (2026-08-15, relatado pelo dono com vídeo — foto de
+ * categoria "salvando" sem erro nem sucesso, nunca persistindo): este
+ * editor usava `<Modal>` (portanto um `<dialog>` nativo) por baixo, e
+ * SEMPRE é usado ANINHADO dentro de outro modal já aberto
+ * ("Editar categoria"/"Editar produto"). Dois `<dialog>` nativos
+ * empilhados — o vídeo mostrou os DOIS fechando juntos, no mesmo quadro,
+ * assim que "Salvar" era tocado aqui dentro: o clique "vazava" pro modal
+ * de trás, fechando-o também, ANTES do formulário de categoria/produto
+ * conseguir mandar o `imageUrl` pro servidor — por isso a foto nunca
+ * persistia, sem erro nenhum (o formulário de fora nunca chegou a
+ * tentar salvar, só foi descartado como se tivesse cancelado).
+ *
+ * Corrigido trocando o `<dialog>` nativo por uma camada simples
+ * (`position: fixed`, sem elemento `<dialog>` próprio) — mesmo raciocínio
+ * já usado no meio a meio (Fase 3: "trocar conteúdo do mesmo modal" em vez
+ * de empilhar um novo por cima). Continua indo por `createPortal` pro
+ * mesmo container temático (`.ds2-dark`/`.menu-dark`) que o `<Modal>` já
+ * usava, pra manter as variáveis de cor corretas — só não empilha um 2º
+ * `<dialog>` nativo em cima do 1º.
  */
 export function ImageCropEditor({ open, file, onCancel, onSave, isSaving }: ImageCropEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
@@ -74,6 +104,14 @@ export function ImageCropEditor({ open, file, onCancel, onSave, isSaving }: Imag
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Mesma lógica de detecção de tema do `<Modal>` — este componente para
+  // de usar `<Modal>` por baixo (ver comentário acima), mas precisa do
+  // mesmo container pra herdar as variáveis de cor certas.
+  useEffect(() => {
+    const themedAncestor = anchorRef.current?.closest(".ds2-dark, .menu-dark");
+    setPortalTarget(themedAncestor ?? document.body);
+  }, []);
 
   // Ponteiros ativos (toque ou mouse) — chave é o `pointerId` nativo do
   // navegador. 1 ponteiro = arrastar; 2 = pinça (zoom + pan simultâneos).
@@ -327,70 +365,112 @@ export function ImageCropEditor({ open, file, onCancel, onSave, isSaving }: Imag
 
   const busy = isSaving || isExporting;
 
-  return (
-    <Modal
-      open={open}
-      onClose={onCancel}
-      title="Ajustar enquadramento"
-      description="Arraste para posicionar e use o zoom para ajustar como a foto aparece no cardápio."
-      className="max-w-md"
-      footer={
-        <>
+  // `anchorRef` precisa existir na árvore mesmo antes do `portalTarget`
+  // resolver — mesmo raciocínio do `<Modal>`: sem isso, `.closest()` não
+  // tem de onde partir na primeira renderização.
+  if (!open) return <span ref={anchorRef} aria-hidden className="hidden" />;
+  if (!portalTarget) return <span ref={anchorRef} aria-hidden className="hidden" />;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 backdrop-blur-[2px] sm:items-center"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+    >
+      <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-ds2-lg border border-ds2-border bg-ds2-surface p-7 text-ds2-foreground shadow-ds2-lg sm:rounded-ds2-lg">
+        <div className="flex items-start justify-between gap-4 pb-4">
+          <div className="flex flex-col gap-1.5">
+            <h2 className="font-display text-xl font-semibold tracking-tight text-ds2-foreground">
+              Ajustar enquadramento
+            </h2>
+            <p className="text-sm text-ds2-foreground-muted">
+              Arraste para posicionar e use o zoom para ajustar como a foto aparece no cardápio.
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onCancel}
+            aria-label="Fechar"
+            className="-mr-2 -mt-2 h-8 w-8 shrink-0"
+            disabled={busy}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="flex flex-col gap-4 pb-2">
+          {error && <Alert variant="destructive">{error}</Alert>}
+
+          <div
+            ref={containerRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            onWheel={handleWheel}
+            className="relative mx-auto aspect-square w-full max-w-[320px] touch-none select-none overflow-hidden rounded-ds2-lg border border-ds2-border bg-ds2-surface-hover"
+          >
+            {imageUrl && naturalSize && (
+              // eslint-disable-next-line @next/next/no-img-element -- posicionamento manual via transform, fora do fluxo de otimização do <Image>
+              <img
+                ref={imgRef}
+                src={imageUrl}
+                alt=""
+                draggable={false}
+                className="absolute left-0 top-0 max-w-none"
+                style={{
+                  width: `${renderedSize.w}px`,
+                  height: `${renderedSize.h}px`,
+                  transform: `translate(${offset.x}px, ${offset.y}px)`,
+                }}
+              />
+            )}
+          </div>
+
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => applyZoomDelta(1 / 1.2)}
+              disabled={!naturalSize || busy}
+              aria-label="Reduzir zoom"
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => applyZoomDelta(1.2)}
+              disabled={!naturalSize || busy}
+              aria-label="Ampliar zoom"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={handleCenter} disabled={!naturalSize || busy}>
+              <Crosshair className="h-4 w-4" />
+              Centralizar imagem
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={handleReset} disabled={!naturalSize || busy}>
+              <RotateCcw className="h-4 w-4" />
+              Redefinir
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 pt-5">
           <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
             Cancelar
           </Button>
           <Button type="button" onClick={handleSave} isLoading={busy} disabled={!naturalSize}>
             Salvar
           </Button>
-        </>
-      }
-    >
-      <div className="flex flex-col gap-4 pb-2">
-        {error && <Alert variant="destructive">{error}</Alert>}
-
-        <div
-          ref={containerRef}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          onWheel={handleWheel}
-          className="relative mx-auto aspect-square w-full max-w-[320px] touch-none select-none overflow-hidden rounded-ds2-lg border border-ds2-border bg-ds2-surface-hover"
-        >
-          {imageUrl && naturalSize && (
-            // eslint-disable-next-line @next/next/no-img-element -- posicionamento manual via transform, fora do fluxo de otimização do <Image>
-            <img
-              ref={imgRef}
-              src={imageUrl}
-              alt=""
-              draggable={false}
-              className="absolute left-0 top-0 max-w-none"
-              style={{
-                width: `${renderedSize.w}px`,
-                height: `${renderedSize.h}px`,
-                transform: `translate(${offset.x}px, ${offset.y}px)`,
-              }}
-            />
-          )}
-        </div>
-
-        <div className="flex items-center justify-center gap-2">
-          <Button type="button" variant="outline" size="icon" onClick={() => applyZoomDelta(1 / 1.2)} disabled={!naturalSize || busy} aria-label="Reduzir zoom">
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          <Button type="button" variant="outline" size="icon" onClick={() => applyZoomDelta(1.2)} disabled={!naturalSize || busy} aria-label="Ampliar zoom">
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={handleCenter} disabled={!naturalSize || busy}>
-            <Crosshair className="h-4 w-4" />
-            Centralizar imagem
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={handleReset} disabled={!naturalSize || busy}>
-            <RotateCcw className="h-4 w-4" />
-            Redefinir
-          </Button>
         </div>
       </div>
-    </Modal>
+    </div>,
+    portalTarget,
   );
 }
