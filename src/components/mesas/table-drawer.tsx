@@ -221,6 +221,11 @@ export function TableDrawer({
   // pedidos `pending` de uma vez — não depende de achar o botão de
   // dentro de nenhum card específico.
   const [isSendingBatchToKitchen, setIsSendingBatchToKitchen] = useState(false);
+  // Mesmo pedido do dono, extendido pro próximo estágio (2026-08-15):
+  // depois de mandar pra cozinha, marcar como finalizado tinha o MESMO
+  // problema — enterrado dentro do card, na lista rolável. Mesma solução,
+  // um degrau adiante do fluxo.
+  const [isFinalizingBatch, setIsFinalizingBatch] = useState(false);
   // Trava síncrona — mesmo raciocínio de `order-detail.tsx`: `setState` só
   // reflete no próximo render, então um duplo toque rápido podia escapar do
   // `disabled` do botão antes dele atualizar de verdade.
@@ -375,6 +380,17 @@ export function TableDrawer({
       await handleSendToKitchen(orderId);
     }
     setIsSendingBatchToKitchen(false);
+  }
+
+  /** Mesmo raciocínio de `handleSendAllPendingToKitchen`, um degrau adiante do fluxo (`preparing → delivered`). */
+  async function handleFinalizeAllPreparing() {
+    const preparingOrderIds = openOrders.filter((o) => o.status === "preparing").map((o) => o.id);
+    if (preparingOrderIds.length === 0) return;
+    setIsFinalizingBatch(true);
+    for (const orderId of preparingOrderIds) {
+      await handleMarkDelivered(orderId);
+    }
+    setIsFinalizingBatch(false);
   }
 
   /**
@@ -730,6 +746,7 @@ export function TableDrawer({
     .reduce((sum, o) => sum + o.item_count, 0);
   const hasPendingOrder = openOrders.some((o) => o.status === "pending");
   const pendingOrdersCount = openOrders.filter((o) => o.status === "pending").length;
+  const preparingOrdersCount = openOrders.filter((o) => o.status === "preparing").length;
   const hasPreparingOrder = openOrders.some((o) => o.status === "preparing");
   const orderTimestamps = openOrders.map((o) => o.created_at);
   const openedAt = orderTimestamps.length > 0 ? orderTimestamps.reduce((a, b) => (a < b ? a : b)) : null;
@@ -981,6 +998,27 @@ export function TableDrawer({
             >
               <ChefHat className="h-4 w-4" />
               {pendingOrdersCount > 1 ? `Enviar ${pendingOrdersCount} pedidos para a cozinha` : "Enviar para a cozinha"}
+            </Button>
+          </div>
+        )}
+
+        {/* Mesmo pedido do dono, um degrau adiante do fluxo (2026-08-15):
+            depois de mandar pra cozinha, "Finalizar pedido" tinha o
+            MESMO problema de ficar enterrado dentro do card. Aparece
+            junto da barra de "Enviar para cozinha" quando fizer sentido
+            (as duas podem coexistir se a mesa tiver 1 pedido pendente e
+            outro já em preparo ao mesmo tempo). */}
+        {hasPreparingOrder && (
+          <div className="border-b border-ds2-border px-5 py-3">
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full"
+              onClick={handleFinalizeAllPreparing}
+              isLoading={isFinalizingBatch}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {preparingOrdersCount > 1 ? `Finalizar ${preparingOrdersCount} pedidos` : "Finalizar pedido"}
             </Button>
           </div>
         )}
@@ -1353,13 +1391,13 @@ export function TableDrawer({
           )}
 
           {openOrders.length > 0 && (
-            // Corrigido a pedido do dono (2026-08-15): antes era um
-            // <Link> com classes Tailwind imitando um botão à mão — não
-            // ficava óbvio que era clicável. `ButtonLink` é o MESMO
-            // componente usado em "Imprimir"/"Liberar mesa" logo acima
-            // (`buttonVariants()` por baixo) — garante aparência idêntica
-            // a um botão de verdade, não uma imitação.
-            <ButtonLink href={ROUTES.pedidoDetalhe(openOrders[0]!.id)} variant="outline" className="w-full">
+            // Corrigido a pedido do dono (2026-08-15, 2ª rodada): mesmo
+            // com `ButtonLink`, `variant="outline"` (só borda fina) ainda
+            // não ficava óbvio o bastante como botão — trocado por
+            // `secondary` (fundo sólido cinza), garantia visual mais
+            // forte de que é clicável, sem competir com o vermelho da
+            // ação principal ("Fechar conta").
+            <ButtonLink href={ROUTES.pedidoDetalhe(openOrders[0]!.id)} variant="secondary" className="w-full">
               Ver histórico completo de pedidos desta mesa
             </ButtonLink>
           )}

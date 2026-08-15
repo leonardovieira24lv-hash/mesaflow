@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import type { Route } from "next";
 import type { LucideIcon } from "lucide-react";
 import {
   Armchair,
@@ -174,7 +176,26 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [qrTable, setQrTable] = useState<TableEntity | null>(null);
-  const [drawerTable, setDrawerTable] = useState<TableEntity | null>(null);
+  // Correção pedida pelo dono (2026-08-15): "qual mesa está com o
+  // drawer aberto" era só estado local (`useState`), nunca refletido na
+  // URL. Clicar em "Ver histórico completo de pedidos desta mesa" (uma
+  // navegação de página de verdade, pra `/pedidos/{id}`) empilhava uma
+  // entrada de histórico nova em cima da página de Mesas — mas essa
+  // entrada não sabia que a mesa X estava aberta, então "Voltar" caía na
+  // grade de mesas fechada, não reabria o drawer de onde a pessoa saiu.
+  // `?mesa={id}` na URL resolve isso: `router.replace` (não `push`, não
+  // queremos empilhar 1 entrada de histórico por clique em mesa) grava o
+  // parâmetro ao abrir/fechar; o `useState` lê ele já na primeira
+  // renderização, então um F5 ou "Voltar" do navegador reabre o drawer
+  // certo sozinho.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [drawerTable, setDrawerTable] = useState<TableEntity | null>(() => {
+    const mesaId = searchParams.get("mesa");
+    if (!mesaId) return null;
+    return initialTables.find((t) => t.id === mesaId) ?? null;
+  });
 
   // Estado puramente visual (busca + filtro de status na grade). Não é
   // consumido por nenhuma API/hook — só decide o que é renderizado.
@@ -558,6 +579,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
    */
   function handleOpenTable(table: TableEntity) {
     setDrawerTable(table);
+    router.replace(`${pathname}?mesa=${table.id}` as Route, { scroll: false });
   }
 
   function openCreateModal() {
@@ -1247,7 +1269,10 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
           openOrders={drawerOperations?.orders ?? []}
           alerts={tableEvents[drawerTable.id] ?? []}
           acceptedPaymentMethods={acceptedPaymentMethods}
-          onClose={() => setDrawerTable(null)}
+          onClose={() => {
+            setDrawerTable(null);
+            router.replace(pathname as Route, { scroll: false });
+          }}
           onOrdersChanged={() => void fetchOperations()}
           onAlertsChanged={() => void fetchTableEvents()}
           onTableUpdated={(updated) => {
