@@ -4,120 +4,75 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Minus, Plus, UtensilsCrossed, X } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
-import { useCart, type SelectedOption } from "@/components/cardapio-cliente/cart-context";
+import { useCart, type SelectedOption, type HalfAndHalf } from "@/components/cardapio-cliente/cart-context";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import type { PublicMenuItem, PublicOptionGroup } from "@/lib/orders/public-menu";
+import type { PublicMenuItem } from "@/lib/orders/public-menu";
 
-interface ProductDetailModalProps {
-  item: PublicMenuItem | null;
+interface HalfAndHalfConfirmModalProps {
+  /** `null` enquanto não há 2 sabores escolhidos — mesmo padrão de `item` em `ProductDetailModal` (controla show/hide do `<dialog>`). */
+  flavorA: PublicMenuItem | null;
+  flavorB: PublicMenuItem | null;
   onClose: () => void;
 }
 
 /**
- * Detalhes do produto (Fase 3, item 7). Implementado como modal, não como
- * rota própria: o cardápio inteiro já chega numa única chamada
- * (`GET /api/v1/public/{slug}/menu`, seção 3.2) — não existe um endpoint de
- * "detalhe de um item" no contrato, então navegar para uma página separada
- * só para reexibir dados que a página do cardápio já tem seria uma ida e
- * volta desnecessária. `<dialog>` nativo pelos motivos de sempre (foco
- * preso, Esc fecha, `::backdrop` cuida do overlay, mantém a posição de
- * scroll do cliente no cardápio): bottom sheet com a foto sangrando até a
- * borda, padrão de vitrine de produto de apps de delivery.
+ * Sistema de Opcionais, Fase 3 — meio a meio, Opção C (2026-08-15).
  *
- * Quantidade e observação (Módulo 2) ficam prontas aqui; "Adicionar ao
- * carrinho" já grava no `<CartProvider>` (Fase 3, item 8).
+ * Substitui a primeira tentativa (toggle "Fazer meio a meio?" dentro do
+ * modal de UM produto) — o dono não aprovou porque escolher o 2º sabor
+ * numa lista pequena, sem ver a pizza "no modo geral", não era natural.
+ * Referência dada por ele (cardápio próprio que já fez antes): a escolha
+ * acontece na LISTA do cardápio — toca no 1º sabor (destaca), toca no 2º
+ * (ou no mesmo de nova, pra pizza inteira) — só ENTÃO abre este modal,
+ * já com os dois prontos. Ver `cardapio-cliente-view.tsx` pra a lógica de
+ * seleção nos cards e a barra de revisão (evita erro de toque: nada abre
+ * modal sozinho, sempre passa por uma barra "Confirmar" antes).
  *
- * Sprint de manutenção (2026-08-08): `onError`/fallback na imagem; botão
- * "Adicionar ao carrinho" movido para um rodapé fixo fora da área rolável.
+ * `flavorA` é sempre o 1º tocado, vira o `menu_item_id` principal do item
+ * no pedido (mesmo raciocínio do `create-order.ts`: preço final = maior
+ * dos dois, mas o FK continua sendo o 1º). Quando `flavorA.id ===
+ * flavorB.id` (mesmo sabor tocado 2x), isto é uma pizza comum, inteira —
+ * grava sem `halfAndHalf` nenhum, like a qualquer outro produto.
  *
- * Sprint de reconstrução visual (2026-08-08, seguinte): paleta padrão do
- * Tailwind, sem tokens do design system antigo.
- *
- * Sprint "Cardápio Dark/Premium" (2026-08-09): painel `zinc-900` sobre
- * overlay `black/60`, controles internos em `zinc-800`/`zinc-700` (mais
- * claros que o painel, para parecerem "elevados"/tocáveis), preço em
- * `emerald-400`, botão principal continua `emerald-500` sólido. Nenhuma
- * lógica foi tocada.
- *
- * Sprint "Identidade Forko — Cardápio Claro" (2026-08-11): painel branco
- * sobre o mesmo overlay escuro (`backdrop:bg-black/60` — continua
- * funcionando bem mesmo com painel claro, é padrão comum). Controles
- * internos viraram `zinc-100`→`branco` (a mesma lógica de "mais claro =
- * mais elevado" se inverte naturalmente: branco é o tom mais claro
- * possível, então os controles viram brancos dentro de um card cinza-claro
- * — sensação de elevação preservada). Preço em `emerald-600` (não
- * `emerald-400` — contraste ruim em fundo branco). Botão principal
- * continua `emerald-500` sólido, intocado.
- *
- * Etapa 3J — Migração para Tokens (2026-08-12): painel/textos migraram
- * pra token semântico (`bg-background`, `text-foreground`,
- * `text-muted-foreground`), caixa de quantidade virou `bg-surface`
- * (cinza, mesma hierarquia dos cards de produto), pill interna
- * `bg-background` (branca, dentro do cinza — mesma relação página/card já
- * usada em todo o Cardápio desde a Etapa 3I). Botão de fechar sobre a
- * foto (`bg-white/90`) e preço/botão principal (`emerald-600`/`emerald-500`)
- * deliberadamente preservados sem token — mesmos motivos já documentados
- * em `menu-item-card.tsx` (contraste fixo sobre foto arbitrária; cor de
- * ação, fora do escopo).
- *
- * Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14/15): chegou a
- * ganhar um toggle "Fazer meio a meio?" aqui dentro (Opções A/B) — o dono
- * não aprovou nenhuma das duas (queria ver a pizza "no modo geral" antes
- * de escolher o 2º sabor). Revertido de propósito: a partir da Opção C
- * (aprovada), a escolha de meio a meio acontece na LISTA do cardápio
- * (`cardapio-cliente-view.tsx` decide o que um toque num card significa),
- * não mais dentro deste modal — este componente voltou a cuidar só de UM
- * produto por vez, como sempre foi. Ver `half-and-half-confirm-modal.tsx`
- * pro fluxo novo.
+ * Opcionais (ex.: Borda) usam `flavorA.optionGroups` — já inclui os da
+ * categoria inteira (`public-menu.ts`), que é o que se aplica aqui
+ * (borda da pizza vale pra pizza toda, não por metade).
  */
-export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
+export function HalfAndHalfConfirmModal({ flavorA, flavorB, onClose }: HalfAndHalfConfirmModalProps) {
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
-  // Sistema de Opcionais, Fase 1 (2026-08-14) — escolha única obrigatória
-  // por grupo: `groupId -> optionId` escolhido. Um produto sem nenhum
-  // `optionGroups` nunca usa isto (objeto fica vazio a vida toda).
-  //
-  // Sistema de Opcionais, Fase 2 (2026-08-14) — cada grupo agora guarda
-  // um ARRAY de ids escolhidos, não mais 1 só: grupo `single` nunca tem
-  // mais de 1 item no array (mesmo efeito de antes, só a forma mudou);
-  // grupo `multiple` pode ter vários, até `maxSelections`.
   const [selectedOptionIds, setSelectedOptionIds] = useState<Record<string, string[]>>({});
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [hasError, setHasError] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
+
+  const isOpen = Boolean(flavorA && flavorB);
+  const isWholePizza = flavorA && flavorB && flavorA.id === flavorB.id;
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
 
-    if (item && !dialog.open) {
+    if (isOpen && !dialog.open) {
       dialog.showModal();
-    } else if (!item && dialog.open) {
+    } else if (!isOpen && dialog.open) {
       dialog.close();
     }
-  }, [item]);
+  }, [isOpen]);
 
-  // Reseta quantidade/observação/opções/estado da imagem sempre que um
-  // produto diferente é aberto.
+  // Reseta a cada nova dupla de sabores (novo `flavorA`/`flavorB.id`) —
+  // mesmo padrão de `ProductDetailModal` ao trocar de produto.
   useEffect(() => {
     setQuantity(1);
     setNotes("");
     setSelectedOptionIds({});
-    setImageLoaded(false);
-    setHasError(false);
-  }, [item?.id]);
+  }, [flavorA?.id, flavorB?.id]);
 
-  const optionGroups = item?.optionGroups ?? [];
+  const optionGroups = flavorA?.optionGroups ?? [];
   const missingRequiredGroup = optionGroups.some(
     (group) => group.required && (selectedOptionIds[group.id]?.length ?? 0) === 0,
   );
 
-  // Preço unitário = base + soma dos `priceDelta` de TODAS as opções
-  // marcadas (Fase 2: pode ser mais de uma por grupo) — recalculado a
-  // cada escolha, pro cliente ver o valor final antes de adicionar
-  // (nunca só descobrir no carrinho).
   const optionsPriceDelta = optionGroups.reduce((sum, group) => {
     const chosenIds = selectedOptionIds[group.id] ?? [];
     const groupDelta = chosenIds.reduce((groupSum, optionId) => {
@@ -126,15 +81,12 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
     }, 0);
     return sum + groupDelta;
   }, 0);
-  const unitPrice = (item?.price ?? 0) + optionsPriceDelta;
+  // Regra de preço confirmada com o dono: cobra o valor do sabor MAIS
+  // CARO entre os dois — nunca a média, nunca a soma.
+  const basePrice = flavorA && flavorB ? Math.max(flavorA.price, flavorB.price) : 0;
+  const unitPrice = basePrice + optionsPriceDelta;
 
-  // Sistema de Opcionais, Fase 2 (2026-08-14) — grupo `single`: marcar
-  // uma opção substitui a anterior (array sempre com no máximo 1). Grupo
-  // `multiple`: marcar alterna (adiciona/remove), até `maxSelections` —
-  // clique além do limite não faz nada (o próprio `<input>` já vem
-  // `disabled` nesse caso, ver JSX abaixo; esta função é a segunda
-  // camada de segurança).
-  function toggleOption(group: PublicOptionGroup, optionId: string) {
+  function toggleOption(group: (typeof optionGroups)[number], optionId: string) {
     setSelectedOptionIds((prev) => {
       const current = prev[group.id] ?? [];
       if (group.selectionType !== "multiple") {
@@ -151,7 +103,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
   }
 
   function handleAdd() {
-    if (!item) return;
+    if (!flavorA || !flavorB) return;
 
     const selectedOptions: SelectedOption[] = optionGroups.flatMap((group) => {
       const chosenIds = selectedOptionIds[group.id] ?? [];
@@ -167,21 +119,33 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
         }));
     });
 
+    const halfAndHalf: HalfAndHalf | undefined = isWholePizza
+      ? undefined
+      : {
+          flavorAName: flavorA.name,
+          flavorAPrice: flavorA.price,
+          flavorBMenuItemId: flavorB.id,
+          flavorBName: flavorB.name,
+          flavorBPrice: flavorB.price,
+        };
+
     addItem({
-      menuItemId: item.id,
-      name: item.name,
+      menuItemId: flavorA.id,
+      name: flavorA.name,
       price: unitPrice,
       quantity,
       notes: notes.trim() || undefined,
       selectedOptions: selectedOptions.length > 0 ? selectedOptions : undefined,
-      imageUrl: item.image_url ?? undefined,
+      halfAndHalf,
+      imageUrl: flavorA.image_url ?? undefined,
     });
 
-    toast.success("Adicionado ao carrinho", `${quantity}x ${item.name}`);
+    toast.success(
+      "Adicionado ao carrinho",
+      isWholePizza ? `${quantity}x ${flavorA.name}` : `${quantity}x Meio a meio: ${flavorA.name} / ${flavorB.name}`,
+    );
     onClose();
   }
-
-  const showImage = Boolean(item?.image_url) && !hasError;
 
   return (
     <dialog
@@ -191,63 +155,59 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
       onClick={(e) => {
         if (e.target === ref.current) onClose();
       }}
-      aria-label={item?.name}
+      aria-label={isWholePizza ? flavorA?.name : "Meio a meio"}
       className={cn(
         "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88dvh] w-full overflow-hidden rounded-t-3xl border-t border-border bg-background p-0 text-foreground shadow-2xl",
         "sm:inset-0 sm:bottom-auto sm:m-auto sm:max-w-md sm:rounded-2xl sm:border sm:shadow-2xl",
         "backdrop:bg-black/60 backdrop:backdrop-blur-[2px]",
       )}
     >
-      {item && (
+      {flavorA && flavorB && (
         <div className="flex max-h-[88dvh] flex-col sm:max-h-[85dvh]">
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="relative h-56 w-full shrink-0 bg-muted sm:h-64 sm:rounded-t-2xl">
-              {showImage ? (
-                <>
-                  {!imageLoaded && <div className="absolute inset-0 animate-pulse bg-muted" aria-hidden />}
-                  <Image
-                    src={item.image_url as string}
-                    alt=""
-                    fill
-                    sizes="448px"
-                    onLoad={() => setImageLoaded(true)}
-                    onError={() => setHasError(true)}
-                    className={cn(
-                      "object-cover transition-opacity duration-300",
-                      imageLoaded ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                </>
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <UtensilsCrossed className="h-12 w-12 text-muted-foreground" aria-hidden />
-                </div>
-              )}
-              <div
-                aria-hidden
-                className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent"
-              />
-              {/* Botão fechar — HTML nativo, não depende de <Button>. */}
+            <div className="flex items-center justify-between px-6 pb-2 pt-5">
+              <h2 className="text-xl font-bold tracking-tight text-foreground">
+                {isWholePizza ? "Pizza inteira" : "Meio a meio"}
+              </h2>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Fechar"
-                className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-zinc-700 shadow-md ring-1 ring-zinc-200 transition hover:bg-white active:scale-95"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground transition hover:bg-muted/70"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="flex flex-col gap-5 px-6 pb-6 pt-5">
-              <div className="flex flex-col gap-1.5">
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">{item.name}</h2>
-                {item.description && <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>}
-                <p className="pt-1 text-lg font-bold tabular-nums text-soft-success-foreground">{formatCurrency(item.price)}</p>
-              </div>
+            {/* Os 2 sabores lado a lado — "modo geral" que o dono pediu:
+                foto de verdade, não só nome numa lista. Quando é pizza
+                inteira, os dois lados são o mesmo sabor mesmo (repetido
+                de propósito — reforça visualmente "inteira"). */}
+            <div className="flex gap-3 px-6 pb-4">
+              {[flavorA, flavorB].map((flavor, i) => (
+                <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+                  <div className="relative h-24 w-full overflow-hidden rounded-2xl bg-muted">
+                    {flavor.image_url ? (
+                      <Image src={flavor.image_url} alt="" fill sizes="200px" className="object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <UtensilsCrossed className="h-6 w-6 text-muted-foreground" aria-hidden />
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-center text-sm font-semibold text-foreground">{flavor.name}</span>
+                  <span className="text-xs text-muted-foreground">{formatCurrency(flavor.price)}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-5 px-6 pb-6">
+              {!isWholePizza && (
+                <p className="text-xs text-muted-foreground">Cobrado o valor do sabor mais caro entre os dois.</p>
+              )}
 
               <div className="flex items-center justify-between rounded-2xl bg-surface px-4 py-3 ring-1 ring-border">
                 <span className="text-sm font-medium text-foreground">Quantidade</span>
-                {/* Controles +/- — HTML nativo, área de toque 40x40, com fundo/borda/estado ativo próprios. */}
                 <div className="flex items-center gap-1 rounded-full bg-background p-1 shadow-sm ring-1 ring-border">
                   <button
                     type="button"
@@ -272,16 +232,6 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                 </div>
               </div>
 
-              {/* Sistema de Opcionais, Fase 1 (2026-08-14) — só renderiza
-                  quando o produto tem pelo menos 1 grupo aplicável (a
-                  grande maioria não tem nenhum ainda).
-                  Fase 2 (2026-08-14): grupo `single` continua
-                  `<input type="radio">` (igual sempre foi); grupo
-                  `multiple` vira `<input type="checkbox">`, com contador
-                  "X/Y selecionados" no título e opções não marcadas
-                  desabilitando sozinhas ao bater o limite — mesmo
-                  raciocínio de "não depender de componente novo" já
-                  usado no resto deste modal. */}
               {optionGroups.map((group) => {
                 const chosenIds = selectedOptionIds[group.id] ?? [];
                 return (
@@ -335,25 +285,22 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                 );
               })}
 
-              {/* Campo de observação — label/textarea/hint em HTML nativo, sem depender de FormField/Textarea. */}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="product-notes" className="text-sm font-medium text-foreground">
+                <label htmlFor="half-and-half-notes" className="text-sm font-medium text-foreground">
                   Observação
                 </label>
                 <textarea
-                  id="product-notes"
+                  id="half-and-half-notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Alguma observação para a cozinha?"
                   rows={2}
                   className="w-full resize-none rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 />
-                <p className="text-xs text-muted-foreground">Opcional — ex.: sem cebola, ponto da carne.</p>
               </div>
             </div>
           </div>
 
-          {/* Botão principal — HTML nativo, fundo/contraste/hover/active próprios. */}
           <div className="shrink-0 border-t border-border bg-background px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
             <button
               type="button"
