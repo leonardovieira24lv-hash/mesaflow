@@ -21,7 +21,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
   try {
     const { slug, token } = await params;
 
-    assertWithinRateLimit(`call-waiter:${token}`, CALL_WAITER_RATE_LIMIT);
+    await assertWithinRateLimit(`call-waiter:${token}`, CALL_WAITER_RATE_LIMIT);
 
     const admin = createAdminClient();
     const restaurant = await resolveRestaurantBySlug(admin, slug);

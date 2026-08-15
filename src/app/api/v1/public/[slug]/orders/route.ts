@@ -24,7 +24,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const body = await request.json();
     const input = parseOrThrow(createOrderSchema, body);
 
-    assertWithinRateLimit(`create-order:${input.table_token}`, ORDER_CREATION_RATE_LIMIT);
+    await assertWithinRateLimit(`create-order:${input.table_token}`, ORDER_CREATION_RATE_LIMIT);
 
     const admin = createAdminClient();
     const restaurant = await resolveRestaurantBySlug(admin, slug);

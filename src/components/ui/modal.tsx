@@ -91,7 +91,27 @@ export function Modal({ open, onClose, title, description, children, footer, hid
     } else if (!open && dialog.open) {
       dialog.close();
     }
-  }, [open]);
+    // Bug real encontrado (2026-08-15, relatado pelo dono — QR Code da
+    // mesa "reagia" ao toque mas nunca abria, em computador E celular,
+    // sessão nova, sem nada de cache): faltava `portalTarget` aqui. Um
+    // modal SEMPRE montado (ex.: `<ConfirmDialog open={Boolean(x)}>`,
+    // nunca desmonta, só alterna `open`) nunca bate nisso — o efeito que
+    // resolve `portalTarget` já rodou muito antes do primeiro `open:
+    // true` de verdade. Mas um modal montado só SOB DEMANDA (ex.:
+    // `{qrTable && <TableQrModal open .../>}`, como o de QR) nasce com
+    // `open: true` desde a primeira renderização — nessa primeira
+    // passada, `portalTarget` ainda é `null` (só é resolvido depois, no
+    // outro efeito abaixo), então o `<dialog>` de verdade nem existe no
+    // HTML ainda (`ref.current` é `null`) e este efeito não faz nada. Ele
+    // só roda de novo quando algo na lista de dependências muda — e
+    // como aqui só tinha `[open]`, e `open` continua `true` a vida
+    // inteira desse modal, o efeito nunca é re-executado depois que
+    // `portalTarget` finalmente resolve e o `<dialog>` passa a existir de
+    // verdade. `showModal()` nunca é chamado — o elemento existe, mas
+    // fica no estado padrão (fechado) pra sempre. Com `portalTarget` na
+    // lista, o efeito roda de novo assim que o `<dialog>` passa a existir
+    // de verdade, e aí sim chama `showModal()`.
+  }, [open, portalTarget]);
 
   const dialogElement = (
     <dialog

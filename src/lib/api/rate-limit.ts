@@ -1,76 +1,39 @@
 import { AppError } from "@/lib/api/errors";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
- * Limitador de requisições em memória, por chave (contrato seção 3.3:
- * "protegido por rate limiting por table_token"; seção 1.4: `429
- * RATE_LIMITED`).
+ * Limitador de requisições compartilhado (contrato seção 3.3: "protegido
+ * por rate limiting por table_token"; seção 1.4: `429 RATE_LIMITED`).
  *
  * ===========================================================================
- * Reavaliação — Sprint Pós-Auditoria (RC1.1), item 4
+ * Correção de confiabilidade — 2026-08-15
  * ===========================================================================
  *
- * A Auditoria Técnica Final apontou que este limitador não é confiável no
- * ambiente real de deploy (Vercel, serverless): cada instância da função
- * tem seu próprio processo Node e, portanto, seu próprio `Map` — não existe
- * um contador único e global por `key`.
+ * Até aqui, este módulo guardava a contagem num `Map` em memória do
+ * próprio processo Node — funcionava bem localmente, mas no ambiente real
+ * de deploy (Vercel, serverless) cada instância da função tem seu próprio
+ * processo e, portanto, seu próprio `Map`. Não existia um contador único
+ * e global por `key`: 20 instâncias concorrentes = 20 limites de `N`
+ * cada, não um limite de `N` de verdade. Isso já estava documentado aqui
+ * mesmo como pendência conhecida havia tempo.
  *
- * Decisão desta sprint: **o problema de fundo (contador não-compartilhado
- * entre instâncias) não tem correção real sem algum tipo de store
- * compartilhado** (Redis, ou até a mesma base Postgres já usada pelo
- * projeto) — e a sprint que abriu este item foi explícita: nenhuma
- * infraestrutura nova nesta rodada. Introduzir isso agora seria também uma
- * refatoração maior que o pedido ("melhoria simples"), com uma
- * consequência real de latência (todo request protegido passaria a
- * depender de um round-trip extra a um store externo). Por isso, **não foi
- * implementado** — fica registrado no roadmap como pendência real para uma
- * sprint futura dedicada a isso, não escondido atrás de uma correção
- * cosmética.
+ * Correção (decisão do dono, 2026-08-15): reaproveitar o Postgres já
+ * usado pelo projeto em vez de introduzir Redis/Upstash — sem serviço
+ * novo pra gerenciar. A contagem em si (mesmo algoritmo de "janela
+ * deslizante" que já existia aqui, ponderando a janela anterior pra
+ * evitar a rajada de 2×limit na borda entre duas janelas fixas) agora
+ * mora inteira dentro da função `check_rate_limit` (migration `0040`),
+ * protegida por `select ... for update` — a linha daquela chave trava
+ * enquanto a função roda, então duas requisições concorrentes pra MESMA
+ * chave (de instâncias diferentes, não importa) nunca competem "por
+ * baixo do pano": a segunda espera a primeira terminar antes de ler o
+ * valor.
  *
- * O que ESTA sprint corrigiu, sem nenhuma infraestrutura nova (só o
- * algoritmo, no mesmo `Map` em memória de sempre): a implementação antiga
- * usava "janela fixa" (fixed window) — o contador zera de uma vez a cada
- * `windowMs`. Isso tem uma fragilidade conhecida independente de
- * ser single-instance ou não: um cliente pode mandar `limit` requisições
- * bem no fim de uma janela e outras `limit` logo no início da próxima,
- * conseguindo `2×limit` requisições numa rajada curta que atravessa a
- * borda das duas janelas. Trocado por um "sliding window counter" —
- * pondera a contagem da janela anterior proporcionalmente a quanto da
- * janela atual já passou, em vez de descartá-la de uma vez. Isso reduz de
- * verdade esse tipo de rajada, dentro de uma única instância — não resolve
- * (e não finge resolver) a falta de contador compartilhado entre
- * instâncias diferentes, que é o problema mais sério e continua em aberto.
+ * Assinatura mudou de síncrona pra assíncrona (agora depende de uma
+ * consulta ao banco) — todo chamador precisa de `await` a partir de
+ * agora. Trade-off aceito: alguns milissegundos a mais por requisição
+ * protegida, imperceptível no volume atual.
  */
-interface RateLimitEntry {
-  currentWindowStartedAt: number;
-  currentWindowCount: number;
-  previousWindowCount: number;
-  windowMs: number;
-}
-
-const hits = new Map<string, RateLimitEntry>();
-
-// Sprint Final (RC1) — correção de confiabilidade: `hits` nunca removia
-// entradas antigas, então crescia sem limite pela vida inteira do
-// processo (memory leak lento — só afeta um processo de longa duração,
-// não instâncias serverless que reiniciam sozinhas, mas é barato de
-// corrigir mesmo assim). Em vez de um `setInterval` próprio (que ficaria
-// rodando mesmo sem nenhuma requisição — ruim justamente no ambiente
-// serverless que este módulo já avisa não ser o alvo principal), a
-// limpeza acontece de carona nas próprias chamadas: a cada
-// `CLEANUP_INTERVAL_CALLS` chamadas, varre e remove entradas cuja janela
-// atual E anterior já expiraram de verdade (uma entrada "desliza" entre
-// janelas — só está de fato inativa quando as duas ficaram velhas).
-const CLEANUP_INTERVAL_CALLS = 200;
-let callsSinceCleanup = 0;
-
-function cleanupExpiredEntries(now: number): void {
-  for (const [key, entry] of hits) {
-    if (now - entry.currentWindowStartedAt >= entry.windowMs * 2) {
-      hits.delete(key);
-    }
-  }
-}
-
 interface RateLimitOptions {
   limit: number;
   windowMs: number;
@@ -80,43 +43,34 @@ interface RateLimitOptions {
  * Lança `429 RATE_LIMITED` se `key` já excedeu `limit` chamadas dentro da
  * janela deslizante de `windowMs`. Caso contrário, registra esta chamada e
  * retorna normalmente.
+ *
+ * Propositalmente "falha aberta" (fail open): se a checagem em si der
+ * erro (o banco estiver fora do ar, por exemplo), deixa a requisição
+ * passar em vez de bloquear todo o app por causa de uma proteção
+ * secundária — o objetivo do rate limiter é conter abuso, não virar ele
+ * mesmo um ponto único de falha que derruba pedido/chamar garçom/etc.
+ * pra todo cliente legítimo. Decisão deliberada, dado o medo explícito do
+ * dono de "restaurante parado por causa do Forko" — vale reavaliar se um
+ * dia o volume justificar o oposto.
  */
-export function assertWithinRateLimit(key: string, { limit, windowMs }: RateLimitOptions): void {
-  const now = Date.now();
+export async function assertWithinRateLimit(key: string, { limit, windowMs }: RateLimitOptions): Promise<void> {
+  const admin = createAdminClient();
 
-  callsSinceCleanup += 1;
-  if (callsSinceCleanup >= CLEANUP_INTERVAL_CALLS) {
-    callsSinceCleanup = 0;
-    cleanupExpiredEntries(now);
-  }
+  const { data: allowed, error } = await admin.rpc("check_rate_limit", {
+    p_key: key,
+    p_limit: limit,
+    p_window_ms: windowMs,
+  });
 
-  const entry = hits.get(key);
-
-  if (!entry || now - entry.currentWindowStartedAt >= windowMs * 2) {
-    // Sem entrada, ou tão velha que não há nada "deslizando" de verdade —
-    // começa uma janela nova do zero.
-    hits.set(key, { currentWindowStartedAt: now, currentWindowCount: 1, previousWindowCount: 0, windowMs });
+  if (error) {
+    console.error("[rate-limit] check_rate_limit falhou — deixando passar (fail open):", error);
     return;
   }
 
-  if (now - entry.currentWindowStartedAt >= windowMs) {
-    // A janela atual acabou de virar — a que estava "atual" vira "anterior"
-    // (ainda pesa na contagem, proporcionalmente), e uma nova começa vazia.
-    entry.previousWindowCount = entry.currentWindowCount;
-    entry.currentWindowCount = 0;
-    entry.currentWindowStartedAt += windowMs;
-  }
-
-  const fractionElapsed = (now - entry.currentWindowStartedAt) / windowMs;
-  const weightedPreviousCount = entry.previousWindowCount * (1 - fractionElapsed);
-  const estimatedCount = entry.currentWindowCount + weightedPreviousCount;
-
-  if (estimatedCount >= limit) {
+  if (!allowed) {
     throw new AppError(
       "RATE_LIMITED",
       "Muitos pedidos enviados em pouco tempo. Aguarde um instante e tente novamente.",
     );
   }
-
-  entry.currentWindowCount += 1;
 }

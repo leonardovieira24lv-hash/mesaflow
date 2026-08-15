@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
   try {
     const { profile } = await requireOwner();
-    assertWithinRateLimit(`team-create:${profile.restaurantId}`, STAFF_CREATE_RATE_LIMIT);
+    await assertWithinRateLimit(`team-create:${profile.restaurantId}`, STAFF_CREATE_RATE_LIMIT);
 
     const body = await request.json();
     const input = parseOrThrow(createStaffSchema, body);

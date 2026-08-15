@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   let createdUserId: string | null = null;
 
   try {
-    assertWithinRateLimit(`onboarding-signup:${resolveClientIp(request)}`, SIGNUP_RATE_LIMIT);
+    await assertWithinRateLimit(`onboarding-signup:${resolveClientIp(request)}`, SIGNUP_RATE_LIMIT);
 
     const body = await request.json();
     const input = parseOrThrow(createRestaurantSchema, body);
