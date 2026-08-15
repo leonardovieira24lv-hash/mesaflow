@@ -22,7 +22,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const { data: order, error } = await supabase
       .from("orders")
       .select(
-        "id, status, total_amount, notes, created_at, table:tables(id, name), order_items(id, menu_item_id, name, price, quantity, notes, cancelled_at, selected_options)",
+        "id, status, total_amount, notes, created_at, table:tables(id, name), order_items(id, menu_item_id, name, price, quantity, notes, cancelled_at, selected_options, half_and_half)",
       )
       .eq("id", id)
       .eq("restaurant_id", profile.restaurantId)
@@ -66,6 +66,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
             // create-order.ts como { group_name, option_name, price_delta }[],
             // ou null quando o produto não tinha opção aplicável.
             selected_options: { group_name: string; option_name: string; price_delta: number }[] | null;
+            // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-15).
+            // Gravado por create-order.ts, `null` em todo item comum
+            // (a grande maioria) — só presente quando o pedido combinou 2
+            // sabores diferentes (pizza inteira de 1 sabor não grava isto,
+            // é só um produto comum).
+            half_and_half: { flavor_a_name: string; flavor_a_price: number; flavor_b_name: string; flavor_b_price: number } | null;
           }[]
         | null;
     };
@@ -85,6 +91,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         notes: item.notes ?? undefined,
         cancelled_at: item.cancelled_at,
         selected_options: item.selected_options ?? undefined,
+        half_and_half: item.half_and_half ?? undefined,
       })),
       created_at: row.created_at,
     });

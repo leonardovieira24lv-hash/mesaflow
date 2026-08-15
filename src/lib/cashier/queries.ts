@@ -59,6 +59,8 @@ export interface CashierSessionDetail {
     lineTotal: number;
     // Sistema de Opcionais, Fase 1, Passo 4 (2026-08-14).
     selectedOptions?: { group_name: string; option_name: string; price_delta: number }[];
+    // Sistema de Opcionais, Fase 3, Passo 4 — meio a meio (2026-08-15).
+    halfAndHalf?: { flavor_a_name: string; flavor_a_price: number; flavor_b_name: string; flavor_b_price: number };
   }[];
 }
 
@@ -244,6 +246,7 @@ interface SessionDetailQueryRow {
       quantity: number;
       price: number;
       selected_options: { group_name: string; option_name: string; price_delta: number }[] | null;
+      half_and_half: { flavor_a_name: string; flavor_a_price: number; flavor_b_name: string; flavor_b_price: number } | null;
     }[];
   }[];
 }
@@ -257,7 +260,7 @@ export async function getCashierSessionDetail(
   const { data, error } = await supabase
     .from("order_sessions")
     .select(
-      "id, opened_at, closed_at, payment_method, tables(name), orders(status, total_amount, order_items(name, quantity, price, selected_options))",
+      "id, opened_at, closed_at, payment_method, tables(name), orders(status, total_amount, order_items(name, quantity, price, selected_options, half_and_half))",
     )
     .eq("id", sessionId)
     .eq("restaurant_id", restaurantId)
@@ -294,6 +297,18 @@ export async function getCashierSessionDetail(
       .join(",");
   }
 
+  // Sistema de Opcionais, Fase 3, Passo 4 — meio a meio (2026-08-15):
+  // mesmo raciocínio do `optionsKeyPart` acima — "Meio a meio: Calabresa
+  // / Portuguesa" e "Meio a meio: Marguerita / X-Tudo" podem ter o mesmo
+  // preço final (ambos cobram o sabor mais caro) sem serem o mesmo item;
+  // sem isto na chave, se misturariam numa venda fechada com 2+ pedidos.
+  function halfAndHalfKeyPart(
+    halfAndHalf: { flavor_a_name: string; flavor_b_name: string } | null,
+  ): string {
+    if (!halfAndHalf) return "";
+    return [halfAndHalf.flavor_a_name, halfAndHalf.flavor_b_name].sort().join("+");
+  }
+
   const linesByKey = new Map<
     string,
     {
@@ -301,11 +316,12 @@ export async function getCashierSessionDetail(
       quantity: number;
       unitPrice: number;
       selectedOptions?: { group_name: string; option_name: string; price_delta: number }[];
+      halfAndHalf?: { flavor_a_name: string; flavor_a_price: number; flavor_b_name: string; flavor_b_price: number };
     }
   >();
   for (const order of validOrders) {
     for (const item of order.order_items) {
-      const key = `${item.name}__${item.price}__${optionsKeyPart(item.selected_options)}`;
+      const key = `${item.name}__${item.price}__${optionsKeyPart(item.selected_options)}__${halfAndHalfKeyPart(item.half_and_half)}`;
       const existing = linesByKey.get(key);
       if (existing) existing.quantity += item.quantity;
       else
@@ -314,6 +330,7 @@ export async function getCashierSessionDetail(
           quantity: item.quantity,
           unitPrice: item.price,
           selectedOptions: item.selected_options ?? undefined,
+          halfAndHalf: item.half_and_half ?? undefined,
         });
     }
   }

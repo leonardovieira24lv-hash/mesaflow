@@ -122,7 +122,11 @@ export function CaixaSessionDetailModal({ sessionId, onClose }: CaixaSessionDeta
                         {item.quantity}×
                       </span>
                       <div className="flex min-w-0 flex-col">
-                        <span className="truncate text-ds2-foreground">{item.name}</span>
+                        <span className="truncate text-ds2-foreground">
+                          {item.halfAndHalf
+                            ? `Meio a meio: ${item.halfAndHalf.flavor_a_name} / ${item.halfAndHalf.flavor_b_name}`
+                            : item.name}
+                        </span>
                         {item.selectedOptions && item.selectedOptions.length > 0 && (
                           <span className="truncate text-xs text-ds2-foreground-muted">
                             {item.selectedOptions.map((o) => `${o.group_name}: ${o.option_name}`).join(", ")}

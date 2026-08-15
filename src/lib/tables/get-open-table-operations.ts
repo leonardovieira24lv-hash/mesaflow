@@ -87,6 +87,9 @@ export interface OpenSessionOrder {
     // Sistema de Opcionais, Fase 1, Passo 4 (2026-08-14) — campo aditivo,
     // consumidores que ainda não usam simplesmente ignoram.
     selected_options: { group_name: string; option_name: string; price_delta: number }[] | null;
+    // Sistema de Opcionais, Fase 3, Passo 4 — meio a meio (2026-08-15) —
+    // mesmo raciocínio, campo aditivo.
+    half_and_half: { flavor_a_name: string; flavor_a_price: number; flavor_b_name: string; flavor_b_price: number } | null;
   }[];
 }
 
@@ -116,7 +119,7 @@ export async function getOrdersForSessions(
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, order_session_id, status, total_amount, created_at, table:tables(id, name), order_items(name, quantity, price, notes, cancelled_at, selected_options)",
+      "id, order_session_id, status, total_amount, created_at, table:tables(id, name), order_items(name, quantity, price, notes, cancelled_at, selected_options, half_and_half)",
     )
     .in("order_session_id", sessionIds);
 
@@ -144,6 +147,7 @@ export async function getOrdersForSessions(
           notes: string | null;
           cancelled_at: string | null;
           selected_options: { group_name: string; option_name: string; price_delta: number }[] | null;
+          half_and_half: { flavor_a_name: string; flavor_a_price: number; flavor_b_name: string; flavor_b_price: number } | null;
         }[]
       | null;
   }>;

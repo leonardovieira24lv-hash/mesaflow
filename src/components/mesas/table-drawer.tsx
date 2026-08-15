@@ -28,6 +28,22 @@ import type { PAYMENT_METHOD_VALUES } from "@/lib/validations/tables";
 type PaymentMethod = (typeof PAYMENT_METHOD_VALUES)[number];
 
 /**
+ * Sistema de Opcionais, Fase 3, Passo 4 — meio a meio (2026-08-15). Nome
+ * de exibição do item: "Meio a meio: A / B" quando o pedido combinou 2
+ * sabores diferentes, senão o nome normal. Pizza inteira de 1 sabor só
+ * (mesmo sabor tocado 2x no Cardápio Público) NUNCA grava
+ * `half_and_half` — é indistinguível de um pedido comum de propósito, já
+ * mostra o nome normal sozinho, sem precisar de caso especial aqui.
+ */
+function displayItemName(item: {
+  name: string;
+  half_and_half?: { flavor_a_name: string; flavor_a_price: number; flavor_b_name: string; flavor_b_price: number };
+}): string {
+  if (!item.half_and_half) return item.name;
+  return `Meio a meio: ${item.half_and_half.flavor_a_name} / ${item.half_and_half.flavor_b_name}`;
+}
+
+/**
  * Sistema de Opcionais, Fase 1, Passo 4 (2026-08-14) — texto curto pra
  * exibir a escolha do cliente junto do item (ex.: "Borda: Catupiry").
  *
@@ -90,6 +106,10 @@ interface OrderDetail {
     // Sistema de Opcionais, Fase 1, Passo 4 (2026-08-14) — escolhas feitas
     // pelo cliente (ex.: Borda: Catupiry), resolvidas no servidor.
     selected_options?: { group_name: string; option_name: string; price_delta: number }[];
+    // Sistema de Opcionais, Fase 3, Passo 4 — meio a meio (2026-08-15).
+    // Ausente na grande maioria dos itens (só presente quando o pedido
+    // combinou 2 sabores diferentes).
+    half_and_half?: { flavor_a_name: string; flavor_a_price: number; flavor_b_name: string; flavor_b_price: number };
   }[];
 }
 
@@ -978,7 +998,7 @@ export function TableDrawer({
                                       : "text-ds2-foreground",
                                   )}
                                 >
-                                  {item.quantity}× {item.name}
+                                  {item.quantity}× {displayItemName(item)}
                                   {index < detail.items.length - 1 ? "," : ""}
                                 </span>
                                 {!item.cancelled_at &&
@@ -1041,14 +1061,14 @@ export function TableDrawer({
                                 className="flex items-center gap-1 text-xs italic text-ds2-foreground-muted"
                               >
                                 <StickyNote className="h-3 w-3 shrink-0" aria-hidden />
-                                {item.name}: {item.notes}
+                                {displayItemName(item)}: {item.notes}
                               </span>
                             ))}
                           {detail.items
                             .filter((item) => item.selected_options?.length)
                             .map((item) => (
                               <span key={`${item.id}-options`} className="text-xs text-ds2-foreground-muted">
-                                {item.name}: {formatSelectedOptions(item.selected_options)}
+                                {displayItemName(item)}: {formatSelectedOptions(item.selected_options)}
                               </span>
                             ))}
                         </div>
@@ -1068,7 +1088,7 @@ export function TableDrawer({
                                   <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-ds2-sm bg-ds2-surface-hover px-1 font-numeric text-xs font-semibold text-ds2-foreground-muted">
                                     {item.quantity}×
                                   </span>
-                                  {item.name}
+                                  {displayItemName(item)}
                                 </span>
                                 {item.cancelled_at ? (
                                   <span className="shrink-0 text-xs font-medium text-ds2-danger">Cancelado</span>
@@ -1223,7 +1243,7 @@ export function TableDrawer({
             <div key={order.id}>
               {(details[order.id]?.items ?? []).map((item) => (
                 <p key={item.id}>
-                  {item.quantity}x {item.name} — {formatCurrency(item.price * item.quantity)}
+                  {item.quantity}x {displayItemName(item)} — {formatCurrency(item.price * item.quantity)}
                   {formatSelectedOptions(item.selected_options) && (
                     <> ({formatSelectedOptions(item.selected_options)})</>
                   )}

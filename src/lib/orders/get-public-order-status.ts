@@ -17,6 +17,8 @@ export interface PublicOrderStatusItem {
   // Sistema de Opcionais, Fase 1, Passo 4 (2026-08-14) — escolhas feitas
   // pelo cliente (ex.: Borda: Catupiry), resolvidas no servidor.
   selectedOptions: { group_name: string; option_name: string; price_delta: number }[] | null;
+  // Sistema de Opcionais, Fase 3, Passo 4 — meio a meio (2026-08-15).
+  halfAndHalf?: { flavor_a_name: string; flavor_a_price: number; flavor_b_name: string; flavor_b_price: number } | null;
 }
 
 export interface PublicOrderStatus {
@@ -58,7 +60,7 @@ export async function getPublicOrderStatus(
 
   const { data: items, error: itemsError } = await admin
     .from("order_items")
-    .select("name, quantity, notes, selected_options")
+    .select("name, quantity, notes, selected_options, half_and_half")
     .eq("order_id", order.id);
 
   if (itemsError) {
@@ -73,6 +75,7 @@ export async function getPublicOrderStatus(
       quantity: item.quantity,
       notes: item.notes,
       selectedOptions: item.selected_options,
+      halfAndHalf: item.half_and_half,
     })),
   };
 }

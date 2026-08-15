@@ -251,7 +251,10 @@ export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLog
                   <ul className="flex flex-col gap-1 border-t border-border/80 pt-2.5">
                     {order.items.map((item, index) => (
                       <li key={`${order.id}-${item.name}-${index}`} className="text-xs text-muted-foreground">
-                        <span className="font-semibold text-foreground">{item.quantity}×</span> {item.name}
+                        <span className="font-semibold text-foreground">{item.quantity}×</span>{" "}
+                        {item.halfAndHalf
+                          ? `Meio a meio: ${item.halfAndHalf.flavor_a_name} / ${item.halfAndHalf.flavor_b_name}`
+                          : item.name}
                         {item.selectedOptions && item.selectedOptions.length > 0 && (
                           <span>
                             {" "}

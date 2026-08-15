@@ -62,6 +62,7 @@ export async function getPublicSessionOrders(
         quantity: item.quantity,
         notes: item.notes,
         selectedOptions: item.selected_options,
+        halfAndHalf: item.half_and_half,
       })),
       totalAmount: sessionOrder.totalAmount,
       createdAt: sessionOrder.createdAt,
