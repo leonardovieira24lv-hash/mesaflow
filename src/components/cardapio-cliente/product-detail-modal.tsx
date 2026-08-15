@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Minus, Plus, UtensilsCrossed, X } from "lucide-react";
+import { ChevronDown, Minus, Plus, UtensilsCrossed, X } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { useCart, type SelectedOption, type HalfAndHalf } from "@/components/cardapio-cliente/cart-context";
 import { toast } from "@/components/ui/toast";
@@ -85,6 +85,11 @@ export function ProductDetailModal({ item, onClose, categories }: ProductDetailM
   // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14).
   const [halfAndHalfEnabled, setHalfAndHalfEnabled] = useState(false);
   const [secondFlavorId, setSecondFlavorId] = useState<string | null>(null);
+  // Repensado (2026-08-14): dono não aprovou a lista seca de nome+preço —
+  // cada sabor candidato agora expande pra mostrar foto+descrição antes
+  // de escolher (Opção B, aprovada). `expandedFlavorId` é só apresentação
+  // (qual card está aberto), não afeta a escolha em si (`secondFlavorId`).
+  const [expandedFlavorId, setExpandedFlavorId] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
@@ -108,6 +113,7 @@ export function ProductDetailModal({ item, onClose, categories }: ProductDetailM
     setSelectedOptionIds({});
     setHalfAndHalfEnabled(false);
     setSecondFlavorId(null);
+    setExpandedFlavorId(null);
     setImageLoaded(false);
     setHasError(false);
   }, [item?.id]);
@@ -322,29 +328,68 @@ export function ProductDetailModal({ item, onClose, categories }: ProductDetailM
                   {halfAndHalfEnabled && (
                     <div className="flex flex-col gap-1.5 pt-1">
                       <span className="text-xs text-muted-foreground">Escolha o 2º sabor:</span>
-                      {halfAndHalfSiblings.map((sibling) => (
-                        <label
-                          key={sibling.id}
-                          className={cn(
-                            "flex cursor-pointer items-center justify-between rounded-xl border px-3.5 py-2.5 text-sm transition",
-                            secondFlavorId === sibling.id
-                              ? "border-emerald-500 bg-emerald-50"
-                              : "border-border bg-background",
-                          )}
-                        >
-                          <span className="flex items-center gap-2.5">
-                            <input
-                              type="radio"
-                              name="half-and-half-second-flavor"
-                              checked={secondFlavorId === sibling.id}
-                              onChange={() => setSecondFlavorId(sibling.id)}
-                              className="h-4 w-4 accent-emerald-500"
-                            />
-                            <span className="text-foreground">{sibling.name}</span>
-                          </span>
-                          <span className="tabular-nums text-muted-foreground">{formatCurrency(sibling.price)}</span>
-                        </label>
-                      ))}
+                      {halfAndHalfSiblings.map((sibling) => {
+                        const isSelected = secondFlavorId === sibling.id;
+                        const isExpanded = expandedFlavorId === sibling.id;
+                        return (
+                          <div
+                            key={sibling.id}
+                            className={cn(
+                              "overflow-hidden rounded-xl border transition",
+                              isSelected ? "border-emerald-500 bg-emerald-50" : "border-border bg-background",
+                            )}
+                          >
+                            <div className="flex items-center gap-2 px-3.5 py-2.5">
+                              {/* Nome expande/recolhe a prévia — separado
+                                  do rádio de escolher, mesmo motivo de
+                                  sempre neste projeto: HTML não permite
+                                  `<button>` dentro de `<button>`/`<label>`
+                                  clicável inteiro. */}
+                              <button
+                                type="button"
+                                onClick={() => setExpandedFlavorId(isExpanded ? null : sibling.id)}
+                                className="flex flex-1 items-center gap-2 text-left text-sm"
+                              >
+                                <ChevronDown
+                                  className={cn(
+                                    "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform",
+                                    isExpanded && "rotate-180",
+                                  )}
+                                  aria-hidden
+                                />
+                                <span className="text-foreground">{sibling.name}</span>
+                              </button>
+                              <span className="shrink-0 tabular-nums text-muted-foreground">
+                                {formatCurrency(sibling.price)}
+                              </span>
+                              <input
+                                type="radio"
+                                name="half-and-half-second-flavor"
+                                checked={isSelected}
+                                onChange={() => setSecondFlavorId(sibling.id)}
+                                aria-label={`Escolher ${sibling.name} como 2º sabor`}
+                                className="h-4 w-4 shrink-0 accent-emerald-500"
+                              />
+                            </div>
+                            {isExpanded && (
+                              <div className="flex gap-3 border-t border-border px-3.5 py-3">
+                                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-muted">
+                                  {sibling.image_url ? (
+                                    <Image src={sibling.image_url} alt="" fill sizes="64px" className="object-cover" />
+                                  ) : (
+                                    <div className="flex h-full w-full items-center justify-center">
+                                      <UtensilsCrossed className="h-5 w-5 text-muted-foreground" aria-hidden />
+                                    </div>
+                                  )}
+                                </div>
+                                <p className="text-xs leading-relaxed text-muted-foreground">
+                                  {sibling.description || "Sem descrição cadastrada."}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                       {isHalfAndHalf && (
                         <p className="pt-1 text-xs text-muted-foreground">
                           Cobrado o valor do sabor mais caro entre os dois.
