@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import { ButtonLink } from "@/components/ui/button-link";
 import { Bell, CheckCircle2, ChefHat, Clock3, Hand, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminOrderStatusBadge } from "@/components/ui/badge";
@@ -773,10 +773,9 @@ export function TableDrawer({
   const isDarkOnLight = TABLE_CARD_TONE_DARK_TEXT.includes(cardState.tone);
 
   // `focusRingClass`: mesmo raciocínio de `tables-manager.tsx` — usado em
-  // elementos que não são `Button` (o link "Ver histórico completo");
-  // `Button` já tem `focus-visible` nativo desde a migração DS2 do
-  // componente, então onde este valor é passado para um `<Button>` é
-  // redundante, não incorreto.
+  // elementos que não são `Button` nativo. `Button`/`ButtonLink` já têm
+  // `focus-visible` nativo desde a migração DS2 do componente, então onde
+  // este valor é passado para um deles é redundante, não incorreto.
   const focusRingClass =
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background";
 
@@ -1354,15 +1353,15 @@ export function TableDrawer({
           )}
 
           {openOrders.length > 0 && (
-            <Link
-              href={ROUTES.pedidoDetalhe(openOrders[0]!.id)}
-              className={cn(
-                "flex items-center justify-center gap-1.5 rounded-ds2-md border border-ds2-border bg-ds2-surface px-4 py-2.5 text-center text-sm font-medium text-ds2-foreground transition hover:bg-ds2-surface-hover",
-                focusRingClass,
-              )}
-            >
+            // Corrigido a pedido do dono (2026-08-15): antes era um
+            // <Link> com classes Tailwind imitando um botão à mão — não
+            // ficava óbvio que era clicável. `ButtonLink` é o MESMO
+            // componente usado em "Imprimir"/"Liberar mesa" logo acima
+            // (`buttonVariants()` por baixo) — garante aparência idêntica
+            // a um botão de verdade, não uma imitação.
+            <ButtonLink href={ROUTES.pedidoDetalhe(openOrders[0]!.id)} variant="outline" className="w-full">
               Ver histórico completo de pedidos desta mesa
-            </Link>
+            </ButtonLink>
           )}
         </div>
       </div>

@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { orderTrackingChannel } from "@/lib/realtime/channels";
 import { getAvailableOrderStatusTransitions } from "@/lib/orders/order-status-transitions-map";
@@ -28,6 +29,7 @@ export interface OrderDetailDto {
     price: number;
     quantity: number;
     notes?: string;
+    cancelled_at: string | null;
     // Sistema de Opcionais, Fase 1/3, Passo 4 (2026-08-15) — gap
     // encontrado: esta página nunca buscava/exibia isto, mesmo já
     // existindo desde a Fase 1. Corrigido junto com o relato do dono
@@ -40,6 +42,13 @@ export interface OrderDetailDto {
 
 interface OrderDetailProps {
   initialOrder: OrderDetailDto;
+  /**
+   * Correção (2026-08-15) — outros pedidos da MESMA comanda (mesmo
+   * `order_session_id`), exibidos read-only abaixo do pedido principal.
+   * Resolve o link "Ver histórico completo de pedidos desta mesa"
+   * (plural) realmente mostrar todos, não só 1.
+   */
+  siblingOrders: OrderDetailDto[];
 }
 
 const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
@@ -74,7 +83,7 @@ const STATUS_ACTION_LABELS: Record<OrderStatus, string> = {
  * mudança feita por outro atendente simultaneamente — carga inicial vem do
  * Server Component (página).
  */
-export function OrderDetail({ initialOrder }: OrderDetailProps) {
+export function OrderDetail({ initialOrder, siblingOrders }: OrderDetailProps) {
   const router = useRouter();
   const [order, setOrder] = useState<OrderDetailDto>(initialOrder);
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
@@ -236,7 +245,12 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
                 className="flex flex-col gap-0.5 rounded-ds2-sm border border-ds2-border bg-ds2-surface p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="flex flex-col">
-                  <span className="font-medium text-ds2-foreground">
+                  <span
+                    className={cn(
+                      "font-medium",
+                      item.cancelled_at ? "text-ds2-foreground-muted line-through" : "text-ds2-foreground",
+                    )}
+                  >
                     {item.quantity}×{" "}
                     {item.half_and_half
                       ? `Meio a meio: ${item.half_and_half.flavor_a_name} / ${item.half_and_half.flavor_b_name}`
@@ -249,7 +263,13 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
                   )}
                   {item.notes && <span className="text-xs text-ds2-foreground-muted">{item.notes}</span>}
                 </div>
-                <span className="font-numeric text-ds2-foreground-muted">{formatCurrency(item.price * item.quantity)}</span>
+                {item.cancelled_at ? (
+                  <span className="shrink-0 text-xs font-medium text-ds2-danger">Cancelado</span>
+                ) : (
+                  <span className="font-numeric text-ds2-foreground-muted">
+                    {formatCurrency(item.price * item.quantity)}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
@@ -271,6 +291,73 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
           </span>
         </CardFooter>
       </Card>
+
+      {/* Correção (2026-08-15): outros pedidos da mesma comanda —
+          read-only de propósito (sem botão de ação), pra não duplicar a
+          máquina de transição de status inteira aqui dentro; mudar
+          status de um pedido específico continua sendo feito no drawer
+          de Mesas ou clicando nele direto na lista de Pedidos. */}
+      {siblingOrders.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="text-sm font-semibold text-ds2-foreground-muted">
+            Outros pedidos desta comanda ({siblingOrders.length})
+          </h2>
+          {siblingOrders.map((sibling) => (
+            <Card key={sibling.id}>
+              <CardHeader className="flex flex-row items-center justify-between gap-4 py-3">
+                <CardDescription>
+                  Pedido criado em {dateTimeFormatter.format(new Date(sibling.created_at))}
+                </CardDescription>
+                <AdminOrderStatusBadge status={sibling.status} />
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2 pt-0">
+                <ul className="flex flex-col gap-2">
+                  {sibling.items.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex flex-col gap-0.5 rounded-ds2-sm border border-ds2-border bg-ds2-surface p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="flex flex-col">
+                        <span
+                          className={cn(
+                            "font-medium",
+                            item.cancelled_at ? "text-ds2-foreground-muted line-through" : "text-ds2-foreground",
+                          )}
+                        >
+                          {item.quantity}×{" "}
+                          {item.half_and_half
+                            ? `Meio a meio: ${item.half_and_half.flavor_a_name} / ${item.half_and_half.flavor_b_name}`
+                            : item.name}
+                        </span>
+                        {item.selected_options && item.selected_options.length > 0 && (
+                          <span className="text-xs text-ds2-foreground-muted">
+                            {item.selected_options.map((o) => `${o.group_name}: ${o.option_name}`).join(", ")}
+                          </span>
+                        )}
+                        {item.notes && <span className="text-xs text-ds2-foreground-muted">{item.notes}</span>}
+                      </div>
+                      {item.cancelled_at ? (
+                        <span className="shrink-0 text-xs font-medium text-ds2-danger">Cancelado</span>
+                      ) : (
+                        <span className="font-numeric text-ds2-foreground-muted">
+                          {formatCurrency(item.price * item.quantity)}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+              <CardDivider />
+              <CardFooter className="justify-between">
+                <span className="font-medium text-ds2-foreground">Total</span>
+                <span className="font-numeric text-lg font-semibold text-ds2-foreground">
+                  {formatCurrency(sibling.total_amount)}
+                </span>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {availableTransitions.length > 0 ? (
         <div className="flex flex-wrap gap-3">
