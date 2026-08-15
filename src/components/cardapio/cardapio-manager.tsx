@@ -12,6 +12,8 @@ import { toast } from "@/components/ui/toast";
 import { CategorySection } from "@/components/cardapio/category-section";
 import { ProductStatusFilter, type ProductStatusFilterValue } from "@/components/cardapio/product-status-filter";
 import { ProductForm } from "@/components/cardapio/product-form";
+import { CategoryImageUpload } from "@/components/cardapio/category-image-upload";
+import { deleteCategoryImage } from "@/lib/storage/category-images";
 import { menuItemFromDto, type MenuItemDto } from "@/types/menu-item-dto";
 import { createCategorySchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
@@ -23,6 +25,7 @@ interface CategoryDto {
   position: number;
   allowsHalfAndHalf: boolean;
   isCompact: boolean;
+  imageUrl: string | null;
 }
 
 function categoryFromDto(dto: CategoryDto): MenuCategory {
@@ -32,6 +35,7 @@ function categoryFromDto(dto: CategoryDto): MenuCategory {
     position: dto.position,
     allowsHalfAndHalf: dto.allowsHalfAndHalf,
     isCompact: dto.isCompact,
+    imageUrl: dto.imageUrl,
   };
 }
 
@@ -87,6 +91,13 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
   // "bebidas". Toda categoria marcada assim exibe seus produtos numa
   // grade 2 colunas, foto pequena, sem descrição, no Cardápio Público.
   const [categoryIsCompact, setCategoryIsCompact] = useState(false);
+  // Foto de categoria (2026-08-15) — ideia do dono, inspirada num
+  // concorrente: círculos com foto em vez de pílula de texto puro.
+  // `originalCategoryImageUrl` guarda o valor com que o modal abriu, pra
+  // saber se precisa apagar a imagem antiga do Storage depois de salvar
+  // (mesmo raciocínio de `product-form.tsx`).
+  const [categoryImageUrl, setCategoryImageUrl] = useState("");
+  const [originalCategoryImageUrl, setOriginalCategoryImageUrl] = useState("");
   const [categoryFormError, setCategoryFormError] = useState<string | null>(null);
   const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState<MenuCategory | null>(null);
@@ -137,6 +148,8 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
     setCategoryName("");
     setCategoryAllowsHalfAndHalf(false);
     setCategoryIsCompact(false);
+    setCategoryImageUrl("");
+    setOriginalCategoryImageUrl("");
     setCategoryFormError(null);
     setCategoryModalOpen(true);
   }
@@ -146,6 +159,8 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
     setCategoryName(category.name);
     setCategoryAllowsHalfAndHalf(category.allowsHalfAndHalf);
     setCategoryIsCompact(category.isCompact);
+    setCategoryImageUrl(category.imageUrl ?? "");
+    setOriginalCategoryImageUrl(category.imageUrl ?? "");
     setCategoryFormError(null);
     setCategoryModalOpen(true);
   }
@@ -158,6 +173,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
       name: categoryName,
       allowsHalfAndHalf: categoryAllowsHalfAndHalf,
       isCompact: categoryIsCompact,
+      imageUrl: categoryImageUrl,
     });
     if (!result.success) {
       setCategoryFormError(result.error.issues[0]?.message ?? "Nome inválido.");
@@ -176,6 +192,7 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
             name: result.data.name,
             allowsHalfAndHalf: result.data.allowsHalfAndHalf,
             isCompact: result.data.isCompact,
+            imageUrl: result.data.imageUrl,
           }),
         },
       );
@@ -194,6 +211,13 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
           ? prev.map((c) => (c.id === saved.id ? saved : c))
           : [...prev, saved].sort((a, b) => a.position - b.position),
       );
+
+      // Mesmo raciocínio de `product-form.tsx`: só depois de salvar com
+      // sucesso é que a imagem antiga (se trocada ou removida) é apagada
+      // do Storage — best-effort, nunca bloqueia o fluxo.
+      if (originalCategoryImageUrl && originalCategoryImageUrl !== saved.imageUrl) {
+        void deleteCategoryImage(originalCategoryImageUrl);
+      }
 
       // Categoria nova: fica visível e já expandida, com "+ Adicionar
       // Produto" pronto — sem navegar pra lugar nenhum.
@@ -544,6 +568,18 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
               // atualizar o valor controlado). Removido: o input continua
               // recebendo foco automaticamente pelo comportamento nativo do
               // `<dialog>`, sem o conflito.
+            />
+          </FormField>
+
+          {/* Foto de categoria (2026-08-15) — ideia do dono, inspirada num
+              concorrente: círculos com foto em vez de pílula de texto
+              puro. Opcional de propósito, ver comentário do componente. */}
+          <FormField label="Foto da categoria">
+            <CategoryImageUpload
+              restaurantId={restaurantId}
+              value={categoryImageUrl}
+              onChange={setCategoryImageUrl}
+              disabled={isSavingCategory}
             />
           </FormField>
 

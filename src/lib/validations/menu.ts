@@ -13,6 +13,8 @@ export const createCategorySchema = z.object({
   allowsHalfAndHalf: z.boolean().default(false),
   // Layout compacto por categoria (2026-08-15) — mesmo raciocínio.
   isCompact: z.boolean().default(false),
+  // Foto de categoria (2026-08-15) — opcional de propósito.
+  imageUrl: z.string().trim().optional(),
 });
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 
@@ -23,6 +25,7 @@ export const updateCategorySchema = z.object({
   name: z.string().trim().min(1, "Informe o nome da categoria.").optional(),
   allowsHalfAndHalf: z.boolean().optional(),
   isCompact: z.boolean().optional(),
+  imageUrl: z.string().trim().optional(),
 });
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
 

@@ -54,6 +54,11 @@ export interface PublicMenuCategory {
   allowsHalfAndHalf: boolean;
   // Layout compacto por categoria (2026-08-15) — mesmo raciocínio.
   isCompact: boolean;
+  // Foto de categoria (2026-08-15) — `null` quando o dono não subiu
+  // nenhuma. O fallback (foto do 1º produto → iniciais) é resolvido no
+  // Cardápio Público (`category-nav.tsx`), não aqui — este campo é só o
+  // valor cru do banco.
+  imageUrl: string | null;
   items: PublicMenuItem[];
 }
 
@@ -114,7 +119,7 @@ export async function getPublicMenu(
   const [categoriesResult, itemsResult, optionGroupsResult] = await Promise.all([
     admin
       .from("menu_categories")
-      .select("id, name, position, allows_half_and_half, is_compact")
+      .select("id, name, position, allows_half_and_half, is_compact, image_url")
       .eq("restaurant_id", restaurantId)
       .order("position", { ascending: true }),
     admin
@@ -166,6 +171,7 @@ export async function getPublicMenu(
     name: category.name,
     allowsHalfAndHalf: category.allows_half_and_half,
     isCompact: category.is_compact,
+    imageUrl: category.image_url,
     items: (itemsByCategory.get(category.id) ?? []).map((item) => ({
       id: item.id,
       categoryId: category.id,

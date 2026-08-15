@@ -1,10 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface CategoryNavProps {
-  categories: { id: string; name: string }[];
+  categories: {
+    id: string;
+    name: string;
+    // Foto de categoria (2026-08-15) — ideia do dono, inspirada num
+    // concorrente: círculos com foto em vez de pílula de texto puro.
+    imageUrl: string | null;
+    // Só o necessário pro fallback "foto do 1º produto" — não precisa do
+    // `PublicMenuItem` inteiro aqui.
+    items: { image_url?: string }[];
+  }[];
+}
+
+/**
+ * Foto de exibição de UMA categoria, em cascata (2026-08-15): foto
+ * própria da categoria → foto do 1º produto cadastrado nela → `null`
+ * (cai pras iniciais do nome). Ideia do dono, reconhecendo que nem todo
+ * dono de restaurante vai querer subir foto categoria por categoria —
+ * o fallback garante que o círculo nunca fica genérico à toa quando já
+ * existe alguma foto disponível.
+ */
+function resolveCategoryImage(category: CategoryNavProps["categories"][number]): string | null {
+  if (category.imageUrl) return category.imageUrl;
+  return category.items[0]?.image_url ?? null;
 }
 
 /** Prefixo do `id` de cada seção de categoria na página — usado tanto aqui quanto em `<CardapioClienteView>`. */
@@ -93,22 +116,41 @@ export function CategoryNav({ categories }: CategoryNavProps) {
       aria-label="Categorias do cardápio"
       className="sticky top-0 z-20 flex gap-2 overflow-x-auto border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/85 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      {categories.map((category) => (
-        <button
-          key={category.id}
-          type="button"
-          onClick={() => handleClick(category.id)}
-          aria-current={activeId === category.id ? "true" : undefined}
-          className={cn(
-            "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-[background-color,color,transform,box-shadow] duration-150 active:scale-[0.96]",
-            activeId === category.id
-              ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30"
-              : "border border-border bg-surface text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {category.name}
-        </button>
-      ))}
+      {categories.map((category) => {
+        const imageSrc = resolveCategoryImage(category);
+        return (
+          <button
+            key={category.id}
+            type="button"
+            onClick={() => handleClick(category.id)}
+            aria-current={activeId === category.id ? "true" : undefined}
+            className="flex shrink-0 flex-col items-center gap-1.5 active:scale-[0.96]"
+          >
+            <div
+              className={cn(
+                "relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 bg-surface transition-colors",
+                activeId === category.id ? "border-emerald-500" : "border-border",
+              )}
+            >
+              {imageSrc ? (
+                <Image src={imageSrc} alt="" fill sizes="56px" className="object-cover" />
+              ) : (
+                <span className="text-base font-bold text-muted-foreground">
+                  {category.name.trim().charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <span
+              className={cn(
+                "max-w-[64px] truncate text-xs font-medium",
+                activeId === category.id ? "text-emerald-600" : "text-muted-foreground",
+              )}
+            >
+              {category.name}
+            </span>
+          </button>
+        );
+      })}
     </nav>
   );
 }

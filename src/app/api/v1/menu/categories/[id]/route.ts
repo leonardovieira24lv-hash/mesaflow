@@ -17,7 +17,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const { id } = await params;
     const { profile } = await requireOwner();
     const body = await request.json();
-    const { name, allowsHalfAndHalf, isCompact } = parseOrThrow(updateCategorySchema, body);
+    const { name, allowsHalfAndHalf, isCompact, imageUrl } = parseOrThrow(updateCategorySchema, body);
 
     const supabase = await createClient();
 
@@ -25,13 +25,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (name !== undefined) updates.name = name;
     if (allowsHalfAndHalf !== undefined) updates.allows_half_and_half = allowsHalfAndHalf;
     if (isCompact !== undefined) updates.is_compact = isCompact;
+    // Diferente de `name`/`isCompact` acima: uma string vazia é uma
+    // intenção válida ("remover a foto"), não "não mexi nesse campo" —
+    // por isso `!== undefined` aqui, não um `if (imageUrl)` que trataria
+    // "" como ausência.
+    if (imageUrl !== undefined) updates.image_url = imageUrl || null;
 
     const { data: updated, error } = await supabase
       .from("menu_categories")
       .update(updates)
       .eq("id", id)
       .eq("restaurant_id", profile.restaurantId)
-      .select("id, name, position, allows_half_and_half, is_compact")
+      .select("id, name, position, allows_half_and_half, is_compact, image_url")
       .maybeSingle();
 
     if (error) {
@@ -55,6 +60,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       position: updated.position,
       allowsHalfAndHalf: updated.allows_half_and_half,
       isCompact: updated.is_compact,
+      imageUrl: updated.image_url,
     });
   } catch (err) {
     return handleRouteError(err);

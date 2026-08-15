@@ -40,6 +40,8 @@ export interface MenuCategory {
   allowsHalfAndHalf: boolean;
   // Layout compacto por categoria (2026-08-15).
   isCompact: boolean;
+  // Foto de categoria (2026-08-15) — opcional, `null` quando não subida.
+  imageUrl: string | null;
 }
 
 export interface MenuItem {

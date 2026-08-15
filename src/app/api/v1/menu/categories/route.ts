@@ -13,7 +13,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("menu_categories")
-      .select("id, name, position, allows_half_and_half, is_compact")
+      .select("id, name, position, allows_half_and_half, is_compact, image_url")
       .eq("restaurant_id", profile.restaurantId)
       .order("position", { ascending: true });
 
@@ -28,6 +28,7 @@ export async function GET() {
         position: c.position,
         allowsHalfAndHalf: c.allows_half_and_half,
         isCompact: c.is_compact,
+        imageUrl: c.image_url,
       })),
     );
   } catch (err) {
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
   try {
     const { profile } = await requireOwner();
     const body = await request.json();
-    const { name, allowsHalfAndHalf, isCompact } = parseOrThrow(createCategorySchema, body);
+    const { name, allowsHalfAndHalf, isCompact, imageUrl } = parseOrThrow(createCategorySchema, body);
 
     const supabase = await createClient();
 
@@ -77,8 +78,9 @@ export async function POST(request: Request) {
         position: nextPosition,
         allows_half_and_half: allowsHalfAndHalf,
         is_compact: isCompact,
+        image_url: imageUrl || null,
       })
-      .select("id, name, position, allows_half_and_half, is_compact")
+      .select("id, name, position, allows_half_and_half, is_compact, image_url")
       .single();
 
     if (insertError) {
@@ -96,6 +98,7 @@ export async function POST(request: Request) {
       position: created.position,
       allowsHalfAndHalf: created.allows_half_and_half,
       isCompact: created.is_compact,
+      imageUrl: created.image_url,
     });
   } catch (err) {
     return handleRouteError(err);
