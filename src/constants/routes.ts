@@ -29,6 +29,7 @@ export const ROUTES = {
   mesas: "/mesas",
   caixa: "/caixa",
   configuracoes: "/configuracoes",
+  configuracoesPerfil: "/configuracoes/perfil",
   configuracoesEquipe: "/configuracoes/equipe",
   configuracoesOperacao: "/configuracoes/operacao",
 

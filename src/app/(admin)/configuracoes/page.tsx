@@ -1,35 +1,46 @@
 import { redirect } from "next/navigation";
-import { Users, Clock } from "lucide-react";
+import Link from "next/link";
+import { Store, Clock, Users, ChevronRight } from "lucide-react";
 import { requirePageSession } from "@/lib/auth/require-page-session";
-import { createClient } from "@/lib/supabase/server";
-import { getRestaurantOverview } from "@/lib/restaurant/get-restaurant-overview";
-import { RestaurantSettingsForm } from "@/components/configuracoes/restaurant-settings-form";
-import { ButtonLink } from "@/components/ui/button-link";
 import { ROUTES } from "@/constants/routes";
 
-export const metadata = { title: "Perfil do Restaurante" };
+export const metadata = { title: "Configurações" };
+
+const OPTIONS = [
+  {
+    href: ROUTES.configuracoesPerfil,
+    icon: Store,
+    title: "Perfil",
+    description: "Identidade, contato e endereço do restaurante.",
+  },
+  {
+    href: ROUTES.configuracoesOperacao,
+    icon: Clock,
+    title: "Operação",
+    description: "Horário de funcionamento e formas de pagamento aceitas.",
+  },
+  {
+    href: ROUTES.configuracoesEquipe,
+    icon: Users,
+    title: "Equipe",
+    description: "Funcionários com acesso ao sistema.",
+  },
+] as const;
 
 /**
- * Configurações do Restaurante (contrato seção 4.2, Sprint 9). Carrega o
- * restaurante atual aqui (Server Component lendo direto do Supabase via
- * `getRestaurantOverview` — mesma função já usada pelo Dashboard e por
- * `GET /api/v1/restaurant`, evitando um round-trip HTTP da própria página
- * para a própria API, mesmo raciocínio documentado no módulo de Dashboard)
- * e entrega para `<RestaurantSettingsForm>`, que cuida de toda a edição.
+ * Configurações — hub (2026-08-15). Antes, `/configuracoes` já ERA o
+ * Perfil do Restaurante (formulário inteiro direto na tela), com
+ * "Operação"/"Equipe" como 2 atalhos pendurados no topo — visualmente
+ * desequilibrado ("2 botões + um monte de cards soltos embaixo"),
+ * relatado pelo dono com prints. Mockup aprovado antes de codar (regra
+ * do projeto): virou um hub simples, 3 opções simétricas
+ * (Perfil/Operação/Equipe), cada uma sua própria página — o conteúdo do
+ * Perfil não mudou em nada, só passou a morar em
+ * `/configuracoes/perfil` (ver esse arquivo pro histórico completo).
  *
- * Sprint "Perfil do Restaurante, Fase 1" (2026-08-09): título/descrição da
- * página atualizados para refletir a reorganização; `logoUrl`/`description`
- * (colunas novas, `0026_restaurant_logo_and_description.sql`) passados ao
- * formulário junto com os demais campos.
- *
- * Fase 3 — Gestão de Equipe (2026-08-09, seguinte): página passou a exigir
- * `role = 'owner'` — reforço no nível de página do mesmo limite que
- * `GET/PATCH /api/v1/restaurant` já impõem (a proteção real está lá, isto
- * só evita que um `staff` veja a tela renderizar antes de qualquer
- * requisição falhar). Ganhou também o atalho para `/configuracoes/equipe`.
- * O `?blocked=configuracoes` no redirect é lido por `<AccessDeniedToast>`
- * (`components/dashboard/access-denied-toast.tsx`) para explicar, com um
- * toast, por que a pessoa voltou pro Dashboard sem ter feito nada.
+ * Sem busca de dado nenhuma aqui de propósito — é só navegação, carrega
+ * mais rápido que a versão antiga (que já buscava `getRestaurantOverview`
+ * só pra mostrar 2 botões).
  */
 export default async function ConfiguracoesPage() {
   const { profile } = await requirePageSession();
@@ -37,53 +48,31 @@ export default async function ConfiguracoesPage() {
     redirect(`${ROUTES.dashboard}?blocked=configuracoes`);
   }
 
-  const supabase = await createClient();
-  const overview = await getRestaurantOverview(supabase, profile.restaurantId);
-
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="font-display text-2xl font-semibold">Perfil do Restaurante</h1>
-          <p className="text-sm text-muted-foreground">
-            Gerencie a identidade, o contato e o endereço do restaurante.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <ButtonLink href={ROUTES.configuracoesOperacao} variant="outline" size="sm">
-            <Clock className="h-4 w-4" />
-            Operação
-          </ButtonLink>
-          <ButtonLink href={ROUTES.configuracoesEquipe} variant="outline" size="sm">
-            <Users className="h-4 w-4" />
-            Equipe
-          </ButtonLink>
-        </div>
+      <div className="flex flex-col gap-1">
+        <h1 className="font-display text-2xl font-semibold text-ds2-foreground">Configurações</h1>
+        <p className="text-sm text-ds2-foreground-muted">Escolha o que você quer gerenciar.</p>
       </div>
 
-      <RestaurantSettingsForm
-        restaurant={{
-          id: overview.id,
-          name: overview.name,
-          slug: overview.slug,
-          status: overview.status,
-          tradeName: overview.tradeName,
-          phone: overview.phone,
-          whatsapp: overview.whatsapp,
-          email: overview.email,
-          postalCode: overview.postalCode,
-          street: overview.street,
-          streetNumber: overview.streetNumber,
-          neighborhood: overview.neighborhood,
-          city: overview.city,
-          state: overview.state,
-          instagram: overview.instagram,
-          facebook: overview.facebook,
-          website: overview.website,
-          logoUrl: overview.logoUrl,
-          description: overview.description,
-        }}
-      />
+      <div className="flex flex-col gap-3">
+        {OPTIONS.map((option) => (
+          <Link
+            key={option.href}
+            href={option.href}
+            className="flex items-center gap-4 rounded-ds2-lg border border-ds2-border bg-ds2-surface p-4 transition hover:bg-ds2-surface-hover active:scale-[0.98]"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-ds2-md bg-ds2-primary/10 text-ds2-primary">
+              <option.icon className="h-5 w-5" />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="font-semibold text-ds2-foreground">{option.title}</span>
+              <span className="text-xs text-ds2-foreground-muted">{option.description}</span>
+            </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-ds2-foreground-muted" aria-hidden />
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
