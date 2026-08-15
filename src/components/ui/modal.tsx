@@ -76,6 +76,8 @@ export function Modal({ open, onClose, title, description, children, footer, hid
   // elemento com aquele id no documento, não necessariamente ao do modal
   // realmente aberto. `useId()` torna isto único por instância, sempre.
   const titleId = useId();
+  // Ver comentário completo no `onClick` do backdrop, mais abaixo.
+  const pointerDownOnBackdrop = useRef(false);
 
   useEffect(() => {
     const themedAncestor = anchorRef.current?.closest(".ds2-dark, .menu-dark");
@@ -118,9 +120,31 @@ export function Modal({ open, onClose, title, description, children, footer, hid
       ref={ref}
       onClose={onClose}
       onCancel={onClose}
+      onPointerDown={(e) => {
+        // Guarda o alvo de ONDE o clique começou — usado pelo onClick
+        // abaixo. Ver comentário lá pro motivo.
+        pointerDownOnBackdrop.current = e.target === ref.current;
+      }}
       onClick={(e) => {
-        // Fecha ao clicar no backdrop (fora do <div> de conteúdo).
-        if (e.target === ref.current) onClose();
+        // Fecha ao clicar no backdrop (fora do <div> de conteúdo) — mas só
+        // se o clique também tiver COMEÇADO no backdrop (`pointerDownOnBackdrop`).
+        //
+        // Bug real encontrado (2026-08-15, relatado pelo dono com vídeo —
+        // foto de categoria "salvando" mas nunca persistindo): o editor de
+        // recorte de foto é um `<dialog>` aninhado DENTRO deste modal
+        // (categoria/produto). Tocar em "Salvar" dentro dele fecha aquele
+        // `<dialog>` de dentro — e o vídeo mostrou os dois fechando
+        // JUNTOS, no mesmo quadro: o clique "vazava" pro backdrop deste
+        // modal de fora e fechava ele também, antes do formulário
+        // conseguir salvar. Suspeita: um clique "fantasma", só a fase de
+        // soltar o dedo, disparado depois que o `<dialog>` de dentro some
+        // do meio do gesto — sem uma fase de "pressionar" de verdade
+        // registrada aqui. Exigir que a MESMA interação tenha começado
+        // E terminado no backdrop deste modal filtra esse tipo de clique
+        // fantasma, sem perder o comportamento normal de "tocar fora
+        // fecha" pra um toque de verdade do usuário.
+        if (e.target === ref.current && pointerDownOnBackdrop.current) onClose();
+        pointerDownOnBackdrop.current = false;
       }}
       // `hideHeader` omite o `<h2 id="modal-title">` — sem isso,
       // `aria-labelledby="modal-title"` fixo apontaria para um id
