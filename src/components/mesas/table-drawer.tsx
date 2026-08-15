@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ButtonLink } from "@/components/ui/button-link";
-import { Bell, CheckCircle2, ChefHat, Clock3, Hand, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
+import { Bell, CheckCircle2, ChefHat, Clock3, Hand, History, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -1391,17 +1391,17 @@ export function TableDrawer({
           )}
 
           {openOrders.length > 0 && (
-            // Corrigido a pedido do dono (2026-08-15, 3ª rodada) — prova
-            // concreta na própria foto que ele mandou: "Imprimir" e
-            // "Liberar mesa" (que ELE reconhece como botões de verdade)
-            // usam `variant="outline"`. Minha 2ª tentativa (`secondary`)
-            // piorou: nesse tema claro, `ds2-surface-hover` (96% de
-            // claridade) fica quase idêntico ao fundo ao redor (90%),
-            // quase invisível — `outline` tem borda explícita
-            // (`border-ds2-border`), funciona porque tem contorno
-            // definido, não depende de contraste de preenchimento sutil.
+            // 4ª rodada (2026-08-15) — o dono apontou o que realmente
+            // faltava: "Imprimir"/"Liberar mesa" têm ÍCONE junto do
+            // texto (`<Printer />`), este botão era só texto puro, frase
+            // longa ("Ver histórico completo de pedidos desta mesa", 43
+            // caracteres) — lê como faixa de texto esparsa, não botão.
+            // Ícone + texto mais curto ("abrasileirado", pedido
+            // explícito) resolve as duas queixas de uma vez: mesma
+            // linguagem visual do resto do rodapé, menos "esparsado".
             <ButtonLink href={ROUTES.pedidoDetalhe(openOrders[0]!.id)} variant="outline" className="w-full">
-              Ver histórico completo de pedidos desta mesa
+              <History className="h-4 w-4" />
+              Ver histórico da mesa
             </ButtonLink>
           )}
         </div>
