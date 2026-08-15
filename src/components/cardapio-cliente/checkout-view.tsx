@@ -120,6 +120,7 @@ function CheckoutContent({ slug, tableToken, restaurantName, restaurantLogoUrl, 
             quantity: item.quantity,
             notes: item.notes,
             selected_option_ids: item.selectedOptions?.map((o) => o.optionId),
+            second_menu_item_id: item.halfAndHalf?.flavorBMenuItemId,
           })),
         }),
       });

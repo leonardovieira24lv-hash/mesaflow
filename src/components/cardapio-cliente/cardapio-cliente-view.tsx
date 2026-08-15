@@ -172,7 +172,7 @@ export function CardapioClienteView({
           )}
         </main>
 
-        <ProductDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+        <ProductDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} categories={categories} />
         <CartSummaryBar slug={slug} />
       </div>
     </CartProvider>

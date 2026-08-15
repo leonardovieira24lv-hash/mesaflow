@@ -18,6 +18,23 @@ export interface SelectedOption {
   priceDelta: number;
 }
 
+/**
+ * Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). Snapshot dos
+ * dois sabores no momento da compra — mesmo raciocínio de sempre (se o
+ * dono renomear/mudar preço amanhã, o carrinho/pedido de hoje não muda
+ * sozinho). `flavorA` é sempre o produto cujo modal foi aberto primeiro;
+ * `flavorB` é o escolhido na lista de "fazer meio a meio". A ordem entre
+ * os dois não importa pra exibição (sempre "A / B"), só precisa ser
+ * consistente dentro da mesma linha do carrinho.
+ */
+export interface HalfAndHalf {
+  flavorAName: string;
+  flavorAPrice: number;
+  flavorBMenuItemId: string;
+  flavorBName: string;
+  flavorBPrice: number;
+}
+
 export interface CartItem {
   menuItemId: string;
   name: string;
@@ -33,6 +50,13 @@ export interface CartItem {
    * que gravar em `order_items.selected_options`.
    */
   selectedOptions?: SelectedOption[];
+  /**
+   * Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). Ausente na
+   * grande maioria dos itens (só produtos de categoria marcada como
+   * "aceita meio a meio" mostram a opção). `price` acima já reflete a
+   * regra de negócio confirmada (cobra o valor do sabor mais caro).
+   */
+  halfAndHalf?: HalfAndHalf;
   /**
    * Puramente de apresentação (miniatura na linha do carrinho) — não faz
    * parte do contrato de `POST /orders` (seção 3.3, só `menu_item_id` /
@@ -53,9 +77,15 @@ interface CartContextValue {
     menuItemId: string,
     notes: string | undefined,
     selectedOptions: SelectedOption[] | undefined,
+    halfAndHalf: HalfAndHalf | undefined,
     quantity: number,
   ) => void;
-  removeItem: (menuItemId: string, notes: string | undefined, selectedOptions: SelectedOption[] | undefined) => void;
+  removeItem: (
+    menuItemId: string,
+    notes: string | undefined,
+    selectedOptions: SelectedOption[] | undefined,
+    halfAndHalf: HalfAndHalf | undefined,
+  ) => void;
   clear: () => void;
 }
 
@@ -79,21 +109,33 @@ function optionsSignature(options: SelectedOption[] | undefined): string {
 }
 
 /**
+ * Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). Mesmo
+ * raciocínio de `optionsSignature`: reduz o meio a meio (ou a ausência
+ * dele) a uma string estável, pra comparar duas linhas.
+ */
+function halfAndHalfSignature(halfAndHalf: HalfAndHalf | undefined): string {
+  if (!halfAndHalf) return "";
+  return halfAndHalf.flavorBMenuItemId;
+}
+
+/**
  * Duas linhas do carrinho são "a mesma linha" se forem o mesmo produto,
- * com a mesma observação, E a mesma escolha de opções — pedido explícito
- * do dono: "a lista deve separar o item toda vez que houver observações
- * diferentes, pra cozinha diferenciar". Antes de Opcionais, só
- * `menuItemId`+`notes` decidiam isso; `optionsSignature` agora entra na
- * mesma checagem, exatamente com o mesmo peso.
+ * com a mesma observação, a mesma escolha de opções E o mesmo meio a
+ * meio (ou nenhum dos dois) — pedido explícito do dono: "a lista deve
+ * separar o item toda vez que houver observações diferentes, pra
+ * cozinha diferenciar". Antes de Opcionais, só `menuItemId`+`notes`
+ * decidiam isso; `optionsSignature`/`halfAndHalfSignature` agora entram
+ * na mesma checagem, exatamente com o mesmo peso.
  */
 function sameLine(
-  a: Pick<CartItem, "menuItemId" | "notes" | "selectedOptions">,
-  b: Pick<CartItem, "menuItemId" | "notes" | "selectedOptions">,
+  a: Pick<CartItem, "menuItemId" | "notes" | "selectedOptions" | "halfAndHalf">,
+  b: Pick<CartItem, "menuItemId" | "notes" | "selectedOptions" | "halfAndHalf">,
 ): boolean {
   return (
     a.menuItemId === b.menuItemId &&
     (a.notes ?? "") === (b.notes ?? "") &&
-    optionsSignature(a.selectedOptions) === optionsSignature(b.selectedOptions)
+    optionsSignature(a.selectedOptions) === optionsSignature(b.selectedOptions) &&
+    halfAndHalfSignature(a.halfAndHalf) === halfAndHalfSignature(b.halfAndHalf)
   );
 }
 
@@ -158,11 +200,18 @@ export function CartProvider({ slug, tableToken, children }: CartProviderProps) 
   }, []);
 
   const updateQuantity = useCallback(
-    (menuItemId: string, notes: string | undefined, selectedOptions: SelectedOption[] | undefined, quantity: number) => {
+    (
+      menuItemId: string,
+      notes: string | undefined,
+      selectedOptions: SelectedOption[] | undefined,
+      halfAndHalf: HalfAndHalf | undefined,
+      quantity: number,
+    ) => {
       setItems((prev) => {
-        if (quantity <= 0) return prev.filter((line) => !sameLine(line, { menuItemId, notes, selectedOptions }));
+        if (quantity <= 0)
+          return prev.filter((line) => !sameLine(line, { menuItemId, notes, selectedOptions, halfAndHalf }));
         return prev.map((line) =>
-          sameLine(line, { menuItemId, notes, selectedOptions }) ? { ...line, quantity } : line,
+          sameLine(line, { menuItemId, notes, selectedOptions, halfAndHalf }) ? { ...line, quantity } : line,
         );
       });
     },
@@ -170,8 +219,13 @@ export function CartProvider({ slug, tableToken, children }: CartProviderProps) 
   );
 
   const removeItem = useCallback(
-    (menuItemId: string, notes: string | undefined, selectedOptions: SelectedOption[] | undefined) => {
-      setItems((prev) => prev.filter((line) => !sameLine(line, { menuItemId, notes, selectedOptions })));
+    (
+      menuItemId: string,
+      notes: string | undefined,
+      selectedOptions: SelectedOption[] | undefined,
+      halfAndHalf: HalfAndHalf | undefined,
+    ) => {
+      setItems((prev) => prev.filter((line) => !sameLine(line, { menuItemId, notes, selectedOptions, halfAndHalf })));
     },
     [],
   );

@@ -75,7 +75,11 @@ export function CartLineItem({ item, editable = false, onUpdateQuantity, onRemov
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <p className="truncate font-semibold text-foreground">{item.name}</p>
+        <p className="truncate font-semibold text-foreground">
+          {item.halfAndHalf
+            ? `Meio a meio: ${item.halfAndHalf.flavorAName} / ${item.halfAndHalf.flavorBName}`
+            : item.name}
+        </p>
         {item.selectedOptions && item.selectedOptions.length > 0 && (
           <p className="truncate text-xs text-muted-foreground">
             {item.selectedOptions.map((o) => o.optionName).join(", ")}

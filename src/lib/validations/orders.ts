@@ -43,6 +43,13 @@ export const createOrderItemSchema = z.object({
   // que não pertence a nenhum grupo aplicável a este produto é
   // silenciosamente ignorado, não derruba o pedido inteiro.
   selected_option_ids: z.array(z.string().uuid()).optional(),
+  // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). Presente só
+  // quando o cliente ativou "Fazer meio a meio": id do 2º sabor
+  // escolhido. `menu_item_id` acima continua sendo o 1º sabor. Nome e
+  // preço dos dois, e qual categoria permite a combinação, são sempre
+  // resolvidos/validados no servidor — nunca confia no que o cliente
+  // mandou (mesmo raciocínio de sempre).
+  second_menu_item_id: z.string().uuid("Produto inválido.").optional(),
 });
 export type CreateOrderItemInput = z.infer<typeof createOrderItemSchema>;
 

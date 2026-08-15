@@ -4,14 +4,22 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Minus, Plus, UtensilsCrossed, X } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
-import { useCart, type SelectedOption } from "@/components/cardapio-cliente/cart-context";
+import { useCart, type SelectedOption, type HalfAndHalf } from "@/components/cardapio-cliente/cart-context";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import type { PublicMenuItem, PublicOptionGroup } from "@/lib/orders/public-menu";
+import type { PublicMenuCategory, PublicMenuItem, PublicOptionGroup } from "@/lib/orders/public-menu";
 
 interface ProductDetailModalProps {
   item: PublicMenuItem | null;
   onClose: () => void;
+  /**
+   * Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). O cardápio
+   * inteiro já está carregado na tela-mãe (`CardapioClienteView`) — passa
+   * a lista completa de categorias aqui em vez de fazer uma busca nova,
+   * pra achar a categoria deste item (`allowsHalfAndHalf`) e os
+   * "irmãos" (outros produtos da mesma categoria) pra combinar.
+   */
+  categories: PublicMenuCategory[];
 }
 
 /**
@@ -61,7 +69,7 @@ interface ProductDetailModalProps {
  * em `menu-item-card.tsx` (contraste fixo sobre foto arbitrária; cor de
  * ação, fora do escopo).
  */
-export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
+export function ProductDetailModal({ item, onClose, categories }: ProductDetailModalProps) {
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
@@ -74,6 +82,9 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
   // mais de 1 item no array (mesmo efeito de antes, só a forma mudou);
   // grupo `multiple` pode ter vários, até `maxSelections`.
   const [selectedOptionIds, setSelectedOptionIds] = useState<Record<string, string[]>>({});
+  // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14).
+  const [halfAndHalfEnabled, setHalfAndHalfEnabled] = useState(false);
+  const [secondFlavorId, setSecondFlavorId] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
@@ -95,6 +106,8 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
     setQuantity(1);
     setNotes("");
     setSelectedOptionIds({});
+    setHalfAndHalfEnabled(false);
+    setSecondFlavorId(null);
     setImageLoaded(false);
     setHasError(false);
   }, [item?.id]);
@@ -103,6 +116,15 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
   const missingRequiredGroup = optionGroups.some(
     (group) => group.required && (selectedOptionIds[group.id]?.length ?? 0) === 0,
   );
+
+  // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). Categoria
+  // deste item e seus "irmãos" — outros produtos disponíveis da mesma
+  // categoria, pra combinar. `allowsHalfAndHalf` confirmado com o dono:
+  // é a categoria inteira que liga isso, não produto por produto.
+  const category = categories.find((c) => c.id === item?.categoryId);
+  const halfAndHalfSiblings = (category?.items ?? []).filter((sibling) => sibling.id !== item?.id && sibling.is_available);
+  const secondFlavor = halfAndHalfSiblings.find((sibling) => sibling.id === secondFlavorId) ?? null;
+  const isHalfAndHalf = halfAndHalfEnabled && secondFlavor !== null;
 
   // Preço unitário = base + soma dos `priceDelta` de TODAS as opções
   // marcadas (Fase 2: pode ser mais de uma por grupo) — recalculado a
@@ -116,7 +138,11 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
     }, 0);
     return sum + groupDelta;
   }, 0);
-  const unitPrice = (item?.price ?? 0) + optionsPriceDelta;
+  // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). Regra de
+  // preço confirmada com o dono: cobra o valor do sabor MAIS CARO entre
+  // os dois — nunca a média, nunca a soma.
+  const basePrice = isHalfAndHalf ? Math.max(item?.price ?? 0, secondFlavor!.price) : (item?.price ?? 0);
+  const unitPrice = basePrice + optionsPriceDelta;
 
   // Sistema de Opcionais, Fase 2 (2026-08-14) — grupo `single`: marcar
   // uma opção substitui a anterior (array sempre com no máximo 1). Grupo
@@ -157,6 +183,16 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
         }));
     });
 
+    const halfAndHalf: HalfAndHalf | undefined = isHalfAndHalf
+      ? {
+          flavorAName: item.name,
+          flavorAPrice: item.price,
+          flavorBMenuItemId: secondFlavor!.id,
+          flavorBName: secondFlavor!.name,
+          flavorBPrice: secondFlavor!.price,
+        }
+      : undefined;
+
     addItem({
       menuItemId: item.id,
       name: item.name,
@@ -164,6 +200,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
       quantity,
       notes: notes.trim() || undefined,
       selectedOptions: selectedOptions.length > 0 ? selectedOptions : undefined,
+      halfAndHalf,
       imageUrl: item.image_url ?? undefined,
     });
 
@@ -262,6 +299,62 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                 </div>
               </div>
 
+              {/* Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14).
+                  Só aparece quando a categoria deste produto está
+                  marcada como "aceita meio a meio". Tudo dentro do
+                  mesmo modal, mesma rolagem — sem abrir outra tela nem
+                  fechar o que já estava aberto (confirmado com o dono). */}
+              {category?.allowsHalfAndHalf && (
+                <div className="flex flex-col gap-2 rounded-2xl bg-surface px-4 py-3 ring-1 ring-border">
+                  <label className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium text-foreground">Fazer meio a meio?</span>
+                    <input
+                      type="checkbox"
+                      checked={halfAndHalfEnabled}
+                      onChange={(e) => {
+                        setHalfAndHalfEnabled(e.target.checked);
+                        if (!e.target.checked) setSecondFlavorId(null);
+                      }}
+                      className="h-5 w-5 accent-emerald-500"
+                    />
+                  </label>
+
+                  {halfAndHalfEnabled && (
+                    <div className="flex flex-col gap-1.5 pt-1">
+                      <span className="text-xs text-muted-foreground">Escolha o 2º sabor:</span>
+                      {halfAndHalfSiblings.map((sibling) => (
+                        <label
+                          key={sibling.id}
+                          className={cn(
+                            "flex cursor-pointer items-center justify-between rounded-xl border px-3.5 py-2.5 text-sm transition",
+                            secondFlavorId === sibling.id
+                              ? "border-emerald-500 bg-emerald-50"
+                              : "border-border bg-background",
+                          )}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <input
+                              type="radio"
+                              name="half-and-half-second-flavor"
+                              checked={secondFlavorId === sibling.id}
+                              onChange={() => setSecondFlavorId(sibling.id)}
+                              className="h-4 w-4 accent-emerald-500"
+                            />
+                            <span className="text-foreground">{sibling.name}</span>
+                          </span>
+                          <span className="tabular-nums text-muted-foreground">{formatCurrency(sibling.price)}</span>
+                        </label>
+                      ))}
+                      {isHalfAndHalf && (
+                        <p className="pt-1 text-xs text-muted-foreground">
+                          Cobrado o valor do sabor mais caro entre os dois.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Sistema de Opcionais, Fase 1 (2026-08-14) — só renderiza
                   quando o produto tem pelo menos 1 grupo aplicável (a
                   grande maioria não tem nenhum ainda).
@@ -348,10 +441,16 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
             <button
               type="button"
               onClick={handleAdd}
-              disabled={missingRequiredGroup}
+              disabled={missingRequiredGroup || (halfAndHalfEnabled && !secondFlavor)}
               className="flex min-h-11 w-full items-center justify-between rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-600 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
             >
-              <span>{missingRequiredGroup ? "Escolha as opções acima" : "Adicionar ao carrinho"}</span>
+              <span>
+                {missingRequiredGroup
+                  ? "Escolha as opções acima"
+                  : halfAndHalfEnabled && !secondFlavor
+                    ? "Escolha o 2º sabor"
+                    : "Adicionar ao carrinho"}
+              </span>
               <span className="tabular-nums">{formatCurrency(unitPrice * quantity)}</span>
             </button>
           </div>

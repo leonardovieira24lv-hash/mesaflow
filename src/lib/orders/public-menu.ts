@@ -23,6 +23,11 @@ export interface PublicOptionGroup {
 
 export interface PublicMenuItem {
   id: string;
+  // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). O modal do
+  // produto precisa saber a categoria do item pra achar os "irmãos"
+  // (outros produtos da mesma categoria) sem precisar de uma segunda
+  // busca — o cardápio inteiro já chega numa chamada só, contrato 3.2.
+  categoryId: string;
   name: string;
   description?: string;
   price: number;
@@ -43,6 +48,10 @@ export interface PublicMenuItem {
 export interface PublicMenuCategory {
   id: string;
   name: string;
+  // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). Confirmado
+  // com o dono: ativação por categoria inteira (ex.: "Pizzas"), não
+  // produto por produto.
+  allowsHalfAndHalf: boolean;
   items: PublicMenuItem[];
 }
 
@@ -103,7 +112,7 @@ export async function getPublicMenu(
   const [categoriesResult, itemsResult, optionGroupsResult] = await Promise.all([
     admin
       .from("menu_categories")
-      .select("id, name, position")
+      .select("id, name, position, allows_half_and_half")
       .eq("restaurant_id", restaurantId)
       .order("position", { ascending: true }),
     admin
@@ -153,8 +162,10 @@ export async function getPublicMenu(
   return (categoriesResult.data ?? []).map((category) => ({
     id: category.id,
     name: category.name,
+    allowsHalfAndHalf: category.allows_half_and_half,
     items: (itemsByCategory.get(category.id) ?? []).map((item) => ({
       id: item.id,
+      categoryId: category.id,
       name: item.name,
       description: item.description ?? undefined,
       price: item.price,

@@ -118,7 +118,15 @@ export async function createPublicOrder({
     }
   }
 
-  const menuItemIds = [...new Set(input.items.map((item) => item.menu_item_id))];
+  const menuItemIds = [
+    ...new Set([
+      ...input.items.map((item) => item.menu_item_id),
+      // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14): o 2º
+      // sabor também é um `menu_item_id` de verdade, precisa da mesma
+      // validação de existência/disponibilidade que o 1º já tem.
+      ...input.items.flatMap((item) => (item.second_menu_item_id ? [item.second_menu_item_id] : [])),
+    ]),
+  ];
 
   const { data: menuItems, error: menuItemsError } = await admin
     .from("menu_items")
@@ -158,11 +166,30 @@ export async function createPublicOrder({
       };
     });
 
-  if (staleDetails.length > 0) {
+  // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14): mesma
+  // checagem de existência/disponibilidade, agora pro 2º sabor.
+  const staleSecondFlavorDetails = input.items
+    .filter((item): item is typeof item & { second_menu_item_id: string } => Boolean(item.second_menu_item_id))
+    .filter((item) => {
+      const menuItem = menuItemById.get(item.second_menu_item_id);
+      return !menuItem || menuItem.is_archived || !menuItem.is_available;
+    })
+    .map((item) => {
+      const menuItem = menuItemById.get(item.second_menu_item_id);
+      return {
+        field: item.second_menu_item_id,
+        issue:
+          menuItem && !menuItem.is_archived && !menuItem.is_available
+            ? "Este item ficou indisponível."
+            : "Este item não existe mais no cardápio.",
+      };
+    });
+
+  if (staleDetails.length > 0 || staleSecondFlavorDetails.length > 0) {
     throw new AppError(
       "STALE_PRICE_OR_AVAILABILITY",
       "Alguns itens do pedido mudaram desde que o cardápio foi carregado. Revise o carrinho.",
-      staleDetails,
+      [...staleDetails, ...staleSecondFlavorDetails],
     );
   }
 
@@ -206,6 +233,22 @@ export async function createPublicOrder({
   }
 
   const applicableGroups = (applicableGroupsData ?? []) as OptionGroupRow[];
+
+  // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14): busca
+  // `allows_half_and_half` das mesmas categorias já levantadas pra
+  // Opcionais (`orderedCategoryIds`) — nenhuma consulta extra além desta.
+  const { data: categoriesData, error: categoriesError } = await admin
+    .from("menu_categories")
+    .select("id, allows_half_and_half")
+    .in("id", orderedCategoryIds);
+
+  if (categoriesError) {
+    throw new AppError("INTERNAL_ERROR", "Não foi possível validar as categorias dos itens.");
+  }
+
+  const categoryAllowsHalfAndHalfById = new Map<string, boolean>(
+    (categoriesData ?? []).map((c) => [c.id, c.allows_half_and_half]),
+  );
 
   function groupsForMenuItem(menuItem: MenuItemRow): OptionGroupRow[] {
     return applicableGroups.filter(
@@ -286,18 +329,69 @@ export async function createPublicOrder({
     );
   }
 
+  // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14): rejeita o
+  // pedido inteiro (mesmo padrão de "obrigatório vazio" acima) se algum
+  // item pedir meio a meio numa categoria que não permite, ou combinar
+  // com um produto de OUTRA categoria — nunca confia que o cliente só
+  // ofereceu essa opção porque o Cardápio Público já escondia o botão
+  // nesses casos; aqui é a validação de verdade.
+  const halfAndHalfErrors = input.items
+    .filter((item): item is typeof item & { second_menu_item_id: string } => Boolean(item.second_menu_item_id))
+    .flatMap((item) => {
+      const menuItem = menuItemById.get(item.menu_item_id)!;
+      const secondItem = menuItemById.get(item.second_menu_item_id)!;
+      if (!categoryAllowsHalfAndHalfById.get(menuItem.category_id)) {
+        return [{ field: item.menu_item_id, issue: `"${menuItem.name}" não aceita meio a meio.` }];
+      }
+      if (secondItem.category_id !== menuItem.category_id) {
+        return [
+          {
+            field: item.second_menu_item_id,
+            issue: `"${secondItem.name}" não pode combinar com "${menuItem.name}" — categorias diferentes.`,
+          },
+        ];
+      }
+      return [];
+    });
+
+  if (halfAndHalfErrors.length > 0) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Alguns itens meio a meio não são válidos. Revise o carrinho.",
+      halfAndHalfErrors,
+    );
+  }
+
   const orderItemsToInsert = input.items.map((item) => {
     // Non-null: todo `menu_item_id` já passou pela checagem acima.
     const menuItem = menuItemById.get(item.menu_item_id)!;
     const selectedOptions = resolveSelectedOptions(item, menuItem);
     const optionsPriceDelta = selectedOptions.reduce((sum, o) => sum + o.price_delta, 0);
+
+    // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). Regra de
+    // preço confirmada com o dono: cobra o valor do sabor MAIS CARO
+    // entre os dois — nunca a média, nunca a soma. Os Opcionais da
+    // categoria (ex.: Borda) continuam somando por cima normalmente,
+    // igual a um produto comum.
+    const secondItem = item.second_menu_item_id ? menuItemById.get(item.second_menu_item_id) : undefined;
+    const basePrice = secondItem ? Math.max(menuItem.price, secondItem.price) : menuItem.price;
+    const halfAndHalf = secondItem
+      ? {
+          flavor_a_name: menuItem.name,
+          flavor_a_price: menuItem.price,
+          flavor_b_name: secondItem.name,
+          flavor_b_price: secondItem.price,
+        }
+      : null;
+
     return {
       menu_item_id: menuItem.id,
       name: menuItem.name,
-      price: menuItem.price + optionsPriceDelta,
+      price: basePrice + optionsPriceDelta,
       quantity: item.quantity,
       notes: item.notes || null,
       selected_options: selectedOptions.length > 0 ? selectedOptions : null,
+      half_and_half: halfAndHalf,
     };
   });
 
