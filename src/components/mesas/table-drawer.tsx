@@ -212,6 +212,15 @@ export function TableDrawer({
   const [details, setDetails] = useState<Record<string, OrderDetail>>({});
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  // Correção pedida pelo dono (2026-08-15) — o botão "Enviar para
+  // cozinha" ficava dentro da lista rolável de pedidos: item com nome
+  // grande (ex.: "Meio a meio: Calabresa / Portuguêsa" + observação de
+  // opcional) já empurrava o botão pra fora da tela com só 1 pedido —
+  // exigia rolar pra achar a ação mais urgente. Barra fixa nova, fora da
+  // rolagem (entre os contadores Pedido/Item e a lista), manda todos os
+  // pedidos `pending` de uma vez — não depende de achar o botão de
+  // dentro de nenhum card específico.
+  const [isSendingBatchToKitchen, setIsSendingBatchToKitchen] = useState(false);
   // Trava síncrona — mesmo raciocínio de `order-detail.tsx`: `setState` só
   // reflete no próximo render, então um duplo toque rápido podia escapar do
   // `disabled` do botão antes dele atualizar de verdade.
@@ -348,6 +357,24 @@ export function TableDrawer({
       setUpdatingOrderId(null);
       isSendingToKitchenRef.current = false;
     }
+  }
+
+  /**
+   * Chamada pela barra fixa nova (fora da rolagem) — manda todos os
+   * pedidos `pending` desta mesa de uma vez, um de cada vez em sequência
+   * (reaproveita `handleSendToKitchen` sem duplicar a lógica de
+   * requisição/erro). Caso comum é só 1 pedido pendente; sequência em
+   * vez de paralelo evita 2 requisições da mesma mesa competindo se, por
+   * acaso, houver mais de um.
+   */
+  async function handleSendAllPendingToKitchen() {
+    const pendingOrderIds = openOrders.filter((o) => o.status === "pending").map((o) => o.id);
+    if (pendingOrderIds.length === 0) return;
+    setIsSendingBatchToKitchen(true);
+    for (const orderId of pendingOrderIds) {
+      await handleSendToKitchen(orderId);
+    }
+    setIsSendingBatchToKitchen(false);
   }
 
   /**
@@ -702,6 +729,7 @@ export function TableDrawer({
     .filter((o) => o.status !== "cancelled")
     .reduce((sum, o) => sum + o.item_count, 0);
   const hasPendingOrder = openOrders.some((o) => o.status === "pending");
+  const pendingOrdersCount = openOrders.filter((o) => o.status === "pending").length;
   const hasPreparingOrder = openOrders.some((o) => o.status === "preparing");
   const orderTimestamps = openOrders.map((o) => o.created_at);
   const openedAt = orderTimestamps.length > 0 ? orderTimestamps.reduce((a, b) => (a < b ? a : b)) : null;
@@ -934,6 +962,27 @@ export function TableDrawer({
               <span className="font-numeric text-lg font-bold tabular-nums text-ds2-foreground">{itemCount}</span>
               <span className="text-xs text-ds2-foreground-muted">{itemCount === 1 ? "Item" : "Itens"}</span>
             </div>
+          </div>
+        )}
+
+        {/* Correção pedida pelo dono (2026-08-15): antes, "Enviar para
+            cozinha" só existia dentro de cada card, na lista rolável —
+            com um item de nome grande (meio a meio, opcional) já bastava
+            pra empurrar o botão pra fora da tela, mesmo com só 1 pedido.
+            Esta barra fica FORA da rolagem (mesma zona dos contadores
+            acima), sempre visível enquanto houver pedido pendente — não
+            depende de rolar nem de qual pedido/card é o pendente. */}
+        {hasPendingOrder && (
+          <div className="border-b border-ds2-border px-5 py-3">
+            <Button
+              type="button"
+              className="w-full"
+              onClick={handleSendAllPendingToKitchen}
+              isLoading={isSendingBatchToKitchen}
+            >
+              <ChefHat className="h-4 w-4" />
+              {pendingOrdersCount > 1 ? `Enviar ${pendingOrdersCount} pedidos para a cozinha` : "Enviar para a cozinha"}
+            </Button>
           </div>
         )}
 
@@ -1307,7 +1356,10 @@ export function TableDrawer({
           {openOrders.length > 0 && (
             <Link
               href={ROUTES.pedidoDetalhe(openOrders[0]!.id)}
-              className={cn("rounded-ds2-sm text-center text-xs font-medium text-ds2-primary hover:underline", focusRingClass)}
+              className={cn(
+                "flex items-center justify-center gap-1.5 rounded-ds2-md border border-ds2-border bg-ds2-surface px-4 py-2.5 text-center text-sm font-medium text-ds2-foreground transition hover:bg-ds2-surface-hover",
+                focusRingClass,
+              )}
             >
               Ver histórico completo de pedidos desta mesa
             </Link>

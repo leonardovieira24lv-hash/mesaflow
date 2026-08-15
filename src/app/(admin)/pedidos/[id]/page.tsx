@@ -18,7 +18,7 @@ export default async function PedidoDetalhePage({ params }: { params: Promise<{ 
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, status, total_amount, notes, created_at, table:tables(id, name), order_items(id, menu_item_id, name, price, quantity, notes)",
+      "id, status, total_amount, notes, created_at, table:tables(id, name), order_items(id, menu_item_id, name, price, quantity, notes, selected_options, half_and_half)",
     )
     .eq("id", id)
     .eq("restaurant_id", profile.restaurantId)
@@ -41,7 +41,20 @@ export default async function PedidoDetalhePage({ params }: { params: Promise<{ 
     created_at: string;
     table: { id: string; name: string } | null;
     order_items:
-      | { id: string; menu_item_id: string; name: string; price: number; quantity: number; notes: string | null }[]
+      | {
+          id: string;
+          menu_item_id: string;
+          name: string;
+          price: number;
+          quantity: number;
+          notes: string | null;
+          // Sistema de Opcionais, Fase 1/3, Passo 4 (2026-08-15) — esta
+          // página nunca buscava esses 2 campos, mesmo já existindo desde
+          // a Fase 1 (`selected_options`) — gap encontrado e corrigido
+          // junto com a correção de `half_and_half` (relatada pelo dono).
+          selected_options: { group_name: string; option_name: string; price_delta: number }[] | null;
+          half_and_half: { flavor_a_name: string; flavor_a_price: number; flavor_b_name: string; flavor_b_price: number } | null;
+        }[]
       | null;
   };
 
@@ -58,6 +71,8 @@ export default async function PedidoDetalhePage({ params }: { params: Promise<{ 
       price: item.price,
       quantity: item.quantity,
       notes: item.notes ?? undefined,
+      selected_options: item.selected_options ?? undefined,
+      half_and_half: item.half_and_half ?? undefined,
     })),
     created_at: row.created_at,
   };

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter, CardDivider } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ButtonLink } from "@/components/ui/button-link";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
@@ -12,7 +12,6 @@ import { formatCurrency } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import { orderTrackingChannel } from "@/lib/realtime/channels";
 import { getAvailableOrderStatusTransitions } from "@/lib/orders/order-status-transitions-map";
-import { ROUTES } from "@/constants/routes";
 import type { ApiError, ApiSuccess } from "@/types/api";
 import type { OrderStatus } from "@/types/domain";
 
@@ -22,7 +21,20 @@ export interface OrderDetailDto {
   status: OrderStatus;
   total_amount: number;
   notes?: string;
-  items: { id: string; menu_item_id: string; name: string; price: number; quantity: number; notes?: string }[];
+  items: {
+    id: string;
+    menu_item_id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    notes?: string;
+    // Sistema de Opcionais, Fase 1/3, Passo 4 (2026-08-15) — gap
+    // encontrado: esta página nunca buscava/exibia isto, mesmo já
+    // existindo desde a Fase 1. Corrigido junto com o relato do dono
+    // sobre `half_and_half` faltando aqui.
+    selected_options?: { group_name: string; option_name: string; price_delta: number }[];
+    half_and_half?: { flavor_a_name: string; flavor_a_price: number; flavor_b_name: string; flavor_b_price: number };
+  }[];
   created_at: string;
 }
 
@@ -63,6 +75,7 @@ const STATUS_ACTION_LABELS: Record<OrderStatus, string> = {
  * Server Component (página).
  */
 export function OrderDetail({ initialOrder }: OrderDetailProps) {
+  const router = useRouter();
   const [order, setOrder] = useState<OrderDetailDto>(initialOrder);
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -193,10 +206,16 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <ButtonLink href={ROUTES.pedidos} variant="ghost" size="sm">
+        {/* Corrigido a pedido do dono (2026-08-15): antes ia sempre pra
+            lista de Pedidos (`ROUTES.pedidos`), mesmo quando a pessoa
+            chegou aqui a partir do drawer de Mesas ("Ver histórico
+            completo de pedidos desta mesa") — "voltar" levava pra um
+            lugar sem relação com de onde ela veio. `router.back()` volta
+            pra tela anterior de verdade, seja Mesas ou Pedidos. */}
+        <Button type="button" variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" aria-hidden />
-          Voltar para Pedidos
-        </ButtonLink>
+          Voltar
+        </Button>
       </div>
 
       <Card>
@@ -218,8 +237,16 @@ export function OrderDetail({ initialOrder }: OrderDetailProps) {
               >
                 <div className="flex flex-col">
                   <span className="font-medium text-ds2-foreground">
-                    {item.quantity}× {item.name}
+                    {item.quantity}×{" "}
+                    {item.half_and_half
+                      ? `Meio a meio: ${item.half_and_half.flavor_a_name} / ${item.half_and_half.flavor_b_name}`
+                      : item.name}
                   </span>
+                  {item.selected_options && item.selected_options.length > 0 && (
+                    <span className="text-xs text-ds2-foreground-muted">
+                      {item.selected_options.map((o) => `${o.group_name}: ${o.option_name}`).join(", ")}
+                    </span>
+                  )}
                   {item.notes && <span className="text-xs text-ds2-foreground-muted">{item.notes}</span>}
                 </div>
                 <span className="font-numeric text-ds2-foreground-muted">{formatCurrency(item.price * item.quantity)}</span>
