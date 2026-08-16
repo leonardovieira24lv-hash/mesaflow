@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -9,8 +10,9 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { Crosshair, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
-import { Modal } from "@/components/ui/modal";
+import { createPortal } from "react-dom";
+import { Crosshair, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ModalDialogContext } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 
@@ -91,17 +93,26 @@ function pointsOf(map: Map<number, Point>): Point[] {
  * `<dialog>`, o editor de recorte (agora uma div comum) passou a aparecer
  * ATRÁS dele — nunca deveria ter sido essa a correção.
  *
- * Correção real: mantém `<dialog>` aqui (pilha visual correta,
- * comprovada), e a guarda contra o "clique fantasma" foi pro lugar certo
- * — `Modal.tsx`, no handler de fechar ao clicar no backdrop. Agora exige
- * que o clique tenha COMEÇADO (`pointerdown`) e TERMINADO (`click`) no
- * mesmo backdrop pra fechar — um clique fantasma, só a fase de soltar,
- * sem uma fase de pressionar de verdade registrada, não passa mais nessa
- * checagem. Ver `Modal.tsx` pro comentário completo.
+ * 2ª tentativa de correção (também revertida): manter `<dialog>` aqui
+ * (pilha visual restaurada) e só endurecer o clique-fora-fecha do modal
+ * de trás (`Modal.tsx`, exigir `pointerdown`+`click` no mesmo backdrop).
+ * Gravação de tela nova (2026-08-16) provou que NADA mudou — o problema
+ * nunca foi um clique vazando pro backdrop.
+ *
+ * Correção real (3ª tentativa): nenhuma das duas tentativas anteriores
+ * atacava a causa de verdade — dois `<dialog>` nativos abertos ao mesmo
+ * tempo são frágeis, ponto final, seja qual for o mecanismo exato do
+ * navegador por trás disso. A correção que resolve de vez: NUNCA ter um
+ * 2º `<dialog>` — este editor não abre mais o seu próprio, ele se PORTA
+ * pra DENTRO do `<dialog>` que já está aberto (via `ModalDialogContext`,
+ * exposto pelo `<Modal>` mais próximo — ver `modal.tsx`), cobrindo o
+ * formulário por baixo com CSS simples (`absolute inset-0`). Existe,
+ * durante todo o fluxo, exatamente 1 `<dialog>` nativo — nunca 2.
  */
 export function ImageCropEditor({ open, file, onCancel, onSave, isSaving }: ImageCropEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const portalTarget = useContext(ModalDialogContext);
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
@@ -363,25 +374,33 @@ export function ImageCropEditor({ open, file, onCancel, onSave, isSaving }: Imag
 
   const busy = isSaving || isExporting;
 
-  return (
-    <Modal
-      open={open}
-      onClose={onCancel}
-      title="Ajustar enquadramento"
-      description="Arraste para posicionar e use o zoom para ajustar como a foto aparece no cardápio."
-      className="max-w-md"
-      footer={
-        <>
-          <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
-            Cancelar
-          </Button>
-          <Button type="button" onClick={handleSave} isLoading={busy} disabled={!naturalSize}>
-            Salvar
-          </Button>
-        </>
-      }
-    >
-      <div className="flex flex-col gap-4 pb-2">
+  if (!open) return null;
+
+  return createPortal(
+    <div className="absolute inset-0 z-20 flex flex-col overflow-y-auto rounded-ds2-lg bg-ds2-surface p-7 text-ds2-foreground">
+      <div className="flex items-start justify-between gap-4 pb-4">
+        <div className="flex flex-col gap-1.5">
+          <h2 className="font-display text-xl font-semibold tracking-tight text-ds2-foreground">
+            Ajustar enquadramento
+          </h2>
+          <p className="text-sm text-ds2-foreground-muted">
+            Arraste para posicionar e use o zoom para ajustar como a foto aparece no cardápio.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onCancel}
+          aria-label="Fechar"
+          disabled={busy}
+          className="-mr-2 -mt-2 h-8 w-8 shrink-0"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="flex flex-1 flex-col gap-4 pb-2">
         {error && <Alert variant="destructive">{error}</Alert>}
 
         <div
@@ -441,6 +460,16 @@ export function ImageCropEditor({ open, file, onCancel, onSave, isSaving }: Imag
           </Button>
         </div>
       </div>
-    </Modal>
+
+      <div className="flex items-center justify-end gap-3 pt-5">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
+          Cancelar
+        </Button>
+        <Button type="button" onClick={handleSave} isLoading={busy} disabled={!naturalSize}>
+          Salvar
+        </Button>
+      </div>
+    </div>,
+    portalTarget ?? document.body,
   );
 }

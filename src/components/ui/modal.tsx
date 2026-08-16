@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,16 @@ interface ModalProps {
   hideHeader?: boolean;
   className?: string;
 }
+
+/**
+ * Elemento `<dialog>` do `<Modal>` mais próximo — exposto pra quem
+ * precisa "tomar conta" da tela inteira de um modal já aberto, sem abrir
+ * um SEGUNDO `<dialog>` nativo por cima (ver `image-crop-editor.tsx` pro
+ * caso de uso real e o bug que isso resolveu). `null` fora de um
+ * `<Modal>` — quem consome decide o que fazer nesse caso (normalmente,
+ * portar pro `document.body` como alternativa).
+ */
+export const ModalDialogContext = createContext<HTMLDialogElement | null>(null);
 
 /**
  * Modal base do MesaFlow, construído sobre `<dialog>` nativo: foco preso
@@ -63,6 +73,12 @@ export function Modal({ open, onClose, title, description, children, footer, hid
   const ref = useRef<HTMLDialogElement>(null);
   const anchorRef = useRef<HTMLSpanElement>(null);
   const [portalTarget, setPortalTarget] = useState<Element | null>(null);
+  // Alimenta `ModalDialogContext` — só existe de verdade DEPOIS que
+  // `portalTarget` resolve e o `<dialog>` é criado (mesma ordem de
+  // sempre: `ref.current` só é confiável depois do commit). `[portalTarget]`
+  // como dependência é o suficiente pra pegar o momento certo, mesmo raciocínio
+  // do efeito de `showModal()` logo abaixo.
+  const [dialogNode, setDialogNode] = useState<HTMLDialogElement | null>(null);
   // Bug real encontrado (2026-08-14): `id="modal-title"` era fixo, igual
   // em toda instância de `<Modal>`. Nunca deu problema enquanto só existia
   // 1 modal montado por vez na tela inteira — mas o próprio `<dialog>`
@@ -93,6 +109,7 @@ export function Modal({ open, onClose, title, description, children, footer, hid
     } else if (!open && dialog.open) {
       dialog.close();
     }
+    setDialogNode(dialog);
     // Bug real encontrado (2026-08-15, relatado pelo dono — QR Code da
     // mesa "reagia" ao toque mas nunca abria, em computador E celular,
     // sessão nova, sem nada de cache): faltava `portalTarget` aqui. Um
@@ -155,7 +172,7 @@ export function Modal({ open, onClose, title, description, children, footer, hid
       aria-labelledby={hideHeader ? undefined : titleId}
       aria-label={hideHeader ? title : undefined}
       className={cn(
-        "m-auto w-full max-w-md rounded-ds2-lg border border-ds2-border bg-ds2-surface p-0 text-ds2-foreground shadow-ds2-lg",
+        "relative m-auto w-full max-w-md rounded-ds2-lg border border-ds2-border bg-ds2-surface p-0 text-ds2-foreground shadow-ds2-lg",
         "backdrop:bg-black/50 backdrop:backdrop-blur-[2px]",
         "open:animate-scale-in",
         className,
@@ -181,7 +198,9 @@ export function Modal({ open, onClose, title, description, children, footer, hid
         </div>
       )}
 
-      <div className="px-7">{children}</div>
+      <div className="px-7">
+        <ModalDialogContext.Provider value={dialogNode}>{children}</ModalDialogContext.Provider>
+      </div>
 
       {footer && <div className="flex items-center justify-end gap-3 p-7 pt-5">{footer}</div>}
     </dialog>
