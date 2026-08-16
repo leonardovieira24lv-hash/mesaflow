@@ -50,14 +50,51 @@ function BrandMark() {
  * Isto é só a interface; a proteção real está em `requireOwner()`
  * (`GET/PATCH /api/v1/restaurant`) e no redirect de `configuracoes/page.tsx`
  * — esconder o link aqui não substitui nenhum dos dois.
+ *
+ * Sprint "Responsividade Desktop — Sidebar Compacta" (2026-08-16):
+ * `compact` — nova variante em quadros (ícone em cima, nome pequeno
+ * embaixo, empilhado verticalmente), usada SÓ na sidebar de desktop
+ * (`<aside>`, abaixo). O drawer mobile continua chamando `<NavLinks>`
+ * sem essa prop — nenhuma mudança lá, layout mobile intocado de
+ * propósito (regra do projeto: essa etapa é só desktop).
  */
-function NavLinks({ items, onNavigate }: { items: (typeof NAV_ITEMS)[number][]; onNavigate?: () => void }) {
+function NavLinks({
+  items,
+  onNavigate,
+  compact,
+}: {
+  items: (typeof NAV_ITEMS)[number][];
+  onNavigate?: () => void;
+  compact?: boolean;
+}) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-1 flex-col gap-1 px-3">
+    <nav className={cn("flex flex-1 flex-col", compact ? "gap-1.5 px-2.5" : "gap-1 px-3")}>
       {items.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname?.startsWith(`${href}/`);
+
+        if (compact) {
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex flex-col items-center gap-1 rounded-ds2-sm py-2.5 text-center text-[11px] font-medium leading-none transition-colors duration-150",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background",
+                active
+                  ? "bg-ds2-primary/10 text-ds2-foreground"
+                  : "text-ds2-foreground-muted hover:bg-ds2-primary/5 hover:text-ds2-foreground",
+              )}
+            >
+              <Icon className={cn("h-4 w-4 shrink-0", active && "text-ds2-primary")} aria-hidden />
+              {label}
+            </Link>
+          );
+        }
+
         return (
           <Link
             key={href}
@@ -100,11 +137,14 @@ export function AdminSidebar({ isOwner }: { isOwner: boolean }) {
 
   return (
     <>
-      {/* Desktop / tablet */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-ds2-border bg-ds2-background md:flex">
-        <BrandMark />
-        <NavLinks items={items} />
-        <div className="border-t border-ds2-border px-6 py-4 text-xs text-ds2-foreground-muted">
+      {/* Desktop / tablet — Sprint "Responsividade Desktop — Sidebar
+          Compacta" (2026-08-16): mais estreita (w-64→w-24) e sem o
+          `<BrandMark>` (logo Forko), a pedido do dono — os quadros de
+          navegação já ocupam esse espaço agora. O drawer mobile (abaixo)
+          NÃO foi tocado, mantém `<BrandMark>` e o layout de sempre. */}
+      <aside className="hidden w-24 shrink-0 flex-col border-r border-ds2-border bg-ds2-background md:flex">
+        <NavLinks items={items} compact />
+        <div className="border-t border-ds2-border px-2 py-3 text-center text-[9px] leading-tight text-ds2-foreground-muted">
           Forko © {new Date().getFullYear()}
         </div>
       </aside>
