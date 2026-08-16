@@ -41,10 +41,22 @@ function NavLinks({
   items,
   onNavigate,
   compact,
+  compactLarge,
 }: {
   items: (typeof NAV_ITEMS)[number][];
   onNavigate?: () => void;
   compact?: boolean;
+  /**
+   * Sprint "Sidebar Compacta — ajuste do mobile" (2026-08-16): o dono
+   * achou o `compact` original pequeno demais na gaveta mobile (depois
+   * de já ter testado espaço vazio demais numa versão anterior, e
+   * grade de 2 colunas numa versão intermediária — nenhuma agradou).
+   * `compactLarge` é só um reforço de tamanho (ícone/texto maiores) em
+   * cima do MESMO layout de 1 coluna do `compact` — usado só no drawer
+   * mobile (abaixo). Desktop continua com `compact` sem isso, do jeito
+   * que já foi aprovado antes.
+   */
+  compactLarge?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -61,14 +73,18 @@ function NavLinks({
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-ds2-sm py-2.5 text-center text-[11px] font-medium leading-none transition-colors duration-150",
+                "flex flex-col items-center rounded-ds2-sm text-center font-medium leading-none transition-colors duration-150",
+                compactLarge ? "gap-1.5 py-3 text-[13px]" : "gap-1 py-2.5 text-[11px]",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background",
                 active
                   ? "bg-ds2-primary/10 text-ds2-foreground"
                   : "text-ds2-foreground-muted hover:bg-ds2-primary/5 hover:text-ds2-foreground",
               )}
             >
-              <Icon className={cn("h-4 w-4 shrink-0", active && "text-ds2-primary")} aria-hidden />
+              <Icon
+                className={cn("shrink-0", compactLarge ? "h-6 w-6" : "h-4 w-4", active && "text-ds2-primary")}
+                aria-hidden
+              />
               {label}
             </Link>
           );
@@ -141,9 +157,15 @@ export function AdminSidebar({ isOwner }: { isOwner: boolean }) {
               celular, fica estranho ficar diferente"). Mesmo tratamento
               do `<aside>` de desktop — sem `<BrandMark>`, `NavLinks`
               compact — só que aqui como drawer (desliza da esquerda),
-              não fixo na tela. Largura reduzida (w-72→w-48) pra combinar
-              com o visual mais enxuto dos quadros. */}
-          <div className="absolute inset-y-0 left-0 flex w-48 flex-col bg-ds2-background shadow-ds2-lg animate-slide-in-right">
+              não fixo na tela.
+              Passou por 3 ajustes de tamanho no mesmo dia até o dono
+              aprovar: v1 (w-48, mesmo tamanho do desktop) achou "não
+              ficou legal"; v2 (grade 2 colunas) não era o que ele queria
+              ("mesma linha do desktop, em linha" = 1 coluna); v3 (w-32,
+              ícone/texto reduzidos) achou "pequeno ainda"; v4 (esta,
+              w-44, ícone h-6/texto 13px via `compactLarge`) foi a
+              aprovada. */}
+          <div className="absolute inset-y-0 left-0 flex w-44 flex-col bg-ds2-background shadow-ds2-lg animate-slide-in-right">
             <div className="flex items-center justify-end p-2">
               <button
                 aria-label="Fechar menu"
@@ -153,7 +175,7 @@ export function AdminSidebar({ isOwner }: { isOwner: boolean }) {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <NavLinks items={items} onNavigate={() => setMobileNavOpen(false)} compact />
+            <NavLinks items={items} onNavigate={() => setMobileNavOpen(false)} compact compactLarge />
           </div>
         </div>
       )}
