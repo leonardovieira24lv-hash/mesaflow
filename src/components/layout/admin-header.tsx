@@ -56,20 +56,21 @@ export function AdminHeader({ userEmail }: AdminHeaderProps) {
       {/* Sprint "Responsividade Desktop — Logo no Header" (2026-08-16):
           o logo saiu da sidebar (virou quadros de navegação, sem
           identidade escrita) — esse espaço, à esquerda do título, ficou
-          vazio no desktop desde então. Símbolo aqui, alinhado à
-          esquerda (não centralizado) — decisão deliberada do dono pra
-          NÃO ficar parecido com o Takeat (referência que ele mesmo
-          trouxe), que usa um logo grande centralizado dominando o topo.
-          Imagem real (`/logo-forko-icon.png`, só o símbolo, sem o texto
-          "FORKO" — recortado do arquivo em alta resolução que o dono
-          mandou, removendo o espaço vazio ao redor), não mais um
-          quadrado de texto "FK" como na 1ª versão. `md:flex` — só
-          aparece a partir do breakpoint onde o título já aparece
-          também; no mobile, o símbolo já mora no topo da gaveta de
+          vazio no desktop desde então. Logo aqui, alinhada à esquerda
+          (não centralizada) — decisão deliberada do dono pra NÃO ficar
+          parecido com o Takeat (referência que ele mesmo trouxe), que
+          usa um logo grande centralizado dominando o topo.
+          Imagem completa (`/logo-forko-novo.png`, ícone + "FORKO"
+          escrito — recortada do arquivo em alta resolução que o dono
+          mandou, removendo o espaço vazio ao redor). Passou por uma
+          versão intermediária só com o ícone (sem o texto) — o dono
+          pediu explicitamente a logo inteira, não só o símbolo.
+          `md:flex` — só aparece a partir do breakpoint onde o título já
+          aparece também; no mobile, a logo já mora no topo da gaveta de
           navegação (`admin-sidebar.tsx`), não precisa duplicar aqui. */}
       <div className="hidden items-center gap-2.5 md:flex">
         {/* eslint-disable-next-line @next/next/no-img-element -- proporção fixa conhecida, mesmo padrão já usado nas outras logos do projeto. */}
-        <img src="/logo-forko-icon.png" alt="Forko" className="h-6 w-auto shrink-0" />
+        <img src="/logo-forko-novo.png" alt="Forko" className="h-6 w-auto shrink-0" />
         <span className="text-sm font-medium text-ds2-foreground-muted">{routeTitle}</span>
       </div>
 

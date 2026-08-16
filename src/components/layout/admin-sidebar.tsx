@@ -168,11 +168,17 @@ export function AdminSidebar({ isOwner }: { isOwner: boolean }) {
           <div className="absolute inset-y-0 left-0 flex w-44 flex-col bg-ds2-background shadow-ds2-lg animate-slide-in-right">
             <div className="flex items-center justify-between p-2">
               {/* Correção (2026-08-16): o comentário acima dizia que o
-                  símbolo "já morava" aqui, mas isso nunca foi
-                  implementado de verdade — só o botão de fechar existia.
-                  Adicionado agora, mesma imagem real usada no
-                  `AdminHeader` do desktop (`/logo-forko-icon.png`). */}
-              <img src="/logo-forko-icon.png" alt="Forko" className="ml-1.5 h-6 w-auto shrink-0" />
+                  logo "já morava" aqui, mas isso nunca foi implementado
+                  de verdade — só o botão de fechar existia. Adicionado
+                  agora, mesma imagem completa (ícone + "FORKO" escrito)
+                  usada no `AdminHeader` do desktop
+                  (`/logo-forko-novo.png`) — o dono pediu explicitamente
+                  a logo inteira, não só o ícone "FK" que foi usado numa
+                  versão intermediária. Altura menor aqui (h-5, não h-6)
+                  só porque a gaveta é estreita (w-44=176px) e precisa
+                  sobrar espaço pro botão de fechar ao lado — a proporção
+                  da imagem (4.26:1) já cabe direitinho nesse tamanho. */}
+              <img src="/logo-forko-novo.png" alt="Forko" className="ml-1.5 h-5 w-auto shrink-0" />
               <button
                 aria-label="Fechar menu"
                 onClick={() => setMobileNavOpen(false)}

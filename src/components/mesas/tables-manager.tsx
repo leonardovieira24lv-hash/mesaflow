@@ -866,12 +866,32 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
       )}
 
       {totalTables > 0 && (
-        <div className="hidden items-stretch divide-x divide-ds2-border border-b border-ds2-border py-2 md:flex">
+        // Indicadores compactos, versão card — Sprint "Responsividade
+        // Desktop — Etapa 2, refinamento" (2026-08-16). Passou por 9
+        // rodadas de mockup até aprovar (linha fina → grade colorida
+        // rejeitada → linha única com borda → sombra → fundo sólido
+        // rejeitado por peso demais → vermelho clarinho → simétrico →
+        // "3×2" pedido por 6 numa linha ficar estreito demais em
+        // largura intermediária). Responsivo dentro do próprio bloco:
+        // `md:grid-cols-3` (2 linhas, cada card mais largo — evita texto
+        // tipo "Pedidos em aberto" empilhando palavra por palavra) até
+        // `xl:grid-cols-6` (1 linha só, achatada — o objetivo real do
+        // dono: sidebar já enxuta, indicadores devem ocupar o MÍNIMO de
+        // altura possível pra sobrar o máximo de espaço central pras
+        // mesas, que é o que importa de verdade no dia a dia).
+        <div className="hidden md:grid md:grid-cols-3 md:gap-2 xl:grid-cols-6">
           {indicators.map((indicator) => (
-            <div key={indicator.key} className="flex flex-1 flex-col items-center gap-0.5 px-2">
-              <indicator.icon className="h-3.5 w-3.5 text-ds2-foreground-muted" aria-hidden />
-              <span className="font-numeric text-sm font-bold tabular-nums text-ds2-foreground">{indicator.value}</span>
-              <span className="text-[10px] text-ds2-foreground-muted">{indicator.label}</span>
+            <div
+              key={indicator.key}
+              className="flex flex-col items-center justify-center gap-1.5 rounded-ds2-md bg-ds2-primary/5 px-2 py-3 text-center ring-1 ring-ds2-primary/10"
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-ds2-full bg-ds2-primary/15">
+                <indicator.icon className="h-3.5 w-3.5 text-ds2-primary" aria-hidden />
+              </span>
+              <span className="font-numeric text-sm font-black leading-none tabular-nums text-ds2-foreground">
+                {indicator.value}
+              </span>
+              <span className="text-[10px] font-medium leading-tight text-ds2-foreground-muted">{indicator.label}</span>
             </div>
           ))}
         </div>

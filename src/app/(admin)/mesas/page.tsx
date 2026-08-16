@@ -55,7 +55,14 @@ export default async function MesasPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
+      {/* H1 + descrição — Sprint "Responsividade Desktop — Etapa 2,
+          refinamento" (2026-08-16): escondido no desktop (`md:hidden`)
+          a pedido do dono — vira redundante com a barra compacta
+          "Mesas · N cadastradas" que o `TablesManager` já mostra logo
+          abaixo. Mobile mantém como sempre foi (a gap-6 do flex pai
+          colapsa sozinha quando este bloco fica `display:none`, sem
+          precisar de nenhum ajuste extra). */}
+      <div className="flex flex-col gap-1 md:hidden">
         <h1 className="font-display text-2xl font-semibold">
           Mesas
         </h1>
