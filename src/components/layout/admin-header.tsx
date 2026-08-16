@@ -56,17 +56,20 @@ export function AdminHeader({ userEmail }: AdminHeaderProps) {
       {/* Sprint "Responsividade Desktop — Logo no Header" (2026-08-16):
           o logo saiu da sidebar (virou quadros de navegação, sem
           identidade escrita) — esse espaço, à esquerda do título, ficou
-          vazio no desktop desde então. Símbolo pequeno aqui, alinhado à
+          vazio no desktop desde então. Símbolo aqui, alinhado à
           esquerda (não centralizado) — decisão deliberada do dono pra
           NÃO ficar parecido com o Takeat (referência que ele mesmo
           trouxe), que usa um logo grande centralizado dominando o topo.
-          `md:flex` — só aparece a partir do breakpoint onde o título já
-          aparece também; no mobile, o "FK" já mora no topo da gaveta de
+          Imagem real (`/logo-forko-icon.png`, só o símbolo, sem o texto
+          "FORKO" — recortado do arquivo em alta resolução que o dono
+          mandou, removendo o espaço vazio ao redor), não mais um
+          quadrado de texto "FK" como na 1ª versão. `md:flex` — só
+          aparece a partir do breakpoint onde o título já aparece
+          também; no mobile, o símbolo já mora no topo da gaveta de
           navegação (`admin-sidebar.tsx`), não precisa duplicar aqui. */}
       <div className="hidden items-center gap-2.5 md:flex">
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-ds2-sm bg-ds2-primary text-[10px] font-bold text-ds2-primary-foreground">
-          FK
-        </span>
+        {/* eslint-disable-next-line @next/next/no-img-element -- proporção fixa conhecida, mesmo padrão já usado nas outras logos do projeto. */}
+        <img src="/logo-forko-icon.png" alt="Forko" className="h-6 w-auto shrink-0" />
         <span className="text-sm font-medium text-ds2-foreground-muted">{routeTitle}</span>
       </div>
 

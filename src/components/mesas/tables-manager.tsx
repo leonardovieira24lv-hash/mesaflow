@@ -771,13 +771,19 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
 
       {/* Header Operacional — Sprint "Responsividade Desktop — Etapa 2"
           (2026-08-16): o bloco original (mobile) fica 100% intocado,
-          só ganhou `lg:hidden` por fora. O bloco novo (`hidden lg:flex`)
-          é a versão compacta, só visível a partir de telas grandes —
-          mesma lógica/estado dos dois lados (`totalTables`,
-          `toggleSoundMuted` etc.), só o tamanho/organização visual
-          muda. Mesmo padrão nos indicadores e na busca/filtros, logo
-          abaixo. */}
-      <div className="flex flex-col gap-4 rounded-ds2-lg border border-ds2-border bg-ds2-surface p-5 shadow-ds2-sm sm:flex-row sm:items-center sm:justify-between lg:hidden">
+          só ganhou `md:hidden` por fora. O bloco novo (`hidden
+          md:flex`) é a versão compacta. Mesma lógica/estado dos dois
+          lados (`totalTables`, `toggleSoundMuted` etc.), só o
+          tamanho/organização visual muda. Mesmo padrão nos indicadores
+          e na busca/filtros, logo abaixo.
+          Correção no mesmo dia: o breakpoint original era `lg:`
+          (1024px), mas a sidebar (Etapa 1) já vira desktop em `md:`
+          (768px) — quem testasse numa largura entre os dois via a
+          sidebar nova mas o topo continuava do tamanho antigo, "sem
+          mudança nenhuma" na prática. Alinhado pro mesmo breakpoint
+          (`md:`) que a sidebar já usa — sem essa faixa morta entre os
+          dois. */}
+      <div className="flex flex-col gap-4 rounded-ds2-lg border border-ds2-border bg-ds2-surface p-5 shadow-ds2-sm sm:flex-row sm:items-center sm:justify-between md:hidden">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-ds2-md bg-ds2-primary/10 text-ds2-primary">
             <LayoutGrid className="h-5 w-5" aria-hidden />
@@ -811,7 +817,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
         </div>
       </div>
 
-      <div className="hidden items-center justify-between gap-3 border-b border-ds2-border pb-2.5 lg:flex">
+      <div className="hidden items-center justify-between gap-3 border-b border-ds2-border pb-2.5 md:flex">
         <div className="flex items-baseline gap-2">
           <LayoutGrid className="h-4 w-4 text-ds2-primary" aria-hidden />
           <h2 className="text-base font-bold text-ds2-foreground">Mesas</h2>
@@ -843,7 +849,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
 
       {/* Indicadores */}
       {totalTables > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:hidden">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:hidden">
           {indicators.map((indicator) => (
             <div
               key={indicator.key}
@@ -860,7 +866,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
       )}
 
       {totalTables > 0 && (
-        <div className="hidden items-stretch divide-x divide-ds2-border border-b border-ds2-border py-2 lg:flex">
+        <div className="hidden items-stretch divide-x divide-ds2-border border-b border-ds2-border py-2 md:flex">
           {indicators.map((indicator) => (
             <div key={indicator.key} className="flex flex-1 flex-col items-center gap-0.5 px-2">
               <indicator.icon className="h-3.5 w-3.5 text-ds2-foreground-muted" aria-hidden />
@@ -873,7 +879,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
 
       {/* Barra de filtros */}
       {totalTables > 0 && (
-        <div className="flex flex-col gap-3 rounded-ds2-md border border-ds2-border bg-ds2-surface p-3 sm:flex-row sm:items-center sm:justify-between lg:hidden">
+        <div className="flex flex-col gap-3 rounded-ds2-md border border-ds2-border bg-ds2-surface p-3 sm:flex-row sm:items-center sm:justify-between md:hidden">
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -900,7 +906,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
       )}
 
       {totalTables > 0 && (
-        <div className="hidden items-center gap-3 lg:flex">
+        <div className="hidden items-center gap-3 md:flex">
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -963,7 +969,8 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
           }
         />
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        <>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:hidden">
           {filteredTables.map((table) => {
             const data = operations[table.id] ?? null;
             const alerts = tableEvents[table.id] ?? [];
@@ -1279,6 +1286,245 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
             );
           })}
         </div>
+
+        {/* Grade de Mesas — desktop, Sprint "Responsividade Desktop —
+            Etapa 3" (2026-08-16). Mesma estrutura visual do card mobile
+            acima (mesmos tons/badges/ícones — copiados, não
+            reinventados), com 3 diferenças, a pedido do dono: (1) mais
+            colunas, progressivo (`md:grid-cols-4 lg:grid-cols-5
+            xl:grid-cols-6 2xl:grid-cols-7`), não trava em 5; (2) o card
+            INTEIRO é clicável (o `<div>` raiz virou
+            `role="button"`/`onClick`) — o botão "Ver mesa" saiu, esse
+            espaço volta pro conteúdo; (3) padding e fontes um pouco
+            menores. Os 4 ícones (QR/Editar/Excluir/Cardápio) continuam
+            funcionando sozinhos por cima — cada um já tinha seu próprio
+            `stopPropagation()` desde antes, então clicar neles não
+            aciona o clique do card por baixo. Bloco mobile acima
+            (`md:hidden`) é outro `.map()` — 100% intocado, cópia
+            fiel do que já existia antes desta etapa. */}
+        <div className="hidden grid-cols-4 gap-2 md:grid lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+          {filteredTables.map((table) => {
+            const data = operations[table.id] ?? null;
+            const alerts = tableEvents[table.id] ?? [];
+            const state = deriveTableCardState(table.status, data, alerts);
+            const isFilled = TABLE_CARD_FILLED_TONES.includes(state.tone);
+            const isDarkOnLight = TABLE_CARD_TONE_DARK_TEXT.includes(state.tone);
+            const isFlashing = flashingIds.has(table.id);
+
+            const dotClass = isFilled
+              ? isDarkOnLight
+                ? "bg-ds2-warning-foreground/70"
+                : "bg-white/70"
+              : TABLE_CARD_TONE_DOT_CLASSES[state.tone];
+            const ordersCount = data?.orders.length ?? 0;
+            const pendingCount = data?.orders.filter((o) => o.status === "pending").length ?? 0;
+            const toneClass = TABLE_CARD_TONE_CLASSES[state.tone];
+            const iconColorClass = isFilled
+              ? isDarkOnLight
+                ? "text-ds2-warning-foreground hover:bg-ds2-warning-foreground/15 hover:text-ds2-warning-foreground"
+                : "text-white hover:bg-white/15 hover:text-white"
+              : "text-ds2-foreground-muted";
+
+            return (
+              <div
+                key={table.id}
+                data-table-tile-id={table.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => handleOpenTable(table)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleOpenTable(table);
+                  }
+                }}
+                className={cn(
+                  "group relative flex h-full cursor-pointer flex-col gap-1.5 overflow-hidden rounded-ds2-lg border p-2 shadow-ds2-sm transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-ds2-md",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background",
+                  toneClass,
+                  isFlashing && "animate-status-flash",
+                  state.hasUnprocessedOrders && "animate-new-order-alert",
+                )}
+              >
+                <Armchair
+                  aria-hidden
+                  className={cn(
+                    "pointer-events-none absolute -bottom-1.5 -right-1.5 h-8 w-8",
+                    isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/15" : "text-white/15") : "text-ds2-foreground-muted/10",
+                  )}
+                />
+
+                <div className="absolute right-1 top-1 z-20 flex gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setQrTable(table);
+                    }}
+                    aria-label={`Ver QR Code de ${table.name}`}
+                    className={cn("h-6 w-6 opacity-70 hover:opacity-100", iconColorClass, focusRingClass)}
+                  >
+                    <QrCode className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditModal(table);
+                    }}
+                    aria-label={`Editar ${table.name}`}
+                    className={cn("h-6 w-6 opacity-70 hover:opacity-100", iconColorClass, focusRingClass)}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletingTable(table);
+                    }}
+                    aria-label={`Excluir ${table.name}`}
+                    className={cn(
+                      "h-6 w-6 opacity-70 hover:opacity-100",
+                      isFilled ? iconColorClass : "text-destructive",
+                      focusRingClass,
+                    )}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                  <a
+                    href={tableUrl(table)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Abrir cardápio da ${table.name}`}
+                    className={cn(
+                      "flex h-6 w-6 items-center justify-center rounded-ds2-sm opacity-70 hover:opacity-100",
+                      iconColorClass,
+                      focusRingClass,
+                    )}
+                  >
+                    <UtensilsCrossed className="h-3 w-3" />
+                  </a>
+                </div>
+
+                <span
+                  className={cn(
+                    "z-10 pr-12 font-numeric text-lg font-bold leading-none tabular-nums",
+                    isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-ds2-foreground",
+                  )}
+                >
+                  {table.name}
+                </span>
+
+                <span
+                  className={cn(
+                    "z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                    isFilled
+                      ? isDarkOnLight
+                        ? "bg-ds2-warning-foreground/15 text-ds2-warning-foreground"
+                        : "bg-white/20 text-white"
+                      : "bg-ds2-surface-hover text-ds2-foreground-muted ring-1 ring-inset ring-ds2-border",
+                  )}
+                >
+                  <span className={cn("h-1 w-1 shrink-0 rounded-ds2-full", dotClass)} aria-hidden />
+                  {state.label}
+                </span>
+
+                {state.hasUnprocessedOrders && state.tone !== "new_order" && (
+                  <span
+                    className="z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full bg-ds2-warning px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ds2-warning-foreground"
+                    title="Pedido novo aguardando envio para a cozinha"
+                  >
+                    <Bell className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                    {pendingCount} {pendingCount === 1 ? "NOVO" : "NOVOS"}
+                  </span>
+                )}
+
+                {state.hasWaiterCall && (
+                  <span
+                    className="z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full bg-ds2-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ds2-primary-foreground"
+                    title="Cliente chamando o garçom"
+                  >
+                    <Hand className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                    Garçom
+                  </span>
+                )}
+
+                {data ? (
+                  <div className="z-10 flex flex-col gap-0.5">
+                    <span
+                      className={cn(
+                        "font-numeric text-sm font-bold leading-tight tabular-nums",
+                        isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-ds2-foreground",
+                      )}
+                    >
+                      {formatCurrency(data.totalAmount)}
+                    </span>
+                    {data.lastOrderAt && (
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 text-[10px]",
+                          isFilled
+                            ? isDarkOnLight
+                              ? "text-ds2-warning-foreground/70"
+                              : "text-white/70"
+                            : "text-ds2-foreground-muted",
+                        )}
+                      >
+                        <Clock3 className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                        {formatRelativeTimeShort(data.lastOrderAt)}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span
+                    className={cn(
+                      "z-10 text-[10px]",
+                      isFilled
+                        ? isDarkOnLight
+                          ? "text-ds2-warning-foreground/70"
+                          : "text-white/70"
+                        : "text-ds2-foreground-muted",
+                    )}
+                  >
+                    Sem pedidos em aberto
+                  </span>
+                )}
+
+                {data && (data.itemCount > 0 || ordersCount > 0) && (
+                  <div
+                    className={cn(
+                      "z-10 flex items-center gap-2 text-[10px]",
+                      isFilled
+                        ? isDarkOnLight
+                          ? "text-ds2-warning-foreground/80"
+                          : "text-white/80"
+                        : "text-ds2-foreground-muted",
+                    )}
+                  >
+                    {ordersCount > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <Receipt className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                        {ordersCount}
+                      </span>
+                    )}
+                    {data.itemCount > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <UtensilsCrossed className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                        {data.itemCount}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        </>
       )}
 
       <Modal
