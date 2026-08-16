@@ -817,11 +817,11 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
         </div>
       </div>
 
-      <div className="hidden items-center justify-between gap-3 border-b border-ds2-border pb-2.5 md:flex">
-        <div className="flex items-baseline gap-2">
-          <LayoutGrid className="h-4 w-4 text-ds2-primary" aria-hidden />
-          <h2 className="text-base font-bold text-ds2-foreground">Mesas</h2>
-          <span className="text-xs text-ds2-foreground-muted">
+      <div className="hidden h-[35px] items-center justify-between gap-3 border-b border-ds2-border md:flex">
+        <div className="flex items-center gap-2">
+          <LayoutGrid className="h-3.5 w-3.5 text-ds2-primary" aria-hidden />
+          <h2 className="text-sm font-bold leading-none text-ds2-foreground">Mesas</h2>
+          <span className="text-[11px] leading-none text-ds2-foreground-muted">
             {totalTables === 0
               ? "Nenhuma mesa cadastrada"
               : `· ${totalTables} ${totalTables === 1 ? "cadastrada" : "cadastradas"}`}
@@ -836,12 +836,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
             aria-label={isSoundMuted ? "Ativar som de novos pedidos" : "Silenciar som de novos pedidos"}
             aria-pressed={isSoundMuted}
             title={isSoundMuted ? "Som desativado" : "Som ativado"}
-            className={cn("h-8 w-8", focusRingClass)}
+            className={cn("h-6 w-6", focusRingClass)}
           >
-            {isSoundMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+            {isSoundMuted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
           </Button>
-          <Button size="sm" onClick={openCreateModal} className={focusRingClass}>
-            <Plus className="h-3.5 w-3.5" />
+          <Button size="sm" onClick={openCreateModal} className={cn("h-6 px-2 text-xs", focusRingClass)}>
+            <Plus className="h-3 w-3" />
             Nova mesa
           </Button>
         </div>
@@ -935,13 +935,13 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
       )}
 
       {totalTables > 0 && (
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden h-[35px] items-center gap-3 md:flex">
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar mesa por nome..."
             leadingIcon={<Search />}
-            className="h-8 max-w-[220px] text-sm"
+            className="h-[35px] max-w-[220px] text-sm"
             aria-label="Buscar mesa"
           />
           {/* `overflow-x-auto` — decisão pragmática pro caso de janela
@@ -949,7 +949,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
               horizontalmente em vez de quebrar linha ou precisar de um
               menu "mais filtros" à parte. Simples, baixo risco, resolve
               o caso raro sem inventar um componente novo. */}
-          <div className="flex gap-1.5 overflow-x-auto">
+          <div className="flex h-[35px] items-center gap-1.5 overflow-x-auto">
             {STATUS_FILTER_OPTIONS.map((option) => (
               <Button
                 key={option.value}
@@ -957,7 +957,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                 size="sm"
                 variant={statusFilter === option.value ? "secondary" : "ghost"}
                 onClick={() => setStatusFilter(option.value)}
-                className={cn("h-8 shrink-0 px-2.5 text-xs", focusRingClass)}
+                className={cn("h-6 shrink-0 px-2 text-[11px]", focusRingClass)}
               >
                 {option.label}
               </Button>
