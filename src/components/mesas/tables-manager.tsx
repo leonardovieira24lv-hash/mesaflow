@@ -867,31 +867,40 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
 
       {totalTables > 0 && (
         // Indicadores compactos, versão card — Sprint "Responsividade
-        // Desktop — Etapa 2, refinamento" (2026-08-16). Passou por 9
-        // rodadas de mockup até aprovar (linha fina → grade colorida
-        // rejeitada → linha única com borda → sombra → fundo sólido
-        // rejeitado por peso demais → vermelho clarinho → simétrico →
-        // "3×2" pedido por 6 numa linha ficar estreito demais em
-        // largura intermediária). Responsivo dentro do próprio bloco:
-        // `md:grid-cols-3` (2 linhas, cada card mais largo — evita texto
-        // tipo "Pedidos em aberto" empilhando palavra por palavra) até
-        // `xl:grid-cols-6` (1 linha só, achatada — o objetivo real do
-        // dono: sidebar já enxuta, indicadores devem ocupar o MÍNIMO de
-        // altura possível pra sobrar o máximo de espaço central pras
-        // mesas, que é o que importa de verdade no dia a dia).
-        <div className="hidden md:grid md:grid-cols-3 md:gap-2 xl:grid-cols-6">
+        // Desktop — Etapa 2, refinamento" (2026-08-16). Passou por ~11
+        // rodadas de mockup até aprovar. Resumo do caminho: linha fina →
+        // grade colorida rejeitada → linha única com borda → sombra →
+        // fundo sólido rejeitado por peso demais → vermelho clarinho →
+        // simétrico → "3×2" (grid responsivo, testado e descartado) →
+        // **tamanho FIXO 80×80px** (`w-20 h-20`, não mais proporcional
+        // nem responsivo por breakpoint) — pedido explícito do dono:
+        // "não travou o tamanho", queria números exatos pra iterar.
+        // Como cada card tem largura FIXA (não `flex-1`/`grid-cols`),
+        // `flex flex-wrap` é o layout certo — os cards se organizam
+        // sozinhos numa linha só (~520px pros 6) na maioria das telas de
+        // computador, e SÓ quebram linha se a tela for genuinamente
+        // estreita (não precisa mais de breakpoint extra pra isso).
+        //
+        // Conteúdo interno reduzido de propósito (ícone 28px→16px,
+        // número 14px→12px, texto 10px→7px) — correção do dono: "não
+        // precisa abreviar, o conteúdo tem que diminuir junto", não
+        // cortar palavras pra caber num espaço pequeno. Motivação maior,
+        // por trás de toda essa etapa: a tela inteira de PC não pode
+        // desperdiçar espaço com elementos grandes — numa loja de
+        // verdade, isso significa menos mesas visíveis sem rolar.
+        <div className="hidden flex-wrap justify-center gap-2 md:flex">
           {indicators.map((indicator) => (
             <div
               key={indicator.key}
-              className="flex flex-col items-center justify-center gap-1.5 rounded-ds2-md bg-ds2-primary/5 px-2 py-3 text-center ring-1 ring-ds2-primary/10"
+              className="flex h-20 w-20 shrink-0 flex-col items-center justify-center gap-0.5 rounded-ds2-md bg-ds2-primary/5 px-1 text-center ring-1 ring-ds2-primary/10"
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-ds2-full bg-ds2-primary/15">
-                <indicator.icon className="h-3.5 w-3.5 text-ds2-primary" aria-hidden />
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-ds2-full bg-ds2-primary/15">
+                <indicator.icon className="h-2.5 w-2.5 text-ds2-primary" aria-hidden />
               </span>
-              <span className="font-numeric text-sm font-black leading-none tabular-nums text-ds2-foreground">
+              <span className="font-numeric text-xs font-black leading-none tabular-nums text-ds2-foreground">
                 {indicator.value}
               </span>
-              <span className="text-[10px] font-medium leading-tight text-ds2-foreground-muted">{indicator.label}</span>
+              <span className="text-[7px] font-medium leading-[1.15] text-ds2-foreground-muted">{indicator.label}</span>
             </div>
           ))}
         </div>
