@@ -36,6 +36,9 @@ export async function GET() {
       website: overview.website,
       logo_url: overview.logoUrl,
       description: overview.description,
+      promo_banner_image_url: overview.promoBannerImageUrl,
+      promo_banner_text: overview.promoBannerText,
+      promo_banner_enabled: overview.promoBannerEnabled,
       opening_hours: overview.openingHours,
       accepted_payment_methods: overview.acceptedPaymentMethods,
       timezone: overview.timezone,
@@ -82,6 +85,9 @@ export async function PATCH(request: Request) {
       website,
       description,
       logo_url,
+      promo_banner_image_url,
+      promo_banner_text,
+      promo_banner_enabled,
       opening_hours,
       accepted_payment_methods,
       timezone,
@@ -113,6 +119,9 @@ export async function PATCH(request: Request) {
     if (website !== undefined) updates.website = website;
     if (description !== undefined) updates.description = description;
     if (logo_url !== undefined) updates.logo_url = logo_url;
+    if (promo_banner_image_url !== undefined) updates.promo_banner_image_url = promo_banner_image_url;
+    if (promo_banner_text !== undefined) updates.promo_banner_text = promo_banner_text;
+    if (promo_banner_enabled !== undefined) updates.promo_banner_enabled = promo_banner_enabled;
     // Operação — Fase 4A (2026-08-10).
     if (opening_hours !== undefined) updates.opening_hours = opening_hours;
     if (accepted_payment_methods !== undefined) updates.accepted_payment_methods = accepted_payment_methods;
@@ -124,7 +133,7 @@ export async function PATCH(request: Request) {
       .update(updates)
       .eq("id", profile.restaurantId)
       .select(
-        "id, name, slug, status, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description, opening_hours, accepted_payment_methods, timezone, menu_theme",
+        "id, name, slug, status, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description, promo_banner_image_url, promo_banner_text, promo_banner_enabled, opening_hours, accepted_payment_methods, timezone, menu_theme",
       )
       .maybeSingle();
 
@@ -172,6 +181,9 @@ export async function PATCH(request: Request) {
       website: updated.website,
       logo_url: updated.logo_url,
       description: updated.description,
+      promo_banner_image_url: updated.promo_banner_image_url,
+      promo_banner_text: updated.promo_banner_text,
+      promo_banner_enabled: updated.promo_banner_enabled,
       opening_hours: updated.opening_hours,
       accepted_payment_methods: updated.accepted_payment_methods,
       timezone: updated.timezone,

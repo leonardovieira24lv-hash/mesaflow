@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import { SearchX, UtensilsCrossed } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RestaurantHeader } from "@/components/cardapio-cliente/restaurant-header";
@@ -33,6 +34,13 @@ interface CardapioClienteViewProps {
   menuTheme?: "light" | "dark";
   tableName?: string;
   categories: PublicMenuCategory[];
+  // Banner promocional — estudo de caso de concorrentes (2026-08-16).
+  // `enabled: false` (ou `imageUrl: null`) não renderiza nada — a tela
+  // fica idêntica a antes desta feature existir, sem espaço reservado
+  // (confirmado com o dono antes de codar).
+  promoBannerImageUrl?: string | null;
+  promoBannerText?: string | null;
+  promoBannerEnabled?: boolean;
 }
 
 /**
@@ -93,6 +101,9 @@ export function CardapioClienteView({
   menuTheme,
   tableName,
   categories,
+  promoBannerImageUrl,
+  promoBannerText,
+  promoBannerEnabled,
 }: CardapioClienteViewProps) {
   const [selectedItem, setSelectedItem] = useState<PublicMenuItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -226,6 +237,29 @@ export function CardapioClienteView({
           onSearchChange={setSearchTerm}
         />
         <TableAssistanceActions slug={slug} tableToken={tableToken} />
+
+        {/* Banner promocional — estudo de caso de concorrentes
+            (2026-08-16). Posição pedida explicitamente pelo dono, com
+            base num print real: entre "Chamar garçom"/"Pedir a conta" e
+            os círculos de categoria. Só renderiza com os dois
+            confirmados (`enabled` E uma imagem de verdade) — qualquer
+            um faltando, a tela fica idêntica a antes desta feature
+            existir. */}
+        {promoBannerEnabled && promoBannerImageUrl && (
+          <div className="px-4 pt-3">
+            <div className="relative overflow-hidden rounded-2xl">
+              <div className="relative aspect-[3/1] w-full bg-muted">
+                <Image src={promoBannerImageUrl} alt="" fill sizes="512px" className="object-cover" />
+              </div>
+              {promoBannerText && (
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3.5">
+                  <p className="text-sm font-bold text-white">{promoBannerText}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <CategoryNav categories={categories} />
 
         <main className="flex flex-1 flex-col gap-7 px-4 py-5">

@@ -16,6 +16,12 @@ export interface PublicRestaurantContext {
   tradeName: string | null;
   logoUrl: string | null;
   description: string | null;
+  // Banner promocional — estudo de caso de concorrentes (2026-08-16).
+  // `enabled` decide se o Cardápio Público mostra o banner (E precisa de
+  // `imageUrl` também não-nulo) — ver `cardapio-cliente-view.tsx`.
+  promoBannerImageUrl: string | null;
+  promoBannerText: string | null;
+  promoBannerEnabled: boolean;
   // Operação — Fase 4B.2 (2026-08-10), colunas de
   // `0028_restaurant_operation_settings.sql`/`0029_restaurant_timezone.sql`.
   // `openingHours` fica `null` quando o proprietário nunca configurou nada
@@ -53,7 +59,9 @@ export async function resolveRestaurantBySlug(
 ): Promise<PublicRestaurantContext> {
   const { data, error } = await admin
     .from("restaurants")
-    .select("id, name, slug, trade_name, logo_url, description, opening_hours, timezone, menu_theme")
+    .select(
+      "id, name, slug, trade_name, logo_url, description, promo_banner_image_url, promo_banner_text, promo_banner_enabled, opening_hours, timezone, menu_theme",
+    )
     .eq("slug", slug)
     .maybeSingle();
 
@@ -71,6 +79,9 @@ export async function resolveRestaurantBySlug(
     tradeName: data.trade_name,
     logoUrl: data.logo_url,
     description: data.description,
+    promoBannerImageUrl: data.promo_banner_image_url,
+    promoBannerText: data.promo_banner_text,
+    promoBannerEnabled: data.promo_banner_enabled,
     openingHours: data.opening_hours as OpeningHours | null,
     timezone: data.timezone,
     menuTheme: data.menu_theme as "light" | "dark",

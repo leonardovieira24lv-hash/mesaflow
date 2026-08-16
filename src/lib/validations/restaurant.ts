@@ -149,6 +149,15 @@ export const updateRestaurantSchema = z.object({
     .union([z.string().trim().url("URL do logo inválida."), z.literal("")])
     .optional(),
 
+  // Banner promocional — estudo de caso de concorrentes (2026-08-16).
+  // Mesmo raciocínio de `logo_url`: string vazia é uma intenção válida
+  // ("remover a imagem"), não ausência.
+  promo_banner_image_url: z
+    .union([z.string().trim().url("URL do banner inválida."), z.literal("")])
+    .optional(),
+  promo_banner_text: z.string().trim().max(200, "O texto do banner deve ter no máximo 200 caracteres.").optional(),
+  promo_banner_enabled: z.boolean().optional(),
+
   // Dados cadastrais (Sprint "Gestão do Restaurante", 2026-08-07) — mesmo
   // espírito do PATCH parcial já usado para `name`/`slug` acima: todos
   // opcionais, só entra no `update` o que for de fato enviado.

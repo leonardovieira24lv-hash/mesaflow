@@ -11,6 +11,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { RestaurantStatusBadge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { RestaurantLogoUpload } from "@/components/configuracoes/restaurant-logo-upload";
+import { PromoBannerUpload } from "@/components/configuracoes/promo-banner-upload";
+import { Switch } from "@/components/ui/switch";
 import { updateRestaurantSchema } from "@/lib/validations/restaurant";
 import { ROUTES } from "@/constants/routes";
 import type { Restaurant } from "@/types/domain";
@@ -37,6 +39,10 @@ interface RestaurantSettingsFormProps {
     // Identidade — Sprint "Perfil do Restaurante, Fase 1" (2026-08-09).
     logoUrl: string | null;
     description: string | null;
+    // Banner promocional — estudo de caso de concorrentes (2026-08-16).
+    promoBannerImageUrl: string | null;
+    promoBannerText: string | null;
+    promoBannerEnabled: boolean;
   };
 }
 
@@ -60,6 +66,9 @@ interface RestaurantDto {
   website: string | null;
   logo_url: string | null;
   description: string | null;
+  promo_banner_image_url: string | null;
+  promo_banner_text: string | null;
+  promo_banner_enabled: boolean;
 }
 
 // Chave de cada campo = exatamente o nome aceito pelo PATCH
@@ -147,8 +156,15 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
     website: restaurant.website ?? "",
     logo_url: restaurant.logoUrl ?? "",
     description: restaurant.description ?? "",
+    promo_banner_image_url: restaurant.promoBannerImageUrl ?? "",
+    promo_banner_text: restaurant.promoBannerText ?? "",
   };
   const [fields, setFields] = useState<Record<string, string>>(initialFields);
+  // Banner promocional — estudo de caso de concorrentes (2026-08-16).
+  // Booleano, não cabe no `fields: Record<string, string>` acima (que é
+  // só pra texto) — mesmo raciocínio do resto do formulário: estado
+  // próprio, comparado à parte em `buildPayload`.
+  const [promoBannerEnabled, setPromoBannerEnabled] = useState(restaurant.promoBannerEnabled);
 
   function updateField(key: string, value: string) {
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -160,7 +176,7 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
   // Diálogo de confirmação específico para mudança de slug — só aparece
   // quando o slug foi de fato alterado (ver `handleSubmit`), nunca para
   // uma edição só de nome.
-  const [pendingSlugChange, setPendingSlugChange] = useState<Record<string, string> | null>(null);
+  const [pendingSlugChange, setPendingSlugChange] = useState<Record<string, string | boolean> | null>(null);
 
   // A URL pública depende do `origin` do navegador — gerada no cliente,
   // mesmo padrão já usado para os QR Codes (`table-qr-modal.tsx`,
@@ -174,13 +190,13 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
   const currentPublicUrl = origin ? `${origin}${ROUTES.clienteMenu(restaurant.slug)}` : null;
   const slugChanged = slug.trim() !== restaurant.slug;
 
-  function buildPayload(): Record<string, string> | null {
+  function buildPayload(): Record<string, string | boolean> | null {
     setErrors({});
 
     const trimmedName = name.trim();
     const trimmedSlug = slug.trim();
 
-    const payload: Record<string, string> = {};
+    const payload: Record<string, string | boolean> = {};
     if (trimmedName !== restaurant.name) payload.name = trimmedName;
     if (trimmedSlug !== restaurant.slug) payload.slug = trimmedSlug;
 
@@ -189,6 +205,12 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
       if (trimmedValue !== originalValue) {
         payload[key] = trimmedValue;
       }
+    }
+
+    // Banner promocional — comparação à parte, mesmo raciocínio do
+    // comentário em `promoBannerEnabled` acima.
+    if (promoBannerEnabled !== restaurant.promoBannerEnabled) {
+      payload.promo_banner_enabled = promoBannerEnabled;
     }
 
     if (Object.keys(payload).length === 0) {
@@ -231,7 +253,7 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
     void submit(payload);
   }
 
-  async function submit(payload: Record<string, string>) {
+  async function submit(payload: Record<string, string | boolean>) {
     setIsSubmitting(true);
     try {
       const response = await fetch("/api/v1/restaurant", {
@@ -276,7 +298,10 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
         website: updated.website ?? "",
         logo_url: updated.logo_url ?? "",
         description: updated.description ?? "",
+        promo_banner_image_url: updated.promo_banner_image_url ?? "",
+        promo_banner_text: updated.promo_banner_text ?? "",
       });
+      setPromoBannerEnabled(updated.promo_banner_enabled);
       toast.success("Configurações salvas");
       setIsSubmitting(false);
       setPendingSlugChange(null);
@@ -393,6 +418,57 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
                 placeholder="Ex.: Hambúrgueres artesanais em ambiente descontraído, desde 2018."
                 disabled={isSubmitting}
                 rows={4}
+              />
+            </FormField>
+          </CardContent>
+        </Card>
+
+        {/* Banner Promocional — estudo de caso de concorrentes
+            (2026-08-16), última peça do cardápio antes de fechar de vez.
+            Posição no Cardápio Público confirmada com o dono a partir de
+            um print real: entre "Chamar garçom"/"Pedir a conta" e as
+            categorias — ver `cardapio-cliente-view.tsx`. */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Banner Promocional</CardTitle>
+            <CardDescription>
+              Uma imagem de destaque no topo do cardápio — promoção do dia, evento, o que quiser.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <label className="flex items-center justify-between gap-3 rounded-ds2-md bg-ds2-surface-hover px-4 py-3">
+              <span className="flex flex-col">
+                <span className="text-sm font-medium text-ds2-foreground">Exibir banner no cardápio</span>
+                <span className="text-xs text-ds2-foreground-muted">
+                  Desligado, o cardápio fica exatamente como hoje — sem nenhum espaço reservado.
+                </span>
+              </span>
+              <Switch
+                checked={promoBannerEnabled}
+                onChange={(e) => setPromoBannerEnabled(e.target.checked)}
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <FormField label="Imagem" error={errors.promo_banner_image_url}>
+              <PromoBannerUpload
+                restaurantId={restaurant.id}
+                value={fields.promo_banner_image_url ?? ""}
+                onChange={(url) => updateField("promo_banner_image_url", url)}
+                disabled={isSubmitting}
+              />
+            </FormField>
+
+            <FormField
+              label="Texto (opcional)"
+              error={errors.promo_banner_text}
+              hint="Aparece sobre a imagem, embaixo. Até 200 caracteres. Deixe em branco pra mostrar só a imagem."
+            >
+              <Input
+                value={fields.promo_banner_text ?? ""}
+                onChange={(e) => updateField("promo_banner_text", e.target.value)}
+                placeholder="Ex.: Terça é dia de pizza em dobro!"
+                disabled={isSubmitting}
               />
             </FormField>
           </CardContent>

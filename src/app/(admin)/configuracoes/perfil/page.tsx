@@ -58,6 +58,9 @@ export default async function PerfilRestaurantePage() {
           website: overview.website,
           logoUrl: overview.logoUrl,
           description: overview.description,
+          promoBannerImageUrl: overview.promoBannerImageUrl,
+          promoBannerText: overview.promoBannerText,
+          promoBannerEnabled: overview.promoBannerEnabled,
         }}
       />
     </div>

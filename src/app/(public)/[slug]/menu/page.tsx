@@ -70,6 +70,9 @@ export default async function CardapioClientePage({
         menuTheme={restaurant.menuTheme}
         tableName={tableName}
         categories={categories}
+        promoBannerImageUrl={restaurant.promoBannerImageUrl}
+        promoBannerText={restaurant.promoBannerText}
+        promoBannerEnabled={restaurant.promoBannerEnabled}
       />
     );
   } catch (err) {

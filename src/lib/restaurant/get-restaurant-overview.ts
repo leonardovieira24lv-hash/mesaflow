@@ -35,6 +35,10 @@ export interface RestaurantOverview {
   // `checklist`/`counts`.
   logoUrl: string | null;
   description: string | null;
+  // Banner promocional — estudo de caso de concorrentes (2026-08-16).
+  promoBannerImageUrl: string | null;
+  promoBannerText: string | null;
+  promoBannerEnabled: boolean;
   // Operação — Fase 4A (2026-08-10), colunas de
   // `0028_restaurant_operation_settings.sql`. `openingHours` fica `null`
   // quando o proprietário ainda não configurou nada — estado distinto de
@@ -95,7 +99,7 @@ export async function getRestaurantOverview(
     supabase
       .from("restaurants")
       .select(
-        "id, name, slug, status, qr_codes_printed_at, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description, opening_hours, accepted_payment_methods, timezone, menu_theme",
+        "id, name, slug, status, qr_codes_printed_at, trade_name, phone, whatsapp, email, postal_code, street, street_number, neighborhood, city, state, instagram, facebook, website, logo_url, description, promo_banner_image_url, promo_banner_text, promo_banner_enabled, opening_hours, accepted_payment_methods, timezone, menu_theme",
       )
       .eq("id", restaurantId)
       .single(),
@@ -135,6 +139,9 @@ export async function getRestaurantOverview(
     website: restaurant.website,
     logoUrl: restaurant.logo_url,
     description: restaurant.description,
+    promoBannerImageUrl: restaurant.promo_banner_image_url,
+    promoBannerText: restaurant.promo_banner_text,
+    promoBannerEnabled: restaurant.promo_banner_enabled,
     openingHours: restaurant.opening_hours as OpeningHours | null,
     acceptedPaymentMethods: restaurant.accepted_payment_methods as PaymentMethod[],
     timezone: restaurant.timezone,
