@@ -32,7 +32,7 @@ export default async function CardapioPage() {
   const { profile } = await requirePageSession();
   const supabase = await createClient();
 
-  const [categoriesResult, itemsResult] = await Promise.all([
+  const [categoriesResult, itemsResult, restaurantResult] = await Promise.all([
     supabase
       .from("menu_categories")
       .select("id, name, position, allows_half_and_half, is_compact, image_url")
@@ -43,6 +43,16 @@ export default async function CardapioPage() {
       .select("id, category_id, name, description, price, image_url, is_available, is_archived")
       .eq("restaurant_id", profile.restaurantId)
       .order("name", { ascending: true }),
+    // Banner Promocional — movido de Configurações/Perfil pra cá
+    // (2026-08-16, correção do dono: "isso é conteúdo de cardápio, não
+    // de perfil"). Mesma tabela `restaurants`, só os 3 campos que
+    // interessam aqui — sem repetir todo o resto do cadastro que só
+    // Perfil precisa.
+    supabase
+      .from("restaurants")
+      .select("promo_banner_image_url, promo_banner_text, promo_banner_enabled")
+      .eq("id", profile.restaurantId)
+      .maybeSingle(),
   ]);
 
   const categories: MenuCategory[] = (categoriesResult.data ?? []).map((c) => ({
@@ -74,7 +84,14 @@ export default async function CardapioPage() {
         </p>
       </div>
 
-      <CardapioManager restaurantId={profile.restaurantId} initialCategories={categories} initialItems={items} />
+      <CardapioManager
+        restaurantId={profile.restaurantId}
+        initialCategories={categories}
+        initialItems={items}
+        initialPromoBannerImageUrl={restaurantResult.data?.promo_banner_image_url ?? null}
+        initialPromoBannerText={restaurantResult.data?.promo_banner_text ?? null}
+        initialPromoBannerEnabled={restaurantResult.data?.promo_banner_enabled ?? false}
+      />
     </div>
   );
 }

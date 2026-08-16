@@ -114,8 +114,12 @@ export function RestaurantHeader({
     <header className="flex flex-col gap-3 border-b border-border bg-surface/95 px-4 pb-3.5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-surface/80">
       {logoUrl ? (
         <div className="flex justify-center">
+          {/* Tamanho reduzido (2026-08-16, pedido do dono: "achando ela um
+              pouco grande") — 75px → 56px (~25% menor). Continua
+              `object-contain`/`w-auto`, mesma lógica de proporção livre
+              de sempre, só a altura mudou. */}
           {/* eslint-disable-next-line @next/next/no-img-element -- proporção livre, ver docstring acima. */}
-          <img src={logoUrl} alt={restaurantName} className="h-[75px] w-auto max-w-full object-contain" />
+          <img src={logoUrl} alt={restaurantName} className="h-14 w-auto max-w-full object-contain" />
         </div>
       ) : (
         <div className="flex items-center justify-between gap-3">

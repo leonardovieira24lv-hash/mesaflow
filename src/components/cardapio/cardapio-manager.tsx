@@ -4,6 +4,8 @@ import { useState, type DragEvent, type FormEvent } from "react";
 import { Plus, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
@@ -13,6 +15,7 @@ import { CategorySection } from "@/components/cardapio/category-section";
 import { ProductStatusFilter, type ProductStatusFilterValue } from "@/components/cardapio/product-status-filter";
 import { ProductForm } from "@/components/cardapio/product-form";
 import { CategoryImageUpload } from "@/components/cardapio/category-image-upload";
+import { PromoBannerUpload } from "@/components/configuracoes/promo-banner-upload";
 import { deleteCategoryImage } from "@/lib/storage/category-images";
 import { menuItemFromDto, type MenuItemDto } from "@/types/menu-item-dto";
 import { createCategorySchema } from "@/lib/validations/menu";
@@ -43,6 +46,12 @@ interface CardapioManagerProps {
   restaurantId: string;
   initialCategories: MenuCategory[];
   initialItems: MenuItem[];
+  // Banner Promocional — movido de Configurações/Perfil pra cá
+  // (2026-08-16, correção do dono: é conteúdo de cardápio, não de
+  // perfil do restaurante).
+  initialPromoBannerImageUrl: string | null;
+  initialPromoBannerText: string | null;
+  initialPromoBannerEnabled: boolean;
 }
 
 /**
@@ -64,7 +73,14 @@ interface CardapioManagerProps {
  * usava) — sem essa lista precisar ser paginada, não há motivo para
  * buscar do zero a cada mudança.
  */
-export function CardapioManager({ restaurantId, initialCategories, initialItems }: CardapioManagerProps) {
+export function CardapioManager({
+  restaurantId,
+  initialCategories,
+  initialItems,
+  initialPromoBannerImageUrl,
+  initialPromoBannerText,
+  initialPromoBannerEnabled,
+}: CardapioManagerProps) {
   // Parada técnica — reorganização do fluxo de Cardápio (2026-08-14):
   // existia uma aba "Grupos de opção" separada aqui (alternando com
   // "Cardápio") — removida. Opcionais agora vivem dentro do acordeão de
@@ -74,6 +90,43 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
   const [items, setItems] = useState<MenuItem[]>(initialItems);
   const [openCategoryIds, setOpenCategoryIds] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<ProductStatusFilterValue>("active");
+
+  // Banner Promocional (2026-08-16) — movido de Configurações/Perfil pra
+  // cá. Salva direto no mesmo endpoint que Perfil já usa
+  // (`PATCH /api/v1/restaurant`) — a tabela é a mesma (`restaurants`),
+  // só o LUGAR na UI que mudou, não o dono do dado.
+  const [promoBannerImageUrl, setPromoBannerImageUrl] = useState(initialPromoBannerImageUrl ?? "");
+  const [promoBannerText, setPromoBannerText] = useState(initialPromoBannerText ?? "");
+  const [promoBannerEnabled, setPromoBannerEnabled] = useState(initialPromoBannerEnabled);
+  const [isSavingPromoBanner, setIsSavingPromoBanner] = useState(false);
+
+  async function handleSavePromoBanner() {
+    setIsSavingPromoBanner(true);
+    try {
+      const response = await fetch("/api/v1/restaurant", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          promo_banner_image_url: promoBannerImageUrl,
+          promo_banner_text: promoBannerText,
+          promo_banner_enabled: promoBannerEnabled,
+        }),
+      });
+      const body = await response.json();
+
+      if (!response.ok) {
+        const apiError = body as ApiError;
+        toast.error("Não foi possível salvar o banner", apiError.error?.message);
+        return;
+      }
+
+      toast.success("Banner promocional salvo");
+    } catch {
+      toast.error("Não foi possível conectar", "Verifique sua internet e tente novamente.");
+    } finally {
+      setIsSavingPromoBanner(false);
+    }
+  }
 
   // Reordenação de categorias (drag-and-drop) — mesma lógica de sempre.
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -506,6 +559,64 @@ export function CardapioManager({ restaurantId, initialCategories, initialItems 
           Nova categoria
         </Button>
       </div>
+
+      {/* Banner Promocional (2026-08-16) — movido de
+          Configurações/Perfil pra cá: é conteúdo do cardápio (aparece no
+          Cardápio Público, entre "Chamar garçom" e as categorias), não
+          dado cadastral do restaurante. Mesmo padrão de card colapsável
+          simples, sem modal — o dono normalmente mexe nisso 1x e não
+          mais, não precisa de um fluxo separado de abrir/fechar. */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Banner Promocional</CardTitle>
+          <CardDescription>
+            Uma imagem de destaque no topo do cardápio — promoção do dia, evento, o que quiser.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <label className="flex items-center justify-between gap-3 rounded-ds2-md bg-ds2-surface-hover px-4 py-3">
+            <span className="flex flex-col">
+              <span className="text-sm font-medium text-ds2-foreground">Exibir banner no cardápio</span>
+              <span className="text-xs text-ds2-foreground-muted">
+                Desligado, o cardápio fica exatamente como hoje — sem nenhum espaço reservado.
+              </span>
+            </span>
+            <Switch
+              checked={promoBannerEnabled}
+              onChange={(e) => setPromoBannerEnabled(e.target.checked)}
+              disabled={isSavingPromoBanner}
+            />
+          </label>
+
+          <FormField label="Imagem">
+            <PromoBannerUpload
+              restaurantId={restaurantId}
+              value={promoBannerImageUrl}
+              onChange={setPromoBannerImageUrl}
+              disabled={isSavingPromoBanner}
+            />
+          </FormField>
+
+          <FormField
+            label="Texto (opcional)"
+            hint="Aparece sobre a imagem, embaixo. Até 200 caracteres. Deixe em branco pra mostrar só a imagem."
+          >
+            <Input
+              value={promoBannerText}
+              onChange={(e) => setPromoBannerText(e.target.value)}
+              placeholder="Ex.: Terça é dia de pizza em dobro!"
+              disabled={isSavingPromoBanner}
+              maxLength={200}
+            />
+          </FormField>
+
+          <div className="flex justify-end">
+            <Button type="button" onClick={handleSavePromoBanner} isLoading={isSavingPromoBanner}>
+              Salvar banner
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {categories.length === 0 ? (
         <EmptyState
