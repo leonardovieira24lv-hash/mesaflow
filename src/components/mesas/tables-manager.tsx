@@ -769,8 +769,15 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
         </Alert>
       )}
 
-      {/* Header Operacional */}
-      <div className="flex flex-col gap-4 rounded-ds2-lg border border-ds2-border bg-ds2-surface p-5 shadow-ds2-sm sm:flex-row sm:items-center sm:justify-between">
+      {/* Header Operacional — Sprint "Responsividade Desktop — Etapa 2"
+          (2026-08-16): o bloco original (mobile) fica 100% intocado,
+          só ganhou `lg:hidden` por fora. O bloco novo (`hidden lg:flex`)
+          é a versão compacta, só visível a partir de telas grandes —
+          mesma lógica/estado dos dois lados (`totalTables`,
+          `toggleSoundMuted` etc.), só o tamanho/organização visual
+          muda. Mesmo padrão nos indicadores e na busca/filtros, logo
+          abaixo. */}
+      <div className="flex flex-col gap-4 rounded-ds2-lg border border-ds2-border bg-ds2-surface p-5 shadow-ds2-sm sm:flex-row sm:items-center sm:justify-between lg:hidden">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-ds2-md bg-ds2-primary/10 text-ds2-primary">
             <LayoutGrid className="h-5 w-5" aria-hidden />
@@ -804,9 +811,39 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
         </div>
       </div>
 
+      <div className="hidden items-center justify-between gap-3 border-b border-ds2-border pb-2.5 lg:flex">
+        <div className="flex items-baseline gap-2">
+          <LayoutGrid className="h-4 w-4 text-ds2-primary" aria-hidden />
+          <h2 className="text-base font-bold text-ds2-foreground">Mesas</h2>
+          <span className="text-xs text-ds2-foreground-muted">
+            {totalTables === 0
+              ? "Nenhuma mesa cadastrada"
+              : `· ${totalTables} ${totalTables === 1 ? "cadastrada" : "cadastradas"}`}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <RealtimeStatusIndicator status={realtimeStatus} />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSoundMuted}
+            aria-label={isSoundMuted ? "Ativar som de novos pedidos" : "Silenciar som de novos pedidos"}
+            aria-pressed={isSoundMuted}
+            title={isSoundMuted ? "Som desativado" : "Som ativado"}
+            className={cn("h-8 w-8", focusRingClass)}
+          >
+            {isSoundMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+          </Button>
+          <Button size="sm" onClick={openCreateModal} className={focusRingClass}>
+            <Plus className="h-3.5 w-3.5" />
+            Nova mesa
+          </Button>
+        </div>
+      </div>
+
       {/* Indicadores */}
       {totalTables > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:hidden">
           {indicators.map((indicator) => (
             <div
               key={indicator.key}
@@ -822,9 +859,21 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
         </div>
       )}
 
+      {totalTables > 0 && (
+        <div className="hidden items-stretch divide-x divide-ds2-border border-b border-ds2-border py-2 lg:flex">
+          {indicators.map((indicator) => (
+            <div key={indicator.key} className="flex flex-1 flex-col items-center gap-0.5 px-2">
+              <indicator.icon className="h-3.5 w-3.5 text-ds2-foreground-muted" aria-hidden />
+              <span className="font-numeric text-sm font-bold tabular-nums text-ds2-foreground">{indicator.value}</span>
+              <span className="text-[10px] text-ds2-foreground-muted">{indicator.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Barra de filtros */}
       {totalTables > 0 && (
-        <div className="flex flex-col gap-3 rounded-ds2-md border border-ds2-border bg-ds2-surface p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-ds2-md border border-ds2-border bg-ds2-surface p-3 sm:flex-row sm:items-center sm:justify-between lg:hidden">
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -842,6 +891,38 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                 variant={statusFilter === option.value ? "secondary" : "ghost"}
                 onClick={() => setStatusFilter(option.value)}
                 className={focusRingClass}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {totalTables > 0 && (
+        <div className="hidden items-center gap-3 lg:flex">
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar mesa por nome..."
+            leadingIcon={<Search />}
+            className="h-8 max-w-[220px] text-sm"
+            aria-label="Buscar mesa"
+          />
+          {/* `overflow-x-auto` — decisão pragmática pro caso de janela
+              desktop mais estreita que o ideal: os filtros rolam
+              horizontalmente em vez de quebrar linha ou precisar de um
+              menu "mais filtros" à parte. Simples, baixo risco, resolve
+              o caso raro sem inventar um componente novo. */}
+          <div className="flex gap-1.5 overflow-x-auto">
+            {STATUS_FILTER_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                size="sm"
+                variant={statusFilter === option.value ? "secondary" : "ghost"}
+                onClick={() => setStatusFilter(option.value)}
+                className={cn("h-8 shrink-0 px-2.5 text-xs", focusRingClass)}
               >
                 {option.label}
               </Button>

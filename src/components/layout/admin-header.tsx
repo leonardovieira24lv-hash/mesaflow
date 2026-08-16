@@ -53,7 +53,22 @@ export function AdminHeader({ userEmail }: AdminHeaderProps) {
         <Menu className="h-5 w-5" />
       </button>
 
-      <div className="hidden text-sm font-medium text-ds2-foreground-muted md:block">{routeTitle}</div>
+      {/* Sprint "Responsividade Desktop — Logo no Header" (2026-08-16):
+          o logo saiu da sidebar (virou quadros de navegação, sem
+          identidade escrita) — esse espaço, à esquerda do título, ficou
+          vazio no desktop desde então. Símbolo pequeno aqui, alinhado à
+          esquerda (não centralizado) — decisão deliberada do dono pra
+          NÃO ficar parecido com o Takeat (referência que ele mesmo
+          trouxe), que usa um logo grande centralizado dominando o topo.
+          `md:flex` — só aparece a partir do breakpoint onde o título já
+          aparece também; no mobile, o "FK" já mora no topo da gaveta de
+          navegação (`admin-sidebar.tsx`), não precisa duplicar aqui. */}
+      <div className="hidden items-center gap-2.5 md:flex">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-ds2-sm bg-ds2-primary text-[10px] font-bold text-ds2-primary-foreground">
+          FK
+        </span>
+        <span className="text-sm font-medium text-ds2-foreground-muted">{routeTitle}</span>
+      </div>
 
       <div className="flex items-center gap-3">
         {userEmail && (
