@@ -5,8 +5,7 @@ import Image from "next/image";
 import { ImageOff, Loader2, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
-import { ImageCropEditor } from "@/components/cardapio/image-crop-editor";
-import { uploadCroppedCategoryImage, validateCategoryImageFile, CategoryImageError } from "@/lib/storage/category-images";
+import { uploadCategoryImage, validateCategoryImageFile, CategoryImageError } from "@/lib/storage/category-images";
 
 interface CategoryImageUploadProps {
   restaurantId: string;
@@ -16,22 +15,29 @@ interface CategoryImageUploadProps {
 }
 
 /**
- * Campo "Foto" do formulário de categoria (2026-08-15) — mesmo componente
- * de recorte (`<ImageCropEditor>`, genérico) e mesmo fluxo de
- * `product-image-upload.tsx` (seleciona → valida → recorta → sobe pro
- * Storage), só trocando o helper de upload por
- * `lib/storage/category-images.ts`. Opcional de propósito — nem todo dono
- * de restaurante vai querer cuidar disso categoria por categoria; sem
- * foto própria, o Cardápio Público recorre a um fallback (ver
- * `category-nav.tsx`).
+ * Campo "Foto" do formulário de categoria (2026-08-15, simplificado
+ * 2026-08-16) — upload DIRETO, sem etapa de recorte.
+ *
+ * Histórico: a 1ª versão abria um editor de recorte (`<ImageCropEditor>`)
+ * dentro do próprio modal de categoria — um `<dialog>` nativo aninhado
+ * dentro de outro `<dialog>` nativo já aberto. 3 tentativas de correção
+ * (trocar por div comum, endurecer o clique do backdrop, portar pro
+ * mesmo dialog via Context) não resolveram de vez um bug real de
+ * navegador com dois `<dialog>` empilhados — confirmado com vídeo de
+ * tela, a foto nunca persistia. Decisão do dono: "chega, tenta outro
+ * modelo" — pra um avatar pequeno e decorativo (círculo de categoria,
+ * bem diferente da foto principal de um produto), abrir mão do recorte
+ * fino elimina o bug pela raiz em vez de insistir em contornar. Upload
+ * do arquivo original, `object-cover` no CSS já centraliza o quanto dá
+ * sozinho — se ficar um pouco fora de centro às vezes, é um preço aceito
+ * de propósito, não um bug.
  */
 export function CategoryImageUpload({ restaurantId, value, onChange, disabled }: CategoryImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
@@ -39,19 +45,15 @@ export function CategoryImageUpload({ restaurantId, value, onChange, disabled }:
     setError(null);
     try {
       validateCategoryImageFile(file);
-      setPendingFile(file);
     } catch (err) {
       setError(err instanceof CategoryImageError ? err.message : "Não foi possível abrir essa imagem.");
+      return;
     }
-  }
 
-  async function handleCropSave(blob: Blob) {
     setIsUploading(true);
-    setError(null);
     try {
-      const url = await uploadCroppedCategoryImage(restaurantId, blob);
+      const url = await uploadCategoryImage(restaurantId, file);
       onChange(url);
-      setPendingFile(null);
     } catch (err) {
       setError(
         err instanceof CategoryImageError ? err.message : "Não foi possível enviar a imagem. Tente novamente.",
@@ -123,14 +125,6 @@ export function CategoryImageUpload({ restaurantId, value, onChange, disabled }:
       />
 
       {error && <Alert variant="destructive">{error}</Alert>}
-
-      <ImageCropEditor
-        open={pendingFile !== null}
-        file={pendingFile}
-        onCancel={() => setPendingFile(null)}
-        onSave={handleCropSave}
-        isSaving={isUploading}
-      />
     </div>
   );
 }
