@@ -853,22 +853,30 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
           </Button>
         </div>
 
+        {/* Correção de acabamento (2026-08-17, dono apontou): antes
+            cada card tinha largura baseada no próprio texto ("0 Em
+            manutenção" mais estreito que "R$ 167,50 Valor em
+            aberto") — larguras diferentes lado a lado davam
+            sensação de "malfeito". `w-[108px]` fixo, IGUAL pros 6,
+            resolve. E a quebra pra 2ª linha (`flex-wrap`) deixava um
+            respiro grande e torto do lado esquerdo — trocado por
+            `overflow-x-auto` (rola de lado se não couber, nunca
+            quebra linha de forma desalinhada) — mesmo raciocínio já
+            usado nos filtros de status, mais abaixo neste arquivo. */}
         {totalTables > 0 && (
-          <div className="flex flex-wrap justify-end gap-1.5">
+          <div className="flex gap-1.5 overflow-x-auto">
             {indicators.map((indicator) => (
               <div
                 key={indicator.key}
-                className="flex shrink-0 items-center gap-1.5 rounded-ds2-md bg-ds2-primary/5 px-2.5 py-1.5 ring-1 ring-ds2-primary/10"
+                className="flex w-[108px] shrink-0 flex-col items-center gap-0.5 rounded-ds2-md bg-ds2-primary/5 px-1.5 py-1.5 text-center ring-1 ring-ds2-primary/10"
               >
                 <indicator.icon className="h-3.5 w-3.5 shrink-0 text-ds2-primary" aria-hidden />
-                <div className="flex flex-col leading-none">
-                  <span className="font-numeric text-sm font-black tabular-nums text-ds2-foreground">
-                    {indicator.value}
-                  </span>
-                  <span className="whitespace-nowrap text-[9px] font-medium text-ds2-foreground-muted">
-                    {indicator.label}
-                  </span>
-                </div>
+                <span className="font-numeric text-sm font-black leading-none tabular-nums text-ds2-foreground">
+                  {indicator.value}
+                </span>
+                <span className="text-[9px] font-medium leading-tight text-ds2-foreground-muted">
+                  {indicator.label}
+                </span>
               </div>
             ))}
           </div>
