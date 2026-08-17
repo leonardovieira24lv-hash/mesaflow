@@ -817,8 +817,17 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
         </div>
       </div>
 
-      <div className="hidden h-[35px] items-center justify-between gap-3 border-b border-ds2-border md:flex">
-        <div className="flex items-center gap-2">
+      {/* Sprint "Responsividade Desktop — consolidação numa linha só"
+          (2026-08-17): dono pediu pra JUNTAR a barra "Mesas/Ao
+          vivo/Nova mesa" com os 6 indicadores na MESMA linha — antes
+          eram 2 blocos empilhados. Validado direto numa edição da foto
+          real do dono (não um mockup abstrato) antes de codar. Título+
+          ações na esquerda, os 6 indicadores (cards compactos, ícone +
+          número + nome, não mais quadrados 80×80) na direita, a mesma
+          linha inteira. Só desktop (`md:flex`) — mobile continua com os
+          2 blocos originais, intocados, mais embaixo neste arquivo. */}
+      <div className="hidden items-center justify-between gap-4 border-b border-ds2-border pb-2 md:flex">
+        <div className="flex shrink-0 items-center gap-2">
           <LayoutGrid className="h-3.5 w-3.5 text-ds2-primary" aria-hidden />
           <h2 className="text-sm font-bold leading-none text-ds2-foreground">Mesas</h2>
           <span className="text-[11px] leading-none text-ds2-foreground-muted">
@@ -826,8 +835,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
               ? "Nenhuma mesa cadastrada"
               : `· ${totalTables} ${totalTables === 1 ? "cadastrada" : "cadastradas"}`}
           </span>
-        </div>
-        <div className="flex items-center gap-2">
           <RealtimeStatusIndicator status={realtimeStatus} />
           <Button
             variant="ghost"
@@ -845,9 +852,31 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
             Nova mesa
           </Button>
         </div>
+
+        {totalTables > 0 && (
+          <div className="flex flex-wrap justify-end gap-1.5">
+            {indicators.map((indicator) => (
+              <div
+                key={indicator.key}
+                className="flex shrink-0 items-center gap-1.5 rounded-ds2-md bg-ds2-primary/5 px-2.5 py-1.5 ring-1 ring-ds2-primary/10"
+              >
+                <indicator.icon className="h-3.5 w-3.5 shrink-0 text-ds2-primary" aria-hidden />
+                <div className="flex flex-col leading-none">
+                  <span className="font-numeric text-sm font-black tabular-nums text-ds2-foreground">
+                    {indicator.value}
+                  </span>
+                  <span className="whitespace-nowrap text-[9px] font-medium text-ds2-foreground-muted">
+                    {indicator.label}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Indicadores */}
+      {/* Indicadores — MOBILE, 100% intocado (o bloco compacto de
+          desktop, acima, já mostra a versão em linha única). */}
       {totalTables > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:hidden">
           {indicators.map((indicator) => (
@@ -860,47 +889,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
               </span>
               <span className="font-numeric text-xl font-bold tabular-nums text-ds2-foreground">{indicator.value}</span>
               <span className="text-xs text-ds2-foreground-muted">{indicator.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {totalTables > 0 && (
-        // Indicadores compactos, versão card — Sprint "Responsividade
-        // Desktop — Etapa 2, refinamento" (2026-08-16). Passou por ~11
-        // rodadas de mockup até aprovar. Resumo do caminho: linha fina →
-        // grade colorida rejeitada → linha única com borda → sombra →
-        // fundo sólido rejeitado por peso demais → vermelho clarinho →
-        // simétrico → "3×2" (grid responsivo, testado e descartado) →
-        // **tamanho FIXO 80×80px** (`w-20 h-20`, não mais proporcional
-        // nem responsivo por breakpoint) — pedido explícito do dono:
-        // "não travou o tamanho", queria números exatos pra iterar.
-        // Como cada card tem largura FIXA (não `flex-1`/`grid-cols`),
-        // `flex flex-wrap` é o layout certo — os cards se organizam
-        // sozinhos numa linha só (~520px pros 6) na maioria das telas de
-        // computador, e SÓ quebram linha se a tela for genuinamente
-        // estreita (não precisa mais de breakpoint extra pra isso).
-        //
-        // Conteúdo interno reduzido de propósito (ícone 28px→16px,
-        // número 14px→12px, texto 10px→7px) — correção do dono: "não
-        // precisa abreviar, o conteúdo tem que diminuir junto", não
-        // cortar palavras pra caber num espaço pequeno. Motivação maior,
-        // por trás de toda essa etapa: a tela inteira de PC não pode
-        // desperdiçar espaço com elementos grandes — numa loja de
-        // verdade, isso significa menos mesas visíveis sem rolar.
-        <div className="hidden flex-wrap justify-center gap-2 md:flex">
-          {indicators.map((indicator) => (
-            <div
-              key={indicator.key}
-              className="flex h-20 w-20 shrink-0 flex-col items-center justify-center gap-0.5 rounded-ds2-md bg-ds2-primary/5 px-1 text-center ring-1 ring-ds2-primary/10"
-            >
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-ds2-full bg-ds2-primary/15">
-                <indicator.icon className="h-2.5 w-2.5 text-ds2-primary" aria-hidden />
-              </span>
-              <span className="font-numeric text-xs font-black leading-none tabular-nums text-ds2-foreground">
-                {indicator.value}
-              </span>
-              <span className="text-[7px] font-medium leading-[1.15] text-ds2-foreground-muted">{indicator.label}</span>
             </div>
           ))}
         </div>
