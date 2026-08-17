@@ -1406,15 +1406,15 @@ export function TableDrawer({
           )}
 
           {openOrders.length > 0 && (
-            // 4ª rodada (2026-08-15) — o dono apontou o que realmente
-            // faltava: "Imprimir"/"Liberar mesa" têm ÍCONE junto do
-            // texto (`<Printer />`), este botão era só texto puro, frase
-            // longa ("Ver histórico completo de pedidos desta mesa", 43
-            // caracteres) — lê como faixa de texto esparsa, não botão.
-            // Ícone + texto mais curto ("abrasileirado", pedido
-            // explícito) resolve as duas queixas de uma vez: mesma
-            // linguagem visual do resto do rodapé, menos "esparsado".
-            <ButtonLink href={ROUTES.pedidoDetalhe(openOrders[0]!.id)} variant="outline" className="w-full">
+            // Correção (2026-08-17, dono trouxe de novo depois de já
+            // termos mexido nesse botão 4x antes): `outline` (só borda)
+            // simplesmente não bastava — mesmo comprovado com print antes,
+            // continuava sem "cara de botão" pro dono. Parando de tentar
+            // ajuste sutil de novo (mesma lição de sempre: se não resolveu
+            // depois de 1 tentativa, simplificar em vez de insistir) — cor
+            // sólida de verdade agora (`variant="primary"`, vermelho da
+            // marca), impossível de confundir com texto solto.
+            <ButtonLink href={ROUTES.pedidoDetalhe(openOrders[0]!.id)} variant="primary" className="w-full">
               <History className="h-4 w-4" />
               Ver histórico da mesa
             </ButtonLink>
