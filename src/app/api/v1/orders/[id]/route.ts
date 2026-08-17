@@ -22,7 +22,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const { data: order, error } = await supabase
       .from("orders")
       .select(
-        "id, status, total_amount, notes, created_at, table:tables(id, name), order_items(id, menu_item_id, name, price, quantity, notes, cancelled_at, selected_options, half_and_half)",
+        "id, status, total_amount, notes, created_at, order_session_id, table:tables(id, name), order_items(id, menu_item_id, name, price, quantity, notes, cancelled_at, selected_options, half_and_half)",
       )
       .eq("id", id)
       .eq("restaurant_id", profile.restaurantId)
@@ -52,6 +52,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       total_amount: number;
       notes: string | null;
       created_at: string;
+      order_session_id: string | null;
       table: { id: string; name: string } | null;
       order_items:
         | {
@@ -76,6 +77,48 @@ export async function GET(_request: Request, { params }: RouteParams) {
         | null;
     };
 
+    // Correção (2026-08-17, dono pediu que "Ver histórico da mesa" trocasse
+    // de conteúdo dentro do MESMO drawer da mesa em vez de navegar pra
+    // `/pedidos/{id}` como página cheia — histórico doloroso de bugs com
+    // `<dialog>` aninhado descartou a opção de abrir um 2º modal por cima).
+    // Este GET, que já existia só pra carga inicial da tela de Detalhes do
+    // Pedido, ganhou `siblingOrders` — MESMA busca que `pedidos/[id]/page.tsx`
+    // já fazia (mesmo `order_session_id`, todos os status, exceto ele
+    // mesmo) — agora disponível também via fetch client-side, pro drawer
+    // de Mesas reaproveitar sem duplicar a query em outro lugar.
+    let siblingOrders: unknown[] = [];
+    if (row.order_session_id) {
+      const { data: siblings } = await supabase
+        .from("orders")
+        .select(
+          "id, status, total_amount, notes, created_at, table:tables(id, name), order_items(id, menu_item_id, name, price, quantity, notes, cancelled_at, selected_options, half_and_half)",
+        )
+        .eq("order_session_id", row.order_session_id)
+        .eq("restaurant_id", profile.restaurantId)
+        .neq("id", row.id)
+        .order("created_at", { ascending: false });
+
+      siblingOrders = ((siblings ?? []) as unknown as (typeof row)[]).map((sibling) => ({
+        id: sibling.id,
+        table: { id: sibling.table?.id ?? "", name: sibling.table?.name ?? "—" },
+        status: sibling.status,
+        total_amount: sibling.total_amount,
+        notes: sibling.notes ?? undefined,
+        items: (sibling.order_items ?? []).map((item) => ({
+          id: item.id,
+          menu_item_id: item.menu_item_id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          notes: item.notes ?? undefined,
+          cancelled_at: item.cancelled_at,
+          selected_options: item.selected_options ?? undefined,
+          half_and_half: item.half_and_half ?? undefined,
+        })),
+        created_at: sibling.created_at,
+      }));
+    }
+
     return apiSuccess({
       id: row.id,
       table: { id: row.table?.id ?? "", name: row.table?.name ?? "—" },
@@ -94,6 +137,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         half_and_half: item.half_and_half ?? undefined,
       })),
       created_at: row.created_at,
+      siblingOrders,
     });
   } catch (err) {
     return handleRouteError(err);

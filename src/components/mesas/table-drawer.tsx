@@ -1,8 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ButtonLink } from "@/components/ui/button-link";
-import { Bell, CheckCircle2, ChefHat, Clock3, Hand, History, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Bell,
+  CheckCircle2,
+  ChefHat,
+  Clock3,
+  Hand,
+  History,
+  Loader2,
+  Printer,
+  Receipt,
+  StickyNote,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -11,7 +23,6 @@ import { toast } from "@/components/ui/toast";
 import { CloseBillModal } from "@/components/mesas/close-bill-modal";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatRelativeTimeShort } from "@/lib/format";
-import { ROUTES } from "@/constants/routes";
 import {
   deriveTableCardState,
   TABLE_CARD_FILLED_TONES,
@@ -267,6 +278,37 @@ export function TableDrawer({
   const [closeBillModalOpen, setCloseBillModalOpen] = useState(false);
   const [closeBillError, setCloseBillError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Histórico da mesa (2026-08-17) — troca de CONTEÚDO dentro do mesmo
+  // drawer já aberto, em vez de navegar pra `/pedidos/{id}` como página
+  // cheia (pedido do dono, "não parece um modal quando isso acontece").
+  // Nenhum modal novo — só um `useState` trocando o que a mesma `<div>`
+  // scrollável mostra. `historySiblings === null` distingue "nunca
+  // buscou" de "buscou e veio vazio" (não teve outro pedido na mesma
+  // comanda) — evita refetch toda vez que o dono clica de novo.
+  const [historyView, setHistoryView] = useState(false);
+  const [historySiblings, setHistorySiblings] = useState<OrderDetail[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  async function handleShowHistory() {
+    setHistoryView(true);
+    if (historySiblings !== null || !openOrders[0]) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const response = await fetch(`/api/v1/orders/${openOrders[0].id}`);
+      const body = await response.json();
+      if (!response.ok) {
+        setHistoryError("Não foi possível carregar o histórico.");
+        return;
+      }
+      setHistorySiblings((body.data?.siblingOrders ?? []) as OrderDetail[]);
+    } catch {
+      setHistoryError("Não foi possível conectar. Verifique sua internet.");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
 
   useEffect(() => {
     const dialog = ref.current;
@@ -1048,6 +1090,72 @@ export function TableDrawer({
             `overflow-y-auto` passa a valer de verdade: cabeçalho e
             rodapé (abaixo) ficam sempre visíveis, só esta lista rola. */}
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-5 py-4">
+          {historyView ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setHistoryView(false)}
+                className={cn(
+                  "flex w-fit items-center gap-1.5 text-sm font-medium text-ds2-foreground-muted hover:text-ds2-foreground",
+                  focusRingClass,
+                )}
+              >
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                Voltar
+              </button>
+              <span className="text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted">
+                Outros pedidos desta comanda
+              </span>
+
+              {historyError && <Alert variant="destructive">{historyError}</Alert>}
+
+              {historyLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-ds2-foreground-muted" aria-hidden />
+                </div>
+              ) : historySiblings && historySiblings.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {historySiblings.map((sibling) => (
+                    <div
+                      key={sibling.id}
+                      className="flex flex-col gap-2 rounded-ds2-lg border border-ds2-border bg-ds2-surface p-3.5 shadow-ds2-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <AdminOrderStatusBadge status={sibling.status} />
+                        <span className="inline-flex items-center gap-1 text-xs text-ds2-foreground-muted">
+                          <Clock3 className="h-3 w-3 shrink-0" aria-hidden />
+                          {formatRelativeTimeShort(sibling.created_at)}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {sibling.items.map((item) => (
+                          <div key={item.id} className="flex items-baseline justify-between gap-2 text-sm">
+                            <span
+                              className={cn(
+                                item.cancelled_at
+                                  ? "text-ds2-foreground-muted line-through"
+                                  : "text-ds2-foreground",
+                              )}
+                            >
+                              {item.quantity}× {item.name}
+                            </span>
+                            <span className="shrink-0 text-ds2-foreground-muted">{formatCurrency(item.price)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between border-t border-ds2-border pt-2 text-sm font-semibold">
+                        <span className="text-ds2-foreground-muted">Subtotal</span>
+                        <span className="text-ds2-foreground">{formatCurrency(sibling.total_amount)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-ds2-foreground-muted">Nenhum outro pedido nesta comanda.</p>
+              )}
+            </>
+          ) : (
+            <>
           {error && <Alert variant="destructive">{error}</Alert>}
 
           {openOrders.length > 0 && (
@@ -1332,6 +1440,8 @@ export function TableDrawer({
               })}
             </div>
           )}
+            </>
+          )}
         </div>
 
         {/* View de impressão — só visível em @media print (globals.css), some do resto da UI.
@@ -1414,10 +1524,17 @@ export function TableDrawer({
             // depois de 1 tentativa, simplificar em vez de insistir) — cor
             // sólida de verdade agora (`variant="primary"`, vermelho da
             // marca), impossível de confundir com texto solto.
-            <ButtonLink href={ROUTES.pedidoDetalhe(openOrders[0]!.id)} variant="primary" className="w-full">
+            //
+            // Correção maior no mesmo dia: deixou de ser `<ButtonLink>`
+            // navegando pra `/pedidos/{id}` (página cheia, "nem parece um
+            // modal") — agora chama `handleShowHistory`, troca o CONTEÚDO
+            // do mesmo drawer já aberto. Nenhum modal novo, nenhuma
+            // navegação — mesmo raciocínio já usado no fluxo de meio a
+            // meio (trocar conteúdo em vez de empilhar).
+            <Button type="button" variant="primary" className="w-full" onClick={handleShowHistory}>
               <History className="h-4 w-4" />
               Ver histórico da mesa
-            </ButtonLink>
+            </Button>
           )}
         </div>
       </div>
