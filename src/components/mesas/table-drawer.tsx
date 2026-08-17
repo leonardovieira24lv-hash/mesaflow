@@ -315,7 +315,17 @@ export function TableDrawer({
         setHistoryError("Não foi possível carregar o histórico.");
         return;
       }
-      setHistorySiblings((body.data?.siblingOrders ?? []) as OrderDetail[]);
+      // Correção (2026-08-17, dono testou com 2 pedidos reais na mesma
+      // comanda e o 1º nunca aparecia): a API devolve o pedido base
+      // (`openOrders[0]`, os campos soltos de `body.data`) SEPARADO dos
+      // `siblingOrders` — pensado originalmente pra página de Detalhes,
+      // que já mostra o pedido base num painel próprio acima, então só
+      // precisava dos "outros" embaixo. Aqui no drawer não existe esse
+      // painel separado — a visão de histórico troca o corpo inteiro,
+      // então o pedido base tinha que entrar na MESMA lista, ou ele
+      // nunca aparecia em lugar nenhum dentro da visão de histórico.
+      const { siblingOrders, ...primaryOrder } = body.data ?? {};
+      setHistorySiblings([primaryOrder as OrderDetail, ...((siblingOrders ?? []) as OrderDetail[])]);
     } catch {
       setHistoryError("Não foi possível conectar. Verifique sua internet.");
     } finally {
@@ -1117,7 +1127,7 @@ export function TableDrawer({
                 Voltar
               </button>
               <span className="text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted">
-                Outros pedidos desta comanda
+                Pedidos desta comanda
               </span>
 
               {historyError && <Alert variant="destructive">{historyError}</Alert>}
