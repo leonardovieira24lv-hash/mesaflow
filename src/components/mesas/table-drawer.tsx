@@ -131,11 +131,12 @@ interface TableDrawerProps {
 
 /**
  * Painel lateral de uma mesa (Painel de Mesas → "Centro de Operações",
- * pedido do dono). Drawer nativo (`<dialog>`), mesmo padrão de
- * `product-detail-modal.tsx`: bottom sheet no mobile, painel lateral da
- * direita a partir de `sm:` — aqui faz mais sentido inverter a proporção
- * do cliente (lá o conteúdo é uma vitrine vertical; aqui é uma lista, cabe
- * melhor num painel estreito e alto).
+ * pedido do dono). Drawer nativo (`<dialog>`) — bottom sheet no mobile,
+ * caixa centralizada a partir de `md:` (2026-08-17, corrigido — dono
+ * trouxe print real de notebook mostrando o bottom sheet tomando a tela
+ * toda; a 1ª tentativa de correção, um painel lateral a partir de `sm:`,
+ * nunca chegou a ficar boa e foi substituída por uma caixa centralizada,
+ * mesmo padrão/breakpoint já usado no resto da Responsividade Desktop).
  *
  * Ações: só as que têm suporte real hoje.
  * - "Enviar para cozinha" — transição real `pending → preparing`
@@ -807,12 +808,26 @@ export function TableDrawer({
       aria-label={`Mesa ${table.name}`}
       className={cn(
         "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88vh] w-full overflow-hidden rounded-t-ds2-lg border-t border-ds2-border bg-ds2-surface p-0 text-ds2-foreground shadow-ds2-lg",
-        "sm:inset-y-0 sm:left-auto sm:right-0 sm:bottom-0 sm:top-0 sm:m-0 sm:h-full sm:max-h-none sm:w-[420px] sm:rounded-none sm:rounded-l-ds2-lg sm:border-l sm:border-t-0 sm:shadow-ds2-lg",
+        // Correção (2026-08-17, dono trouxe print real de notebook — drawer
+        // tomando a tela toda, "nem parece um modal"). Peça que tinha
+        // ficado pra trás do plano original da Responsividade Desktop:
+        // este `<dialog>` é próprio (não usa o `<Modal>` compartilhado,
+        // por precisar do gesto de arrastar pra fechar no mobile — ver
+        // comentário mais acima no arquivo) e só tinha tratamento pra
+        // telas pequenas. Existia uma tentativa anterior aqui num
+        // breakpoint `sm:` (virava painel lateral direito, 420px) — troquei
+        // por uma CAIXA CENTRALIZADA em `md:` (768px), o mesmo breakpoint
+        // já usado em toda a Responsividade Desktop (sidebar, cabeçalho,
+        // grade de mesas) — evita qualquer "faixa morta" entre
+        // comportamentos diferentes, mesmo bug de descompasso já visto
+        // antes nessa etapa. Auditoria confirmou: nenhum outro modal do
+        // admin tinha esse problema — só este.
+        "md:inset-0 md:bottom-auto md:m-auto md:h-fit md:max-h-[85vh] md:w-full md:max-w-lg md:rounded-ds2-lg md:border md:border-ds2-border md:border-t-0",
         "backdrop:bg-black/50 backdrop:backdrop-blur-[2px]",
-        "open:animate-sheet-up sm:open:animate-slide-in-right",
+        "open:animate-sheet-up md:open:animate-scale-in",
       )}
     >
-      <div className="flex h-full max-h-[88vh] flex-col sm:max-h-none">
+      <div className="flex h-full max-h-[88vh] flex-col md:max-h-[85vh]">
         <div
           className={cn(
             "flex flex-col gap-3 border-b border-ds2-border px-5 py-4",
