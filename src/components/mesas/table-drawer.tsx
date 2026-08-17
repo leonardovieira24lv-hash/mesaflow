@@ -292,7 +292,20 @@ export function TableDrawer({
 
   async function handleShowHistory() {
     setHistoryView(true);
-    if (historySiblings !== null || !openOrders[0]) return;
+    if (!openOrders[0]) return;
+    // Correção (2026-08-17, dono testou de novo: fez um 2º pedido na mesma
+    // mesa com o drawer já aberto, reabriu o histórico e continuou vendo
+    // "nenhum outro pedido" — dado velho). Causa real: este fetch só
+    // rodava a 1ª vez que o histórico era aberto nesta montagem do drawer
+    // (`if (historySiblings !== null) return`, pensado como cache pra
+    // evitar refetch em cliques repetidos) — se um pedido novo chegasse
+    // DEPOIS dessa 1ª busca (drawer continua montado, `openOrders` atualiza
+    // sozinho via Realtime/`onOrdersChanged`, mas o cache do histórico não
+    // sabia disso), o botão voltava a mostrar o resultado antigo, vazio,
+    // sem buscar de novo. Removido o cache — busca sempre que o botão é
+    // clicado, sem exceção. Custo real é baixíssimo (1 clique manual, não
+    // um efeito repetindo sozinho) — corretude importa mais aqui que
+    // economizar 1 request ocasional.
     setHistoryLoading(true);
     setHistoryError(null);
     try {
