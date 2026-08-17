@@ -1327,7 +1327,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
             aciona o clique do card por baixo. Bloco mobile acima
             (`md:hidden`) é outro `.map()` — 100% intocado, cópia
             fiel do que já existia antes desta etapa. */}
-        <div className="hidden grid-cols-4 gap-2 md:grid lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+        <div className="hidden grid-cols-5 gap-1.5 md:grid lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
           {filteredTables.map((table) => {
             const data = operations[table.id] ?? null;
             const alerts = tableEvents[table.id] ?? [];
@@ -1364,7 +1364,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                   }
                 }}
                 className={cn(
-                  "group relative flex h-full cursor-pointer flex-col gap-1.5 overflow-hidden rounded-ds2-lg border p-2 shadow-ds2-sm transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-ds2-md",
+                  "group relative flex h-full cursor-pointer flex-col gap-1 overflow-hidden rounded-ds2-lg border p-1.5 shadow-ds2-sm transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-ds2-md",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background",
                   toneClass,
                   isFlashing && "animate-status-flash",
@@ -1374,7 +1374,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                 <Armchair
                   aria-hidden
                   className={cn(
-                    "pointer-events-none absolute -bottom-1.5 -right-1.5 h-8 w-8",
+                    "pointer-events-none absolute -bottom-1 -right-1 h-7 w-7",
                     isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground/15" : "text-white/15") : "text-ds2-foreground-muted/10",
                   )}
                 />
@@ -1388,9 +1388,9 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                       setQrTable(table);
                     }}
                     aria-label={`Ver QR Code de ${table.name}`}
-                    className={cn("h-6 w-6 opacity-70 hover:opacity-100", iconColorClass, focusRingClass)}
+                    className={cn("h-5 w-5 opacity-70 hover:opacity-100", iconColorClass, focusRingClass)}
                   >
-                    <QrCode className="h-3 w-3" />
+                    <QrCode className="h-2.5 w-2.5" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -1400,9 +1400,9 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                       openEditModal(table);
                     }}
                     aria-label={`Editar ${table.name}`}
-                    className={cn("h-6 w-6 opacity-70 hover:opacity-100", iconColorClass, focusRingClass)}
+                    className={cn("h-5 w-5 opacity-70 hover:opacity-100", iconColorClass, focusRingClass)}
                   >
-                    <Pencil className="h-3 w-3" />
+                    <Pencil className="h-2.5 w-2.5" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -1413,12 +1413,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                     }}
                     aria-label={`Excluir ${table.name}`}
                     className={cn(
-                      "h-6 w-6 opacity-70 hover:opacity-100",
+                      "h-5 w-5 opacity-70 hover:opacity-100",
                       isFilled ? iconColorClass : "text-destructive",
                       focusRingClass,
                     )}
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-2.5 w-2.5" />
                   </Button>
                   <a
                     href={tableUrl(table)}
@@ -1427,18 +1427,18 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                     onClick={(e) => e.stopPropagation()}
                     aria-label={`Abrir cardápio da ${table.name}`}
                     className={cn(
-                      "flex h-6 w-6 items-center justify-center rounded-ds2-sm opacity-70 hover:opacity-100",
+                      "flex h-5 w-5 items-center justify-center rounded-ds2-sm opacity-70 hover:opacity-100",
                       iconColorClass,
                       focusRingClass,
                     )}
                   >
-                    <UtensilsCrossed className="h-3 w-3" />
+                    <UtensilsCrossed className="h-2.5 w-2.5" />
                   </a>
                 </div>
 
                 <span
                   className={cn(
-                    "z-10 pr-12 font-numeric text-lg font-bold leading-none tabular-nums",
+                    "z-10 pr-9 font-numeric text-base font-bold leading-none tabular-nums",
                     isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-ds2-foreground",
                   )}
                 >
@@ -1447,7 +1447,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
 
                 <span
                   className={cn(
-                    "z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                    "z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide",
                     isFilled
                       ? isDarkOnLight
                         ? "bg-ds2-warning-foreground/15 text-ds2-warning-foreground"
@@ -1461,7 +1461,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
 
                 {state.hasUnprocessedOrders && state.tone !== "new_order" && (
                   <span
-                    className="z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full bg-ds2-warning px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ds2-warning-foreground"
+                    className="z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full bg-ds2-warning px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-ds2-warning-foreground"
                     title="Pedido novo aguardando envio para a cozinha"
                   >
                     <Bell className="h-2.5 w-2.5 shrink-0" aria-hidden />
@@ -1471,7 +1471,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
 
                 {state.hasWaiterCall && (
                   <span
-                    className="z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full bg-ds2-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ds2-primary-foreground"
+                    className="z-10 inline-flex w-fit items-center gap-1 rounded-ds2-full bg-ds2-primary px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-ds2-primary-foreground"
                     title="Cliente chamando o garçom"
                   >
                     <Hand className="h-2.5 w-2.5 shrink-0" aria-hidden />
@@ -1483,7 +1483,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                   <div className="z-10 flex flex-col gap-0.5">
                     <span
                       className={cn(
-                        "font-numeric text-sm font-bold leading-tight tabular-nums",
+                        "font-numeric text-xs font-bold leading-tight tabular-nums",
                         isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-ds2-foreground",
                       )}
                     >
@@ -1492,7 +1492,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                     {data.lastOrderAt && (
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1 text-[10px]",
+                          "inline-flex items-center gap-1 text-[9px]",
                           isFilled
                             ? isDarkOnLight
                               ? "text-ds2-warning-foreground/70"
@@ -1508,7 +1508,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                 ) : (
                   <span
                     className={cn(
-                      "z-10 text-[10px]",
+                      "z-10 text-[9px]",
                       isFilled
                         ? isDarkOnLight
                           ? "text-ds2-warning-foreground/70"
@@ -1523,7 +1523,7 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                 {data && (data.itemCount > 0 || ordersCount > 0) && (
                   <div
                     className={cn(
-                      "z-10 flex items-center gap-2 text-[10px]",
+                      "z-10 flex items-center gap-2 text-[9px]",
                       isFilled
                         ? isDarkOnLight
                           ? "text-ds2-warning-foreground/80"
