@@ -171,7 +171,18 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
     setOrigin(window.location.origin);
   }, []);
 
-  const currentPublicUrl = origin ? `${origin}${ROUTES.clienteMenu(restaurant.slug)}` : null;
+  // Correção (2026-08-18, dono reportou "mesaflow" ainda aparecendo mesmo
+  // depois de já ter mudado o nome pra "forko"/"prime hambúrguer"): não
+  // era dado velho no banco — era a seção "Informações atuais" (e esta
+  // URL) lendo direto do PROP `restaurant` (uma foto tirada só na carga
+  // da página pelo Server Component) em vez do estado local `name`/`slug`,
+  // que JÁ era atualizado certinho depois de um salvamento bem-sucedido
+  // (`setName(updated.name)`/`setSlug(updated.slug)`, algumas linhas
+  // abaixo) — só ninguém tinha ligado esse estado atualizado de volta pra
+  // essas 3 exibições. Sem re-carregar a página inteira, o prop nunca
+  // muda sozinho; o estado local é a fonte de verdade de quem está vendo
+  // a tela agora.
+  const currentPublicUrl = origin ? `${origin}${ROUTES.clienteMenu(slug)}` : null;
   const slugChanged = slug.trim() !== restaurant.slug;
 
   function buildPayload(): Record<string, string> | null {
@@ -296,11 +307,11 @@ export function RestaurantSettingsForm({ restaurant }: RestaurantSettingsFormPro
         <CardContent className="flex flex-col gap-3 text-sm sm:flex-row sm:flex-wrap sm:gap-6">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-wide text-ds2-foreground-muted">Nome</span>
-            <span className="font-medium">{restaurant.name}</span>
+            <span className="font-medium">{name}</span>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-wide text-ds2-foreground-muted">Slug</span>
-            <span className="font-mono">{restaurant.slug}</span>
+            <span className="font-mono">{slug}</span>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-wide text-ds2-foreground-muted">Status</span>
