@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   Pencil,
   Plus,
+  Printer,
   QrCode,
   Receipt,
   Search,
@@ -40,6 +41,7 @@ import { useRealtimeConnectionStatus } from "@/lib/realtime/use-realtime-connect
 import { RealtimeStatusIndicator } from "@/components/realtime/realtime-status-indicator";
 import { getAppOrigin } from "@/lib/cliente-url";
 import { TableQrModal } from "@/components/mesas/table-qr-modal";
+import { BatchQrPrintModal } from "@/components/mesas/batch-qr-print-modal";
 import { TableDrawer } from "@/components/mesas/table-drawer";
 import {
   deriveTableCardState,
@@ -176,6 +178,9 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [qrTable, setQrTable] = useState<TableEntity | null>(null);
+  // Impressão em lote de QR Codes (2026-08-17/18) — estado próprio, modal
+  // novo (`BatchQrPrintModal`), sem interferir no fluxo individual acima.
+  const [batchQrOpen, setBatchQrOpen] = useState(false);
   // Correção pedida pelo dono (2026-08-15): "qual mesa está com o
   // drawer aberto" era só estado local (`useState`), nunca refletido na
   // URL. Clicar em "Ver histórico completo de pedidos desta mesa" (uma
@@ -810,6 +815,18 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
           >
             {isSoundMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </Button>
+          {totalTables > 0 && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setBatchQrOpen(true)}
+              aria-label="Imprimir QR Codes das mesas"
+              title="Imprimir QR Codes"
+              className={focusRingClass}
+            >
+              <Printer className="h-4 w-4" />
+            </Button>
+          )}
           <Button onClick={openCreateModal} className={focusRingClass}>
             <Plus className="h-4 w-4" />
             Nova mesa
@@ -847,6 +864,18 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
           >
             {isSoundMuted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
           </Button>
+          {totalTables > 0 && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setBatchQrOpen(true)}
+              aria-label="Imprimir QR Codes das mesas"
+              title="Imprimir QR Codes"
+              className={cn("h-6 w-6", focusRingClass)}
+            >
+              <Printer className="h-3 w-3" />
+            </Button>
+          )}
           <Button size="sm" onClick={openCreateModal} className={cn("h-6 px-2 text-xs", focusRingClass)}>
             <Plus className="h-3 w-3" />
             Nova mesa
@@ -1614,6 +1643,12 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
           url={tableUrl(qrTable)}
         />
       )}
+
+      <BatchQrPrintModal
+        open={batchQrOpen}
+        onClose={() => setBatchQrOpen(false)}
+        tables={tables.map((t) => ({ id: t.id, name: t.name, url: tableUrl(t) }))}
+      />
 
       {drawerTable && (
         <TableDrawer

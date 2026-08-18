@@ -510,7 +510,9 @@
   #print-comanda-drawer,
   #print-comanda-drawer *,
   #print-comanda-qr,
-  #print-comanda-qr * {
+  #print-comanda-qr *,
+  #print-batch-qr,
+  #print-batch-qr * {
     visibility: visible;
   }
   #print-comanda-drawer,
@@ -519,5 +521,15 @@
     position: absolute;
     inset: 0;
     padding: 24px;
+  }
+  /* Impressão em lote de QR Codes (2026-08-17/18) — mesmo mecanismo dos
+     dois acima (esconder tudo, exceto o alvo), só sem o `padding: 24px`
+     genérico: o próprio conteúdo já é dimensionado em `cm`, com margem de
+     página calculada no componente (`PAGE_MARGIN_CM`) — um padding extra
+     aqui bagunçaria a matemática de quantos cartões cabem por folha. */
+  #print-batch-qr {
+    display: block !important;
+    position: absolute;
+    inset: 0;
   }
 }
