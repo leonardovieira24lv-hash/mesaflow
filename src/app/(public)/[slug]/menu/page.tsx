@@ -73,6 +73,9 @@ export default async function CardapioClientePage({
         promoBannerImageUrl={restaurant.promoBannerImageUrl}
         promoBannerText={restaurant.promoBannerText}
         promoBannerEnabled={restaurant.promoBannerEnabled}
+        instagram={restaurant.instagram}
+        facebook={restaurant.facebook}
+        website={restaurant.website}
       />
     );
   } catch (err) {

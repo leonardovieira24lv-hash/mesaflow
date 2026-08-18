@@ -13,6 +13,7 @@ import { CartProvider } from "@/components/cardapio-cliente/cart-context";
 import { CartSummaryBar } from "@/components/cardapio-cliente/cart-summary-bar";
 import { TableAssistanceActions } from "@/components/cardapio-cliente/table-assistance-actions";
 import { HalfAndHalfConfirmModal } from "@/components/cardapio-cliente/half-and-half-confirm-modal";
+import { PublicFooter } from "@/components/cardapio-cliente/public-footer";
 import type { PublicMenuCategory, PublicMenuItem } from "@/lib/orders/public-menu";
 
 interface CardapioClienteViewProps {
@@ -41,6 +42,10 @@ interface CardapioClienteViewProps {
   promoBannerImageUrl?: string | null;
   promoBannerText?: string | null;
   promoBannerEnabled?: boolean;
+  // Redes sociais — rodapé do Cardápio Público (2026-08-18).
+  instagram?: string | null;
+  facebook?: string | null;
+  website?: string | null;
 }
 
 /**
@@ -104,6 +109,9 @@ export function CardapioClienteView({
   promoBannerImageUrl,
   promoBannerText,
   promoBannerEnabled,
+  instagram,
+  facebook,
+  website,
 }: CardapioClienteViewProps) {
   const [selectedItem, setSelectedItem] = useState<PublicMenuItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -334,6 +342,8 @@ export function CardapioClienteView({
             ))
           )}
         </main>
+
+        <PublicFooter instagram={instagram ?? null} facebook={facebook ?? null} website={website ?? null} />
 
         <ProductDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
 

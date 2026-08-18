@@ -22,6 +22,17 @@ export interface PublicRestaurantContext {
   promoBannerImageUrl: string | null;
   promoBannerText: string | null;
   promoBannerEnabled: boolean;
+  // Redes sociais — Cardápio Público (2026-08-18). Mesmo raciocínio do
+  // banner: colunas já existentes desde "Gestão do Restaurante", nunca
+  // antes buscadas por esta função — o dono percebeu que preenchia
+  // Instagram/Facebook/Site em Configurações/Perfil, mas isso nunca
+  // chegava no cliente final. Telefone/WhatsApp/endereço FICARAM DE
+  // FORA de propósito (decisão do dono: cliente já está fisicamente no
+  // estabelecimento, essas informações são redundantes nesse contexto —
+  // só redes sociais fazem sentido, pra seguir/engajar mesmo estando lá).
+  instagram: string | null;
+  facebook: string | null;
+  website: string | null;
   // Operação — Fase 4B.2 (2026-08-10), colunas de
   // `0028_restaurant_operation_settings.sql`/`0029_restaurant_timezone.sql`.
   // `openingHours` fica `null` quando o proprietário nunca configurou nada
@@ -60,7 +71,7 @@ export async function resolveRestaurantBySlug(
   const { data, error } = await admin
     .from("restaurants")
     .select(
-      "id, name, slug, trade_name, logo_url, description, promo_banner_image_url, promo_banner_text, promo_banner_enabled, opening_hours, timezone, menu_theme",
+      "id, name, slug, trade_name, logo_url, description, promo_banner_image_url, promo_banner_text, promo_banner_enabled, instagram, facebook, website, opening_hours, timezone, menu_theme",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -82,6 +93,9 @@ export async function resolveRestaurantBySlug(
     promoBannerImageUrl: data.promo_banner_image_url,
     promoBannerText: data.promo_banner_text,
     promoBannerEnabled: data.promo_banner_enabled,
+    instagram: data.instagram,
+    facebook: data.facebook,
+    website: data.website,
     openingHours: data.opening_hours as OpeningHours | null,
     timezone: data.timezone,
     menuTheme: data.menu_theme as "light" | "dark",
