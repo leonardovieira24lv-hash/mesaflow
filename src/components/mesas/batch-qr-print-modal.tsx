@@ -173,8 +173,6 @@ export function BatchQrPrintModal({ open, onClose, tables }: BatchQrPrintModalPr
     try {
       const logoDataUrl = await loadImageAsDataUrl(LOGO_ICON_SRC).catch(() => null);
       const doc = new jsPDF({ unit: "cm", format: "a4" });
-      const logoWCm = 0.55;
-      const logoHCm = logoDataUrl ? (logoWCm * 1) / 1.29 : 0; // proporção real do arquivo (~1.29:1)
 
       pages.forEach((pageTables, pageIndex) => {
         if (pageIndex > 0) doc.addPage();
@@ -185,16 +183,26 @@ export function BatchQrPrintModal({ open, onClose, tables }: BatchQrPrintModalPr
           const x = PAGE_MARGIN_CM + col * cfg.cardWCm;
           const y = PAGE_MARGIN_CM + row * cfg.cardHCm;
 
-          // Faixa vermelha do topo — "MESA XX"
+          // Faixa vermelha do topo — "MESA XX". Correção (2026-08-18,
+          // dono apontou texto "meio fora de centro"): o deslocamento
+          // vertical do texto dentro da faixa era um número fixo
+          // (0.15cm) que não batia certinho com a fonte de 16pt — trocado
+          // por uma fórmula real (metade da altura aproximada da fonte,
+          // convertida de pt pra cm), que centraliza o texto na faixa de
+          // verdade, não só "no olho".
           const headerHCm = 1.3;
+          const titleFontPt = 16;
           doc.setFillColor(230, 30, 40);
           doc.rect(x + 0.15, y + 0.15, cfg.cardWCm - 0.3, headerHCm, "F");
           doc.setTextColor(255, 255, 255);
           doc.setFont("helvetica", "bold");
-          doc.setFontSize(16);
-          doc.text(`MESA ${table.name}`, x + cfg.cardWCm / 2, y + 0.15 + headerHCm / 2 + 0.15, {
-            align: "center",
-          });
+          doc.setFontSize(titleFontPt);
+          doc.text(
+            `MESA ${table.name}`,
+            x + cfg.cardWCm / 2,
+            y + 0.15 + headerHCm / 2 + (titleFontPt * 0.35) / 72 / 0.394,
+            { align: "center" },
+          );
 
           // QR — centralizado, com respiro (quiet zone visual) ao redor.
           const qrDataUrl = qrDataUrls[table.id];
@@ -212,28 +220,56 @@ export function BatchQrPrintModal({ open, onClose, tables }: BatchQrPrintModalPr
           doc.text("Aponte a câmera para", x + cfg.cardWCm / 2, textY, { align: "center" });
           doc.text("fazer seu pedido", x + cfg.cardWCm / 2, textY + 0.38, { align: "center" });
 
-          // Assinatura — logo oficial (ícone real, não texto desenhado).
+          // Assinatura — logo oficial + "FORKO", menor e centralizada de
+          // verdade. Correção (2026-08-18): antes o logo e o texto eram
+          // posicionados com deslocamentos fixos "no chute"
+          // (`-0.45`/`+0.15`), que não consideravam a largura real do
+          // texto "FORKO" — o grupo inteiro ficava desalinhado do centro
+          // do cartão. Agora mede a largura de verdade do texto
+          // (`getTextWidth`) e centraliza o grupo [logo + texto] como um
+          // todo. Logo também menor (0.55cm → 0.4cm), mais "assinatura
+          // discreta" do que elemento de destaque.
+          const signFontPt = 8;
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(signFontPt);
+          const forkoTextW = doc.getTextWidth("FORKO");
+          const signLogoWCm = 0.4;
+          const signLogoHCm = logoDataUrl ? signLogoWCm / 1.29 : 0;
+          const signGapCm = 0.12;
+          const signGroupW = signLogoWCm + signGapCm + forkoTextW;
+          const signGroupX = x + cfg.cardWCm / 2 - signGroupW / 2;
           const signY = textY + 0.75;
           if (logoDataUrl) {
-            doc.addImage(
-              logoDataUrl,
-              "PNG",
-              x + cfg.cardWCm / 2 - logoWCm / 2 - 0.45,
-              signY - logoHCm / 2,
-              logoWCm,
-              logoHCm,
-            );
+            doc.addImage(logoDataUrl, "PNG", signGroupX, signY - signLogoHCm / 2, signLogoWCm, signLogoHCm);
           }
           doc.setTextColor(40, 40, 40);
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(9);
-          doc.text("FORKO", x + cfg.cardWCm / 2 + 0.15, signY + 0.1, { align: "left" });
-
-          // Guia de corte (linha pontilhada) — só visual, não é conteúdo.
-          doc.setDrawColor(210, 210, 213);
-          doc.setLineDashPattern([0.1, 0.1], 0);
-          doc.rect(x + 0.05, y + 0.05, cfg.cardWCm - 0.1, cfg.cardHCm - 0.1);
+          doc.text("FORKO", signGroupX + signLogoWCm + signGapCm, signY + (signFontPt * 0.35) / 72 / 0.394, {
+            align: "left",
+          });
         });
+
+        // Guia de corte — Correção (2026-08-18, dono apontou "linha
+        // dividindo ficou estranha"): antes CADA cartão desenhava a
+        // própria borda (`doc.rect()` por cartão) — no encontro entre 2
+        // cartões vizinhos, isso desenhava 2 linhas tracejadas próximas
+        // mas não coincidentes, parecendo uma linha "dupla"/borrada em
+        // vez de 1 corte limpo. Agora desenha 1 grade só, com as linhas
+        // EXATAMENTE em cima da divisa real entre os cartões — cada
+        // linha de corte existe uma única vez, compartilhada pelos 2
+        // cartões vizinhos.
+        const usedRows = Math.ceil(pageTables.length / cols);
+        const gridWCm = cols * cfg.cardWCm;
+        const gridHCm = usedRows * cfg.cardHCm;
+        doc.setDrawColor(210, 210, 213);
+        doc.setLineDashPattern([0.15, 0.1], 0);
+        for (let c = 0; c <= cols; c++) {
+          const lineX = PAGE_MARGIN_CM + c * cfg.cardWCm;
+          doc.line(lineX, PAGE_MARGIN_CM, lineX, PAGE_MARGIN_CM + gridHCm);
+        }
+        for (let r = 0; r <= usedRows; r++) {
+          const lineY = PAGE_MARGIN_CM + r * cfg.cardHCm;
+          doc.line(PAGE_MARGIN_CM, lineY, PAGE_MARGIN_CM + gridWCm, lineY);
+        }
       });
 
       doc.save("qr-codes-mesas-forko.pdf");
@@ -383,6 +419,18 @@ export function BatchQrPrintModal({ open, onClose, tables }: BatchQrPrintModalPr
               display: "grid",
               gridTemplateColumns: `repeat(${cols}, ${cfg.cardWCm}cm)`,
               gap: "0",
+              // Correção (2026-08-18, dono apontou "linha dividindo ficou
+              // estranha na hora de cortar"): antes CADA cartão tinha
+              // borda tracejada nos 4 lados — no encontro entre 2 cartões
+              // vizinhos, isso desenhava 2 linhas próximas mas não
+              // coincidentes, parecendo duplicada/borrada. Técnica padrão
+              // pra evitar isso numa grade CSS: cada cartão só desenha a
+              // borda DIREITA e DE BAIXO (as que "pertencem" a ele); as
+              // bordas de fora que sobrariam (esquerda da 1ª coluna, topo
+              // da 1ª linha) ficam por conta do CONTAINER da grade — cada
+              // linha de corte existe uma única vez.
+              borderLeft: "1px dashed #d4d4d8",
+              borderTop: "1px dashed #d4d4d8",
               pageBreakAfter: pageIndex < pages.length - 1 ? "always" : "auto",
             }}
           >
@@ -392,7 +440,8 @@ export function BatchQrPrintModal({ open, onClose, tables }: BatchQrPrintModalPr
                 style={{
                   width: `${cfg.cardWCm}cm`,
                   height: `${cfg.cardHCm}cm`,
-                  border: "1px dashed #d4d4d8",
+                  borderRight: "1px dashed #d4d4d8",
+                  borderBottom: "1px dashed #d4d4d8",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
@@ -409,6 +458,7 @@ export function BatchQrPrintModal({ open, onClose, tables }: BatchQrPrintModalPr
                     padding: "0.25cm 0",
                     fontWeight: 700,
                     fontSize: "16pt",
+                    lineHeight: 1,
                   }}
                 >
                   MESA {t.name}
@@ -428,10 +478,13 @@ export function BatchQrPrintModal({ open, onClose, tables }: BatchQrPrintModalPr
                   <br />
                   fazer seu pedido
                 </p>
+                {/* Assinatura — menor (0.4cm→0.35cm), centralizada via
+                    flexbox de verdade (não deslocamento manual, ao
+                    contrário da 1ª versão do PDF — aqui já estava certo). */}
                 <div style={{ marginTop: "0.25cm", display: "flex", alignItems: "center", gap: "0.1cm" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- asset estático de public/, view só de impressão */}
-                  <img src={LOGO_ICON_SRC} alt="" style={{ height: "0.4cm", width: "auto" }} />
-                  <span style={{ fontSize: "9pt", fontWeight: 700, color: "#27272a" }}>FORKO</span>
+                  <img src={LOGO_ICON_SRC} alt="" style={{ height: "0.35cm", width: "auto" }} />
+                  <span style={{ fontSize: "8pt", fontWeight: 700, color: "#27272a" }}>FORKO</span>
                 </div>
               </div>
             ))}
