@@ -76,6 +76,27 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
 
     const supabase = await createClient();
 
+    const { count: activeItemsCount, error: activeItemsError } = await supabase
+      .from("menu_items")
+      .select("id", { count: "exact", head: true })
+      .eq("category_id", id)
+      .eq("restaurant_id", profile.restaurantId)
+      .eq("is_archived", false);
+
+    if (activeItemsError) {
+      throw new AppError(
+        "INTERNAL_ERROR",
+        "Não foi possível verificar os produtos da categoria.",
+      );
+    }
+
+    if ((activeItemsCount ?? 0) > 0) {
+      throw new AppError(
+        "CONFLICT",
+        "Esta categoria ainda tem produtos ativos. Mova ou exclua os produtos primeiro.",
+      );
+    }
+
     const { data: deleted, error } = await supabase
       .from("menu_categories")
       .delete()
@@ -85,14 +106,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       .maybeSingle();
 
     if (error) {
-      // 23503 = foreign_key_violation — `menu_items.category_id` é
-      // `on delete restrict` (migration 0001): existem produtos vinculados.
-      // Deixamos o próprio banco ser a fonte da verdade em vez de fazer uma
-      // consulta de contagem separada antes (evita condição de corrida).
-      if (error.code === "23503") {
+      if (error.code === "23503" || error.code === "23514") {
         throw new AppError(
           "CONFLICT",
-          "Esta categoria tem produtos vinculados. Mova ou exclua os produtos primeiro.",
+          "Esta categoria ainda tem produtos ativos. Mova ou exclua os produtos primeiro.",
         );
       }
       throw new AppError("INTERNAL_ERROR", "Não foi possível excluir a categoria. Tente novamente.");
