@@ -50,7 +50,7 @@ export default async function CardapioPage() {
     // Perfil precisa.
     supabase
       .from("restaurants")
-      .select("promo_banner_image_url, promo_banner_text, promo_banner_enabled")
+      .select("business_type, promo_banner_image_url, promo_banner_text, promo_banner_enabled")
       .eq("id", profile.restaurantId)
       .maybeSingle(),
   ]);
@@ -88,6 +88,7 @@ export default async function CardapioPage() {
         restaurantId={profile.restaurantId}
         initialCategories={categories}
         initialItems={items}
+        businessType={restaurantResult.data?.business_type ?? null}
         initialPromoBannerImageUrl={restaurantResult.data?.promo_banner_image_url ?? null}
         initialPromoBannerText={restaurantResult.data?.promo_banner_text ?? null}
         initialPromoBannerEnabled={restaurantResult.data?.promo_banner_enabled ?? false}

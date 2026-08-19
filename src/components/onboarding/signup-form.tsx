@@ -12,9 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { OnboardingProgress } from "@/components/onboarding/onboarding-progress";
+import { BUSINESS_TYPES } from "@/lib/business-type";
 import type { ApiError } from "@/types/api";
 
-type FieldErrors = Partial<Record<"owner_name" | "restaurant_name" | "email" | "password" | "confirmPassword", string>>;
+type FieldErrors = Partial<Record<"owner_name" | "restaurant_name" | "business_type" | "email" | "password" | "confirmPassword", string>>;
 
 /** Passo 1 do onboarding: cria a conta do proprietário + o restaurante (contrato seção 2.1). */
 export function SignupForm() {
@@ -23,6 +24,7 @@ export function SignupForm() {
   const [form, setForm] = useState({
     owner_name: "",
     restaurant_name: "",
+    business_type: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -65,6 +67,7 @@ export function SignupForm() {
         body: JSON.stringify({
           owner_name: form.owner_name,
           restaurant_name: form.restaurant_name,
+          business_type: form.business_type,
           email: form.email,
           password: form.password,
         }),
@@ -129,6 +132,31 @@ export function SignupForm() {
             onChange={(e) => update("restaurant_name", e.target.value)}
             disabled={isSubmitting}
           />
+        </FormField>
+
+        <FormField label="Tipo do negócio" error={errors.business_type}>
+          <div className="grid grid-cols-2 gap-2">
+            {BUSINESS_TYPES.map((type) => {
+              const selected = form.business_type === type.value;
+              return (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => update("business_type", type.value)}
+                  disabled={isSubmitting}
+                  className={`flex min-h-16 items-center gap-2 rounded-ds2-md border px-3 py-2 text-left text-sm transition ${
+                    selected
+                      ? "border-ds2-primary bg-ds2-primary/10 font-semibold text-ds2-foreground"
+                      : "border-ds2-border bg-ds2-surface hover:bg-ds2-surface-hover"
+                  }`}
+                  aria-pressed={selected}
+                >
+                  <span aria-hidden>{type.icon}</span>
+                  <span>{type.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </FormField>
 
         <FormField label="E-mail" error={errors.email}>

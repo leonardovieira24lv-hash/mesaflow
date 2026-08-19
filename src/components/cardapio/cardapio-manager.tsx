@@ -21,6 +21,7 @@ import { menuItemFromDto, type MenuItemDto } from "@/types/menu-item-dto";
 import { createCategorySchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
 import type { ApiError } from "@/types/api";
+import { getMenuSetupGuide, getBusinessTypeLabel } from "@/lib/business-type";
 
 interface CategoryDto {
   id: string;
@@ -49,6 +50,7 @@ interface CardapioManagerProps {
   // Banner Promocional — movido de Configurações/Perfil pra cá
   // (2026-08-16, correção do dono: é conteúdo de cardápio, não de
   // perfil do restaurante).
+  businessType: string | null;
   initialPromoBannerImageUrl: string | null;
   initialPromoBannerText: string | null;
   initialPromoBannerEnabled: boolean;
@@ -77,6 +79,7 @@ export function CardapioManager({
   restaurantId,
   initialCategories,
   initialItems,
+  businessType,
   initialPromoBannerImageUrl,
   initialPromoBannerText,
   initialPromoBannerEnabled,
@@ -174,6 +177,8 @@ export function CardapioManager({
   const [duplicatingItemId, setDuplicatingItemId] = useState<string | null>(null);
   const [restoringItemId, setRestoringItemId] = useState<string | null>(null);
   const [isArchivingItem, setIsArchivingItem] = useState(false);
+
+  const setupGuide = getMenuSetupGuide(businessType);
 
   function itemsForCategory(categoryId: string) {
     return items
@@ -560,6 +565,33 @@ export function CardapioManager({
         </Button>
       </div>
 
+      <Card className="border-ds2-primary/20 bg-ds2-primary/[0.03]">
+        <CardHeader>
+          <CardTitle>Como montar seu cardápio</CardTitle>
+          <CardDescription>
+            {setupGuide.title} · perfil: {getBusinessTypeLabel(businessType)}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 text-sm text-ds2-foreground">
+          <p>{setupGuide.description}</p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-ds2-md bg-ds2-surface px-3 py-2 ring-1 ring-ds2-border">
+              <p className="text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted">Categoria</p>
+              <p className="mt-1 font-medium">{setupGuide.categoryExample}</p>
+            </div>
+            <div className="rounded-ds2-md bg-ds2-surface px-3 py-2 ring-1 ring-ds2-border">
+              <p className="text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted">Produtos</p>
+              <p className="mt-1 font-medium">{setupGuide.productExample}</p>
+            </div>
+            <div className="rounded-ds2-md bg-ds2-surface px-3 py-2 ring-1 ring-ds2-border">
+              <p className="text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted">Opções</p>
+              <p className="mt-1 font-medium">{setupGuide.optionExample}</p>
+            </div>
+          </div>
+          <p className="text-xs text-ds2-foreground-muted">💡 {setupGuide.tip}</p>
+        </CardContent>
+      </Card>
+
       {/* Banner Promocional (2026-08-16) — movido de
           Configurações/Perfil pra cá: é conteúdo do cardápio (aparece no
           Cardápio Público, entre "Chamar garçom" e as categorias), não
@@ -669,7 +701,7 @@ export function CardapioManager({
             <Input
               value={categoryName}
               onChange={(e) => setCategoryName(e.target.value)}
-              placeholder="Ex.: Lanches"
+              placeholder={businessType === "acai" ? "Ex.: Açaí" : businessType === "pizza" ? "Ex.: Pizzas" : businessType === "burger" ? "Ex.: Hambúrgueres" : "Ex.: Lanches"}
               disabled={isSavingCategory}
               // Bug real encontrado (2026-07-29): o `autoFocus` do React
               // disputava com o próprio `<dialog>.showModal()`, que já foca
@@ -768,6 +800,7 @@ export function CardapioManager({
             key={`${editingItem?.id ?? `new-${productModalCategoryId ?? "none"}`}-${productModalNonce}`}
             categories={categories}
             restaurantId={restaurantId}
+            businessType={businessType}
             item={editingItem ?? undefined}
             defaultCategoryId={productModalCategoryId}
             onSaved={handleProductSaved}

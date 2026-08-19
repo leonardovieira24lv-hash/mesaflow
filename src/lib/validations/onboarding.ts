@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BUSINESS_TYPES } from "@/lib/business-type";
 
 /**
  * Schemas do fluxo de onboarding (contrato seção 2). Usados nos dois lados:
@@ -12,6 +13,9 @@ const PASSWORD_MIN_LENGTH = 6;
 
 export const createRestaurantSchema = z.object({
   owner_name: z.string().trim().min(2, "Informe seu nome completo."),
+  business_type: z.enum(BUSINESS_TYPES.map((item) => item.value) as [string, ...string[]], {
+    errorMap: () => ({ message: "Escolha o tipo do seu negócio." }),
+  }),
   restaurant_name: z
     .string()
     .trim()

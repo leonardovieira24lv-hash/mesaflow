@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     // 2. Cria restaurante + profile numa transação só, com retentativa de
     // slug em caso de conflito de unicidade (23505).
     const baseSlug = slugify(input.restaurant_name) || "restaurante";
-    let restaurant: { id: string; name: string; slug: string; status: string } | null = null;
+    let restaurant: { id: string; name: string; slug: string; status: string; business_type: string | null } | null = null;
     let lastError: { code?: string; message: string } | null = null;
 
     for (let attempt = 1; attempt <= MAX_SLUG_ATTEMPTS; attempt++) {
@@ -74,6 +74,7 @@ export async function POST(request: Request) {
         p_user_id: createdUserId,
         p_restaurant_name: input.restaurant_name,
         p_slug: candidateSlug,
+        p_business_type: input.business_type,
       });
 
       if (!error) {
@@ -116,6 +117,7 @@ export async function POST(request: Request) {
         name: restaurant.name,
         slug: restaurant.slug,
         status: restaurant.status,
+        business_type: restaurant.business_type,
       },
       session: {
         access_token: signInData.session.access_token,

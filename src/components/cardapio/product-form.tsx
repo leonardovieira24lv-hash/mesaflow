@@ -16,6 +16,7 @@ import { deleteProductImage } from "@/lib/storage/product-images";
 import { createMenuItemSchema, updateMenuItemSchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
 import type { ApiError } from "@/types/api";
+import type { BusinessType } from "@/lib/business-type";
 import { menuItemFromDto, type MenuItemDto } from "@/types/menu-item-dto";
 
 interface ProductFormProps {
@@ -26,6 +27,8 @@ interface ProductFormProps {
   item?: MenuItem;
   /** Sprint "Refatoração da Experiência do Cardápio": pré-seleciona a categoria ao criar a partir do "+ Adicionar Produto" de uma seção específica. Ignorado em edição (usa `item.categoryId`). */
   defaultCategoryId?: string;
+  /** Perfil do negócio escolhido no onboarding; usado apenas para orientar exemplos do formulário. */
+  businessType?: BusinessType | string | null;
   onSaved: (item: MenuItem) => void;
   onCancel: () => void;
 }
@@ -47,7 +50,7 @@ interface ProductFormProps {
  * para não perder a imagem antiga caso o usuário cancele o formulário
  * depois de já ter trocado a foto.
  */
-export function ProductForm({ categories, restaurantId, item, defaultCategoryId, onSaved, onCancel }: ProductFormProps) {
+export function ProductForm({ categories, restaurantId, item, defaultCategoryId, businessType, onSaved, onCancel }: ProductFormProps) {
   const isEditing = Boolean(item);
   const originalImageUrl = item?.imageUrl;
 
@@ -57,6 +60,21 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
   const [price, setPrice] = useState(item?.price !== undefined ? String(item.price) : "");
   const [imageUrl, setImageUrl] = useState(item?.imageUrl ?? "");
   const [isAvailable, setIsAvailable] = useState(item?.isAvailable ?? true);
+
+  const productNamePlaceholder = businessType === "acai"
+    ? "Ex.: Açaí tradicional"
+    : businessType === "pizza"
+      ? "Ex.: Calabresa"
+      : businessType === "burger"
+        ? "Ex.: X-Bacon"
+        : "Ex.: Seu produto";
+  const productDescriptionPlaceholder = businessType === "acai"
+    ? "Ex.: Açaí com leite em pó e morango."
+    : businessType === "pizza"
+      ? "Ex.: Molho, queijo e ingredientes da casa."
+      : businessType === "burger"
+        ? "Ex.: Pão, hambúrguer, queijo e molho da casa."
+        : "Ex.: Descreva os principais ingredientes ou detalhes do produto.";
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -143,7 +161,7 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Ex.: X-Burger"
+          placeholder={productNamePlaceholder}
           disabled={isSubmitting}
         />
       </FormField>
@@ -152,7 +170,7 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
         <Textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Ex.: Pão brioche, hambúrguer 150g, queijo e maionese da casa."
+          placeholder={productDescriptionPlaceholder}
           disabled={isSubmitting}
         />
       </FormField>
