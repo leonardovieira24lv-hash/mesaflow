@@ -325,7 +325,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                               <span className="text-foreground">{option.name}</span>
                             </span>
                             <span className="tabular-nums text-muted-foreground">
-                              {option.priceDelta > 0 ? `+${formatCurrency(option.priceDelta)}` : formatCurrency(0)}
+                              {option.priceDelta > 0 ? `+${formatCurrency(option.priceDelta)}` : ""}
                             </span>
                           </label>
                         );
