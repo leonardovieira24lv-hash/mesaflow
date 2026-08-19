@@ -275,7 +275,7 @@ export function HalfAndHalfConfirmModal({ flavorA, flavorB, onClose }: HalfAndHa
                               <span className="text-foreground">{option.name}</span>
                             </span>
                             <span className="tabular-nums text-muted-foreground">
-                              {option.priceDelta > 0 ? `+${formatCurrency(option.priceDelta)}` : "Sem custo"}
+                              {option.priceDelta > 0 ? `+${formatCurrency(option.priceDelta)}` : formatCurrency(0)}
                             </span>
                           </label>
                         );
