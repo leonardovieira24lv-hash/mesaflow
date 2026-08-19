@@ -28,15 +28,15 @@ export interface MenuSetupGuide {
 const GUIDES: Record<BusinessType, MenuSetupGuide> = {
   acai: {
     title: "Monte sua açaíteria sem complicação",
-    description: "Use uma categoria para reunir seus tipos de açaí. Cada tipo vira um produto e os tamanhos podem ser configurados como uma escolha obrigatória.",
+    description: "Crie uma categoria como Açaí e cadastre cada tipo como um produto. Depois use um grupo de opções para Tamanho e outros grupos para Complementos, Frutas e Caldas.",
     categoryExample: "Açaí",
     productExample: "Açaí tradicional, Açaí cremoso, Açaí com morango",
     optionExample: "Tamanho: 300 ml, 500 ml, 700 ml, 1 litro",
-    tip: "Depois, crie grupos como Complementos, Frutas e Caldas. Se um grupo for opcional, o cliente pode seguir sem escolher nada.",
+    tip: "Não crie uma categoria para cada tamanho: mantenha os tipos de açaí juntos e use Tamanho como grupo de escolha. Complementos sem preço podem ficar em R$ 0,00.",
   },
   burger: {
     title: "Monte sua hamburgueria",
-    description: "Crie categorias para organizar os produtos e use grupos de opções para adicionais, molhos e outras escolhas.",
+    description: "Crie categorias como Hambúrgueres e cadastre cada hambúrguer como produto. Use grupos para adicionais, molhos e escolhas que se repetem.",
     categoryExample: "Hambúrgueres",
     productExample: "X-Salada, X-Bacon, Duplo Bacon",
     optionExample: "Adicionais: Bacon, Queijo, Ovo",
@@ -44,7 +44,7 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
   },
   pizza: {
     title: "Monte sua pizzaria",
-    description: "Crie uma categoria para suas pizzas e cadastre cada sabor como produto. Use grupos para bordas e adicionais.",
+    description: "Crie uma categoria como Pizzas e cadastre cada sabor como produto. Use grupos para bordas e adicionais; meio a meio é uma configuração da categoria.",
     categoryExample: "Pizzas",
     productExample: "Calabresa, Frango com Catupiry, Portuguesa",
     optionExample: "Bordas: Catupiry, Cheddar",
@@ -52,7 +52,7 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
   },
   snack: {
     title: "Monte sua lanchonete",
-    description: "Organize o cardápio por tipos de produto e use grupos de opções para montar os lanches.",
+    description: "Organize por categorias como Lanches e Bebidas. Cada lanche vira um produto e os grupos de opções cuidam de adicionais e escolhas.",
     categoryExample: "Lanches",
     productExample: "X-Salada, Misto, Cachorro-quente",
     optionExample: "Adicionais: Bacon, Queijo, Ovo",
@@ -60,7 +60,7 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
   },
   bar: {
     title: "Monte seu bar",
-    description: "Separe bebidas, porções e outros itens em categorias para deixar o cardápio fácil de navegar.",
+    description: "Separe Bebidas, Porções e outros itens em categorias. Use grupos de opções apenas quando o cliente tiver algo para escolher.",
     categoryExample: "Bebidas",
     productExample: "Cerveja, Refrigerante, Suco",
     optionExample: "Tamanho: 300 ml, 500 ml, 1 litro",
@@ -68,7 +68,7 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
   },
   restaurant: {
     title: "Monte seu restaurante",
-    description: "Crie categorias para organizar pratos, bebidas, sobremesas e outros itens.",
+    description: "Crie categorias como Pratos, Bebidas e Sobremesas. Cada item vira um produto; use grupos de opções para acompanhamentos e escolhas.",
     categoryExample: "Pratos principais",
     productExample: "Filé, Parmegiana, Frango grelhado",
     optionExample: "Acompanhamentos: Arroz, Batata, Salada",
@@ -76,7 +76,7 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
   },
   dessert: {
     title: "Monte sua doceria",
-    description: "Organize doces e sobremesas por categorias e use grupos de opções para sabores, tamanhos e complementos.",
+    description: "Organize doces e sobremesas por categorias. Cada produto pode ter grupos para tamanhos, sabores e complementos.",
     categoryExample: "Sobremesas",
     productExample: "Brownie, Açaí, Milk-shake",
     optionExample: "Complementos: Nutella, Morango, Granulado",
@@ -84,7 +84,7 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
   },
   cafe: {
     title: "Monte sua cafeteria",
-    description: "Separe cafés, comidas e bebidas e use grupos de opções para tamanhos e complementos.",
+    description: "Separe Cafés, Comidas e Bebidas. Use grupos de opções para tamanhos e complementos quando fizer sentido.",
     categoryExample: "Cafés",
     productExample: "Expresso, Cappuccino, Mocha",
     optionExample: "Tamanho: Pequeno, Médio, Grande",

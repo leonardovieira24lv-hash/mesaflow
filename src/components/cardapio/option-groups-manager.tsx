@@ -15,6 +15,7 @@ import { toast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/format";
 import type { MenuCategory, MenuItem } from "@/types/domain";
 import type { ApiError, ApiSuccess } from "@/types/api";
+import type { BusinessType } from "@/lib/business-type";
 
 interface OptionGroupItemDto {
   id: string;
@@ -56,6 +57,8 @@ interface OptionGroupsManagerProps {
   filterMenuItemId?: string;
   /** Esconde o parágrafo de instrução e deixa o cabeçalho mais discreto — usado nos dois casos acima, onde o contexto (categoria/produto) já está óbvio ao redor. */
   compact?: boolean;
+  /** Perfil do negócio, usado apenas para orientar os exemplos do formulário. */
+  businessType?: BusinessType | string | null;
 }
 
 /**
@@ -69,12 +72,30 @@ interface OptionGroupsManagerProps {
  * `CardapioManager` pai) para montar o seletor de alvo do grupo, sem
  * duplicar essa busca.
  */
+function optionGroupCopy(businessType?: BusinessType | string | null) {
+  switch (businessType) {
+    case "acai":
+      return { group: "Ex.: Tamanho, Complementos, Frutas", item: "Ex.: Leite em pó", description: "Ex.: Tamanho, Complementos ou Frutas." };
+    case "pizza":
+      return { group: "Ex.: Borda, Adicionais", item: "Ex.: Catupiry", description: "Ex.: Borda ou Adicionais." };
+    case "burger":
+      return { group: "Ex.: Adicionais, Molhos", item: "Ex.: Bacon", description: "Ex.: Adicionais ou Molhos." };
+    case "snack":
+      return { group: "Ex.: Adicionais, Molhos", item: "Ex.: Queijo", description: "Ex.: Adicionais ou Molhos." };
+    case "bar":
+      return { group: "Ex.: Tamanho, Sabores", item: "Ex.: 500 ml", description: "Ex.: Tamanho ou Sabores." };
+    default:
+      return { group: "Ex.: Tamanho, Adicionais, Complementos", item: "Ex.: Catupiry", description: "Ex.: Tamanho, Adicionais ou Complementos." };
+  }
+}
+
 export function OptionGroupsManager({
   categories = [],
   items = [],
   filterCategoryId,
   filterMenuItemId,
   compact,
+  businessType,
 }: OptionGroupsManagerProps) {
   const [groups, setGroups] = useState<OptionGroupDto[]>([]);
   // Bug real encontrado (2026-08-14): este componente agora pode montar
@@ -364,13 +385,13 @@ export function OptionGroupsManager({
       ) : visibleGroups.length === 0 ? (
         compact ? (
           <p className="text-xs text-ds2-foreground-muted">
-            Nenhum grupo cadastrado ainda — ex.: borda, tamanho, complementos.
+            Nenhum grupo cadastrado ainda — use um grupo quando o cliente tiver algo para escolher.
           </p>
         ) : (
           <EmptyState
             icon={Layers}
             title="Nenhum grupo de opção ainda"
-            description='Crie o primeiro, ex.: "Borda", vinculado à categoria de pizzas.'
+            description={`Crie o primeiro grupo, por exemplo: ${optionGroupCopy(businessType).group.replace("Ex.: ", "")}.`}
           />
         )
       ) : (
@@ -435,7 +456,7 @@ export function OptionGroupsManager({
                     <Input
                       value={itemName}
                       onChange={(e) => setItemName(e.target.value)}
-                      placeholder="Ex.: Catupiry"
+                      placeholder={optionGroupCopy(businessType).item}
                       className="flex-1"
                       disabled={isSavingItem}
                     />
@@ -474,7 +495,7 @@ export function OptionGroupsManager({
           if (!isSavingGroup) setIsGroupModalOpen(false);
         }}
         title={editingGroup ? "Editar grupo de opção" : "Novo grupo de opção"}
-        description='Ex.: "Borda", "Ponto da carne", "Tamanho".'
+        description={optionGroupCopy(businessType).description}
         footer={
           <>
             <Button type="button" variant="outline" onClick={() => setIsGroupModalOpen(false)} disabled={isSavingGroup}>
@@ -490,7 +511,7 @@ export function OptionGroupsManager({
           {groupFormError && <Alert variant="destructive">{groupFormError}</Alert>}
 
           <FormField label="Nome do grupo">
-            <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Ex.: Borda" required />
+            <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder={optionGroupCopy(businessType).group.split(",")[0]} required />
           </FormField>
 
           {/* Sistema de Opcionais, Fase 1 — o alvo (categoria/produto) só é

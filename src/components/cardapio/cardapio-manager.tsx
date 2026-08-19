@@ -682,6 +682,7 @@ export function CardapioManager({
               onToggleAvailability={handleToggleAvailability}
               duplicatingItemId={duplicatingItemId}
               restoringItemId={restoringItemId}
+              businessType={businessType}
               onDragStart={handleCategoryDragStart(index)}
               onDragOver={handleCategoryDragOver(index)}
               onDragEnd={handleCategoryDragEnd}
@@ -738,7 +739,7 @@ export function CardapioManager({
               disabled={isSavingCategory}
               className="h-4 w-4 accent-ds2-primary"
             />
-            Aceita meio a meio (ex.: pizza — cliente combina 2 sabores)
+            Aceita meio a meio (cliente combina 2 opções da categoria)
           </label>
 
           {/* Layout compacto por categoria (2026-08-15). Ideia do dono,
@@ -754,7 +755,7 @@ export function CardapioManager({
               disabled={isSavingCategory}
               className="h-4 w-4 accent-ds2-primary"
             />
-            Layout compacto (ex.: bebidas — cards pequenos, grade de 2 colunas)
+            Layout compacto (ideal para itens simples, como bebidas)
           </label>
 
           <div className="flex justify-end gap-3">

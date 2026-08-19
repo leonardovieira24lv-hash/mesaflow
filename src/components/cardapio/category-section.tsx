@@ -9,6 +9,7 @@ import { ProductCard } from "@/components/cardapio/product-card";
 import { OptionGroupsManager } from "@/components/cardapio/option-groups-manager";
 import type { ProductStatusFilterValue } from "@/components/cardapio/product-status-filter";
 import type { MenuCategory, MenuItem } from "@/types/domain";
+import type { BusinessType } from "@/lib/business-type";
 
 interface CategorySectionProps {
   category: MenuCategory;
@@ -26,6 +27,7 @@ interface CategorySectionProps {
   onToggleAvailability: (item: MenuItem) => void;
   duplicatingItemId: string | null;
   restoringItemId: string | null;
+  businessType: BusinessType | string | null;
   // Reordenar categorias (drag-and-drop já existente, só reaproveitado no novo cabeçalho).
   onDragStart: (event: DragEvent<HTMLDivElement>) => void;
   onDragOver: (event: DragEvent<HTMLDivElement>) => void;
@@ -73,6 +75,7 @@ export function CategorySection({
   onToggleAvailability,
   duplicatingItemId,
   restoringItemId,
+  businessType,
   onDragStart,
   onDragOver,
   onDragEnd,
@@ -155,7 +158,7 @@ export function CategorySection({
                   Opcionais desta categoria
                 </span>
               </div>
-              <OptionGroupsManager filterCategoryId={category.id} compact />
+              <OptionGroupsManager filterCategoryId={category.id} businessType={businessType} compact />
             </div>
           )}
         </div>
