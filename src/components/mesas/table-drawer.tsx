@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ButtonLink } from "@/components/ui/button-link";
 import { Bell, CheckCircle2, ChefHat, Clock3, Hand, History, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminOrderStatusBadge } from "@/components/ui/badge";
@@ -11,7 +10,6 @@ import { toast } from "@/components/ui/toast";
 import { CloseBillModal } from "@/components/mesas/close-bill-modal";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatRelativeTimeShort } from "@/lib/format";
-import { ROUTES } from "@/constants/routes";
 import {
   deriveTableCardState,
   TABLE_CARD_FILLED_TONES,
@@ -266,6 +264,7 @@ export function TableDrawer({
   const [closeBillModalOpen, setCloseBillModalOpen] = useState(false);
   const [closeBillError, setCloseBillError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -813,7 +812,111 @@ export function TableDrawer({
       )}
     >
       <div className="flex h-full max-h-[88vh] flex-col sm:max-h-none">
+        {showHistory && (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex items-center justify-between border-b border-ds2-border px-5 py-4">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowHistory(false)}
+                className={cn("-ml-2", focusRingClass)}
+              >
+                <span aria-hidden>←</span>
+                Voltar
+              </Button>
+              <span className="text-lg font-semibold text-ds2-foreground">Histórico da mesa</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                aria-label="Fechar histórico"
+                className={focusRingClass}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+              <div className="mb-4">
+                <h2 className="text-xl font-bold text-ds2-foreground">Mesa {table.name}</h2>
+                <p className="text-sm text-ds2-foreground-muted">Consulta dos pedidos desta comanda.</p>
+              </div>
+              <div className="flex flex-col gap-3">
+                {sortedOpenOrders.map((order) => {
+                  const detail = details[order.id];
+                  return (
+                    <section key={order.id} className="rounded-ds2-md border border-ds2-border bg-ds2-surface-hover p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-ds2-foreground">Pedido #{order.id.slice(0, 8)}</p>
+                          <p className="text-xs text-ds2-foreground-muted">
+                            {new Date(order.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                          </p>
+                        </div>
+                        <AdminOrderStatusBadge status={order.status} />
+                      </div>
+                      {detail?.notes && (
+                        <div className="mt-3 rounded-ds2-sm border border-ds2-border bg-ds2-surface p-3 text-sm">
+                          <div className="mb-1 flex items-center gap-2 font-medium text-ds2-foreground">
+                            <StickyNote className="h-3.5 w-3.5" aria-hidden /> Observação
+                          </div>
+                          <p className="whitespace-pre-wrap text-ds2-foreground-muted">{detail.notes}</p>
+                        </div>
+                      )}
+                      <div className="mt-3 flex flex-col gap-3">
+                        {(detail?.items ?? []).map((item) => (
+                          <div key={item.id} className="border-t border-ds2-border pt-3 first:border-t-0 first:pt-0">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-medium text-ds2-foreground">{item.quantity}× {displayItemName(item)}</p>
+                                {item.selected_options && item.selected_options.length > 0 && (
+                                  <div className="mt-2 flex flex-col gap-1 text-sm text-ds2-foreground-muted">
+                                    {groupSelectedOptions(item.selected_options).map((group) => (
+                                      <div key={group.groupName}>
+                                        <span className="font-medium text-ds2-foreground">{group.groupName}:</span>
+                                        <div className="ml-2">
+                                          {group.optionNames.map((name) => (
+                                            <div key={name}>• {name}</div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {item.notes && (
+                                  <p className="mt-2 whitespace-pre-wrap text-sm text-ds2-foreground-muted">
+                                    <span className="font-medium text-ds2-foreground">Observação:</span> {item.notes}
+                                  </p>
+                                )}
+                              </div>
+                              <span className="shrink-0 font-numeric font-semibold tabular-nums text-ds2-foreground">
+                                {formatCurrency(item.price * item.quantity)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        {!detail && <p className="text-sm text-ds2-foreground-muted">Carregando detalhes do pedido…</p>}
+                      </div>
+                      <div className="mt-3 flex items-center justify-between border-t border-ds2-border pt-3">
+                        <span className="text-sm font-medium text-ds2-foreground-muted">Total</span>
+                        <span className="font-numeric font-bold tabular-nums text-ds2-foreground">{formatCurrency(order.total_amount)}</span>
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div
+          className={cn(
+            "flex h-full max-h-[88vh] flex-col sm:max-h-none",
+            showHistory && "hidden",
+          )}
+        >
+          <div
           className={cn(
             "flex flex-col gap-3 border-b border-ds2-border px-5 py-4",
             isFilled && TABLE_CARD_TONE_CLASSES[cardState.tone],
@@ -1399,11 +1502,16 @@ export function TableDrawer({
             // Ícone + texto mais curto ("abrasileirado", pedido
             // explícito) resolve as duas queixas de uma vez: mesma
             // linguagem visual do resto do rodapé, menos "esparsado".
-            <ButtonLink href={`${ROUTES.pedidoDetalhe(openOrders[0]!.id)}?historico=1`} variant="outline" className="w-full">
+            <Button
+              type="button"
+              className={focusRingClass}
+              onClick={() => setShowHistory(true)}
+            >
               <History className="h-4 w-4" />
               Ver histórico da mesa
-            </ButtonLink>
+            </Button>
           )}
+          </div>
         </div>
       </div>
 
