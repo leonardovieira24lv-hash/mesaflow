@@ -256,10 +256,18 @@ export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLog
                           ? `Meio a meio: ${item.halfAndHalf.flavor_a_name} / ${item.halfAndHalf.flavor_b_name}`
                           : item.name}
                         {item.selectedOptions && item.selectedOptions.length > 0 && (
-                          <span>
-                            {" "}
-                            ({item.selectedOptions.map((o) => `${o.group_name}: ${o.option_name}`).join(", ")})
-                          </span>
+                          <div className="mt-1 flex flex-col gap-1 pl-5">
+                            {groupSelectedOptions(item.selectedOptions).map(([groupName, options]) => (
+                              <div key={groupName}>
+                                <span className="font-semibold text-foreground">{groupName}:</span>
+                                <ul className="ml-2 flex flex-col">
+                                  {options.map((option, optionIndex) => (
+                                    <li key={`${groupName}-${option.option_name}-${optionIndex}`}>{option.option_name}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
                         )}
                         {item.notes && <span className="italic"> — {item.notes}</span>}
                       </li>
@@ -277,4 +285,22 @@ export function OrderTrackingView({ slug, orderId, restaurantName, restaurantLog
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+
+function groupSelectedOptions(
+  options: { group_name: string; option_name: string; price_delta: number }[],
+): [string, { group_name: string; option_name: string; price_delta: number }[]][] {
+  const groups = new Map<string, { group_name: string; option_name: string; price_delta: number }[]>();
+
+  for (const option of options) {
+    const group = groups.get(option.group_name);
+    if (group) {
+      group.push(option);
+    } else {
+      groups.set(option.group_name, [option]);
+    }
+  }
+
+  return Array.from(groups.entries());
 }
