@@ -133,7 +133,7 @@ export function RestaurantHeader({
           </div>
           {tableName && (
             <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
-              Mesa {tableName}
+              {tableName.trim().toLowerCase().startsWith("mesa ") ? tableName : `Mesa ${tableName}`}
             </span>
           )}
         </div>
@@ -152,7 +152,7 @@ export function RestaurantHeader({
           )}
           {tableName && (
             <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
-              Mesa {tableName}
+              {tableName.trim().toLowerCase().startsWith("mesa ") ? tableName : `Mesa ${tableName}`}
             </span>
           )}
         </div>
