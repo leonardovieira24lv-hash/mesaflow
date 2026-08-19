@@ -36,6 +36,7 @@ export const createOptionGroupSchema = z
     selectionType: z.enum(["single", "multiple"]).default("single"),
     maxSelections: z.number().int().positive().optional(),
     required: z.boolean().default(true),
+    groupType: z.enum(["standard", "size"]).default("standard"),
   })
   .refine((data) => Boolean(data.categoryId) !== Boolean(data.menuItemId), {
     message: "Escolha uma categoria OU um produto específico, nunca os dois.",

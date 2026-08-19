@@ -18,6 +18,7 @@ export interface PublicOptionGroup {
   selectionType: "single" | "multiple";
   maxSelections: number | null;
   required: boolean;
+  groupType: "standard" | "size";
   options: PublicOptionGroupItem[];
 }
 
@@ -80,6 +81,7 @@ interface OptionGroupRow {
   selection_type: "single" | "multiple";
   max_selections: number | null;
   required: boolean;
+  group_type: "standard" | "size";
   option_group_items: { id: string; name: string; price_delta: number }[];
 }
 
@@ -131,7 +133,7 @@ export async function getPublicMenu(
     admin
       .from("option_groups")
       .select(
-        "id, name, category_id, menu_item_id, selection_type, max_selections, required, option_group_items(id, name, price_delta)",
+        "id, name, category_id, menu_item_id, selection_type, max_selections, required, group_type, option_group_items(id, name, price_delta)",
       )
       .eq("restaurant_id", restaurantId),
   ]);
@@ -158,6 +160,7 @@ export async function getPublicMenu(
         selectionType: group.selection_type,
         maxSelections: group.max_selections,
         required: group.required,
+        groupType: group.group_type,
         options: group.option_group_items.map((option) => ({
           id: option.id,
           name: option.name,

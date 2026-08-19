@@ -21,7 +21,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from("option_groups")
       .select(
-        "id, name, category_id, menu_item_id, selection_type, max_selections, required, option_group_items(id, name, price_delta, position)",
+        "id, name, category_id, menu_item_id, selection_type, max_selections, required, group_type, option_group_items(id, name, price_delta, position)",
       )
       .eq("restaurant_id", profile.restaurantId)
       .order("created_at", { ascending: true });
@@ -39,6 +39,7 @@ export async function GET() {
         selectionType: group.selection_type,
         maxSelections: group.max_selections,
         required: group.required,
+        groupType: group.group_type,
         items: (group.option_group_items ?? [])
           .slice()
           .sort((a, b) => a.position - b.position)
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
   try {
     const { profile } = await requireOwner();
     const body = await request.json();
-    const { name, categoryId, menuItemId, selectionType, maxSelections, required } = parseOrThrow(
+    const { name, categoryId, menuItemId, selectionType, maxSelections, required, groupType } = parseOrThrow(
       createOptionGroupSchema,
       body,
     );
@@ -75,8 +76,9 @@ export async function POST(request: Request) {
         selection_type: selectionType,
         max_selections: maxSelections ?? null,
         required,
+        group_type: groupType,
       })
-      .select("id, name, category_id, menu_item_id, selection_type, max_selections, required")
+      .select("id, name, category_id, menu_item_id, selection_type, max_selections, required, group_type")
       .single();
 
     if (error) {
@@ -91,6 +93,7 @@ export async function POST(request: Request) {
       selectionType: created.selection_type,
       maxSelections: created.max_selections,
       required: created.required,
+      groupType: created.group_type,
       items: [],
     });
   } catch (err) {

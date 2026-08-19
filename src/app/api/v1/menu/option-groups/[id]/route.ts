@@ -47,7 +47,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       .update(updates)
       .eq("id", id)
       .eq("restaurant_id", profile.restaurantId)
-      .select("id, name, category_id, menu_item_id, selection_type, max_selections, required")
+      .select("id, name, category_id, menu_item_id, selection_type, max_selections, required, group_type")
       .maybeSingle();
 
     if (error) {
@@ -66,6 +66,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       selectionType: updated.selection_type,
       maxSelections: updated.max_selections,
       required: updated.required,
+      groupType: updated.group_type,
     });
   } catch (err) {
     return handleRouteError(err);

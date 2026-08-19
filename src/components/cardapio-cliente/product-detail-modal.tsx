@@ -110,6 +110,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
   }, [item?.id]);
 
   const optionGroups = item?.optionGroups ?? [];
+  const hasSizeGroup = optionGroups.some((group) => group.groupType === "size");
   const missingRequiredGroup = optionGroups.some(
     (group) => group.required && (selectedOptionIds[group.id]?.length ?? 0) === 0,
   );
@@ -242,7 +243,9 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
               <div className="flex flex-col gap-1.5">
                 <h2 className="text-2xl font-bold tracking-tight text-foreground">{item.name}</h2>
                 {item.description && <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>}
-                <p className="pt-1 text-lg font-bold tabular-nums text-soft-success-foreground">{formatCurrency(item.price)}</p>
+                <p className="pt-1 text-lg font-bold tabular-nums text-soft-success-foreground">
+                  {hasSizeGroup ? `A partir de ${formatCurrency(item.price)}` : formatCurrency(item.price)}
+                </p>
               </div>
 
               <div className="flex items-center justify-between rounded-2xl bg-surface px-4 py-3 ring-1 ring-border">
@@ -325,7 +328,11 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                               <span className="text-foreground">{option.name}</span>
                             </span>
                             <span className="tabular-nums text-muted-foreground">
-                              {option.priceDelta > 0 ? `+${formatCurrency(option.priceDelta)}` : ""}
+                              {group.groupType === "size"
+                                ? formatCurrency((item?.price ?? 0) + option.priceDelta)
+                                : option.priceDelta > 0
+                                  ? `+${formatCurrency(option.priceDelta)}`
+                                  : "Sem custo"}
                             </span>
                           </label>
                         );

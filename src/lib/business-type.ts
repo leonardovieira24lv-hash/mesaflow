@@ -28,11 +28,11 @@ export interface MenuSetupGuide {
 const GUIDES: Record<BusinessType, MenuSetupGuide> = {
   acai: {
     title: "Monte sua açaíteria sem complicação",
-    description: "Crie uma categoria como Açaí e cadastre cada tipo como um produto. Depois use um grupo de opções para Tamanho e outros grupos para Complementos, Frutas e Caldas.",
+    description: "Crie uma categoria como Açaí e cadastre cada tipo como um produto. Dentro de cada açaí, cadastre os tamanhos com seus próprios preços; na categoria, crie os grupos de Complementos, Frutas e Caldas.",
     categoryExample: "Açaí",
     productExample: "Açaí tradicional, Açaí cremoso, Açaí com morango",
-    optionExample: "Tamanho: 300 ml, 500 ml, 700 ml, 1 litro",
-    tip: "Não crie uma categoria para cada tamanho: mantenha os tipos de açaí juntos e use Tamanho como grupo de escolha. Complementos sem preço podem ficar em R$ 0,00.",
+    optionExample: "Tamanhos: 300 ml R$15, 500 ml R$18, 1 litro R$27",
+    tip: "Não crie uma categoria para cada tamanho. Cada tipo de açaí é um produto, os tamanhos ficam dentro dele e os complementos gerais ficam na categoria.",
   },
   burger: {
     title: "Monte sua hamburgueria",

@@ -381,11 +381,24 @@ export function CardapioManager({
   }
 
   function handleProductSaved(saved: MenuItem) {
+    const wasCreating = !editingItem;
     setItems((prev) => {
       const exists = prev.some((i) => i.id === saved.id);
       return exists ? prev.map((i) => (i.id === saved.id ? saved : i)) : [...prev, saved];
     });
     setCategoryOpen(saved.categoryId, true);
+
+    // Açaí: depois de criar o produto, mantém o mesmo modal aberto e passa
+    // para o modo de edição. Assim o dono cadastra os tamanhos imediatamente
+    // dentro do próprio açaí, sem precisar localizar o produto de novo.
+    if (businessType === "acai" && wasCreating) {
+      setEditingItem(saved);
+      setProductModalCategoryId(undefined);
+      setProductModalNonce((n) => n + 1);
+      toast.success("Produto criado — agora cadastre os tamanhos.");
+      return;
+    }
+
     toast.success(editingItem ? "Produto atualizado" : "Produto criado");
     setProductModalOpen(false);
   }
@@ -805,6 +818,7 @@ export function CardapioManager({
             item={editingItem ?? undefined}
             defaultCategoryId={productModalCategoryId}
             onSaved={handleProductSaved}
+            onItemUpdated={(updated) => setItems((prev) => prev.map((entry) => (entry.id === updated.id ? updated : entry)))}
             onCancel={() => setProductModalOpen(false)}
           />
         </div>
