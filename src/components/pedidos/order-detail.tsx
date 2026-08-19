@@ -49,6 +49,8 @@ interface OrderDetailProps {
    * (plural) realmente mostrar todos, não só 1.
    */
   siblingOrders: OrderDetailDto[];
+  /** Quando aberto pelo histórico da mesa, a tela é somente consulta. */
+  readOnly?: boolean;
 }
 
 const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
@@ -83,7 +85,7 @@ const STATUS_ACTION_LABELS: Record<OrderStatus, string> = {
  * mudança feita por outro atendente simultaneamente — carga inicial vem do
  * Server Component (página).
  */
-export function OrderDetail({ initialOrder, siblingOrders }: OrderDetailProps) {
+export function OrderDetail({ initialOrder, siblingOrders, readOnly = false }: OrderDetailProps) {
   const router = useRouter();
   const [order, setOrder] = useState<OrderDetailDto>(initialOrder);
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
@@ -359,39 +361,43 @@ export function OrderDetail({ initialOrder, siblingOrders }: OrderDetailProps) {
         </div>
       )}
 
-      {availableTransitions.length > 0 ? (
-        <div className="flex flex-wrap gap-3">
-          {availableTransitions.map((next) => (
-            <Button
-              key={next}
-              variant={next === "cancelled" ? "destructive" : "primary"}
-              onClick={() => handleTransitionClick(next)}
-              // O botão "Cancelar pedido" abre o `<ConfirmDialog>` (que tem
-              // seu próprio spinner via `isConfirming`) em vez de aplicar a
-              // mudança direto — não precisa do próprio estado de loading.
-              isLoading={next !== "cancelled" && isUpdating}
-              disabled={isUpdating}
-            >
-              {STATUS_ACTION_LABELS[next]}
-            </Button>
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-ds2-foreground-muted">
-          Este pedido já está em um status final e não pode mais ser alterado.
-        </p>
-      )}
+      {!readOnly && (
+        <>
+          {availableTransitions.length > 0 ? (
+            <div className="flex flex-wrap gap-3">
+              {availableTransitions.map((next) => (
+                <Button
+                  key={next}
+                  variant={next === "cancelled" ? "destructive" : "primary"}
+                  onClick={() => handleTransitionClick(next)}
+                  // O botão "Cancelar pedido" abre o `<ConfirmDialog>` (que tem
+                  // seu próprio spinner via `isConfirming`) em vez de aplicar a
+                  // mudança direto — não precisa do próprio estado de loading.
+                  isLoading={next !== "cancelled" && isUpdating}
+                  disabled={isUpdating}
+                >
+                  {STATUS_ACTION_LABELS[next]}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-ds2-foreground-muted">
+              Este pedido já está em um status final e não pode mais ser alterado.
+            </p>
+          )}
 
-      <ConfirmDialog
-        open={pendingStatus === "cancelled"}
-        onOpenChange={(open) => !open && setPendingStatus(null)}
-        title="Cancelar pedido"
-        description={`O pedido da mesa ${order.table.name} será marcado como cancelado. Esta ação não pode ser desfeita.`}
-        variant="destructive"
-        confirmLabel="Sim, cancelar pedido"
-        onConfirm={() => void applyStatusChange("cancelled")}
-        isConfirming={isUpdating}
-      />
+          <ConfirmDialog
+            open={pendingStatus === "cancelled"}
+            onOpenChange={(open) => !open && setPendingStatus(null)}
+            title="Cancelar pedido"
+            description={`O pedido da mesa ${order.table.name} será marcado como cancelado. Esta ação não pode ser desfeita.`}
+            variant="destructive"
+            confirmLabel="Sim, cancelar pedido"
+            onConfirm={() => void applyStatusChange("cancelled")}
+            isConfirming={isUpdating}
+          />
+        </>
+      )}
     </div>
   );
 }

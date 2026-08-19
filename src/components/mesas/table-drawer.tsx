@@ -1,20 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  Bell,
-  CheckCircle2,
-  ChefHat,
-  Clock3,
-  Hand,
-  History,
-  Loader2,
-  Printer,
-  Receipt,
-  StickyNote,
-  X,
-} from "lucide-react";
+import { ButtonLink } from "@/components/ui/button-link";
+import { Bell, CheckCircle2, ChefHat, Clock3, Hand, History, Loader2, Printer, Receipt, StickyNote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminOrderStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -23,6 +11,7 @@ import { toast } from "@/components/ui/toast";
 import { CloseBillModal } from "@/components/mesas/close-bill-modal";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatRelativeTimeShort } from "@/lib/format";
+import { ROUTES } from "@/constants/routes";
 import {
   deriveTableCardState,
   TABLE_CARD_FILLED_TONES,
@@ -142,12 +131,11 @@ interface TableDrawerProps {
 
 /**
  * Painel lateral de uma mesa (Painel de Mesas → "Centro de Operações",
- * pedido do dono). Drawer nativo (`<dialog>`) — bottom sheet no mobile,
- * caixa centralizada a partir de `md:` (2026-08-17, corrigido — dono
- * trouxe print real de notebook mostrando o bottom sheet tomando a tela
- * toda; a 1ª tentativa de correção, um painel lateral a partir de `sm:`,
- * nunca chegou a ficar boa e foi substituída por uma caixa centralizada,
- * mesmo padrão/breakpoint já usado no resto da Responsividade Desktop).
+ * pedido do dono). Drawer nativo (`<dialog>`), mesmo padrão de
+ * `product-detail-modal.tsx`: bottom sheet no mobile, painel lateral da
+ * direita a partir de `sm:` — aqui faz mais sentido inverter a proporção
+ * do cliente (lá o conteúdo é uma vitrine vertical; aqui é uma lista, cabe
+ * melhor num painel estreito e alto).
  *
  * Ações: só as que têm suporte real hoje.
  * - "Enviar para cozinha" — transição real `pending → preparing`
@@ -278,60 +266,6 @@ export function TableDrawer({
   const [closeBillModalOpen, setCloseBillModalOpen] = useState(false);
   const [closeBillError, setCloseBillError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Histórico da mesa (2026-08-17) — troca de CONTEÚDO dentro do mesmo
-  // drawer já aberto, em vez de navegar pra `/pedidos/{id}` como página
-  // cheia (pedido do dono, "não parece um modal quando isso acontece").
-  // Nenhum modal novo — só um `useState` trocando o que a mesma `<div>`
-  // scrollável mostra. `historySiblings === null` distingue "nunca
-  // buscou" de "buscou e veio vazio" (não teve outro pedido na mesma
-  // comanda) — evita refetch toda vez que o dono clica de novo.
-  const [historyView, setHistoryView] = useState(false);
-  const [historySiblings, setHistorySiblings] = useState<OrderDetail[] | null>(null);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyError, setHistoryError] = useState<string | null>(null);
-
-  async function handleShowHistory() {
-    setHistoryView(true);
-    if (!openOrders[0]) return;
-    // Correção (2026-08-17, dono testou de novo: fez um 2º pedido na mesma
-    // mesa com o drawer já aberto, reabriu o histórico e continuou vendo
-    // "nenhum outro pedido" — dado velho). Causa real: este fetch só
-    // rodava a 1ª vez que o histórico era aberto nesta montagem do drawer
-    // (`if (historySiblings !== null) return`, pensado como cache pra
-    // evitar refetch em cliques repetidos) — se um pedido novo chegasse
-    // DEPOIS dessa 1ª busca (drawer continua montado, `openOrders` atualiza
-    // sozinho via Realtime/`onOrdersChanged`, mas o cache do histórico não
-    // sabia disso), o botão voltava a mostrar o resultado antigo, vazio,
-    // sem buscar de novo. Removido o cache — busca sempre que o botão é
-    // clicado, sem exceção. Custo real é baixíssimo (1 clique manual, não
-    // um efeito repetindo sozinho) — corretude importa mais aqui que
-    // economizar 1 request ocasional.
-    setHistoryLoading(true);
-    setHistoryError(null);
-    try {
-      const response = await fetch(`/api/v1/orders/${openOrders[0].id}`);
-      const body = await response.json();
-      if (!response.ok) {
-        setHistoryError("Não foi possível carregar o histórico.");
-        return;
-      }
-      // Correção (2026-08-17, dono testou com 2 pedidos reais na mesma
-      // comanda e o 1º nunca aparecia): a API devolve o pedido base
-      // (`openOrders[0]`, os campos soltos de `body.data`) SEPARADO dos
-      // `siblingOrders` — pensado originalmente pra página de Detalhes,
-      // que já mostra o pedido base num painel próprio acima, então só
-      // precisava dos "outros" embaixo. Aqui no drawer não existe esse
-      // painel separado — a visão de histórico troca o corpo inteiro,
-      // então o pedido base tinha que entrar na MESMA lista, ou ele
-      // nunca aparecia em lugar nenhum dentro da visão de histórico.
-      const { siblingOrders, ...primaryOrder } = body.data ?? {};
-      setHistorySiblings([primaryOrder as OrderDetail, ...((siblingOrders ?? []) as OrderDetail[])]);
-    } catch {
-      setHistoryError("Não foi possível conectar. Verifique sua internet.");
-    } finally {
-      setHistoryLoading(false);
-    }
-  }
 
   useEffect(() => {
     const dialog = ref.current;
@@ -873,26 +807,12 @@ export function TableDrawer({
       aria-label={`Mesa ${table.name}`}
       className={cn(
         "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88vh] w-full overflow-hidden rounded-t-ds2-lg border-t border-ds2-border bg-ds2-surface p-0 text-ds2-foreground shadow-ds2-lg",
-        // Correção (2026-08-17, dono trouxe print real de notebook — drawer
-        // tomando a tela toda, "nem parece um modal"). Peça que tinha
-        // ficado pra trás do plano original da Responsividade Desktop:
-        // este `<dialog>` é próprio (não usa o `<Modal>` compartilhado,
-        // por precisar do gesto de arrastar pra fechar no mobile — ver
-        // comentário mais acima no arquivo) e só tinha tratamento pra
-        // telas pequenas. Existia uma tentativa anterior aqui num
-        // breakpoint `sm:` (virava painel lateral direito, 420px) — troquei
-        // por uma CAIXA CENTRALIZADA em `md:` (768px), o mesmo breakpoint
-        // já usado em toda a Responsividade Desktop (sidebar, cabeçalho,
-        // grade de mesas) — evita qualquer "faixa morta" entre
-        // comportamentos diferentes, mesmo bug de descompasso já visto
-        // antes nessa etapa. Auditoria confirmou: nenhum outro modal do
-        // admin tinha esse problema — só este.
-        "md:inset-0 md:bottom-auto md:m-auto md:h-fit md:max-h-[85vh] md:w-full md:max-w-lg md:rounded-ds2-lg md:border md:border-ds2-border md:border-t-0",
+        "sm:inset-y-0 sm:left-auto sm:right-0 sm:bottom-0 sm:top-0 sm:m-0 sm:h-full sm:max-h-none sm:w-[420px] sm:rounded-none sm:rounded-l-ds2-lg sm:border-l sm:border-t-0 sm:shadow-ds2-lg",
         "backdrop:bg-black/50 backdrop:backdrop-blur-[2px]",
-        "open:animate-sheet-up md:open:animate-scale-in",
+        "open:animate-sheet-up sm:open:animate-slide-in-right",
       )}
     >
-      <div className="flex h-full max-h-[88vh] flex-col md:max-h-[85vh]">
+      <div className="flex h-full max-h-[88vh] flex-col sm:max-h-none">
         <div
           className={cn(
             "flex flex-col gap-3 border-b border-ds2-border px-5 py-4",
@@ -1113,72 +1033,6 @@ export function TableDrawer({
             `overflow-y-auto` passa a valer de verdade: cabeçalho e
             rodapé (abaixo) ficam sempre visíveis, só esta lista rola. */}
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-5 py-4">
-          {historyView ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setHistoryView(false)}
-                className={cn(
-                  "flex w-fit items-center gap-1.5 text-sm font-medium text-ds2-foreground-muted hover:text-ds2-foreground",
-                  focusRingClass,
-                )}
-              >
-                <ArrowLeft className="h-4 w-4" aria-hidden />
-                Voltar
-              </button>
-              <span className="text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted">
-                Pedidos desta comanda
-              </span>
-
-              {historyError && <Alert variant="destructive">{historyError}</Alert>}
-
-              {historyLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin text-ds2-foreground-muted" aria-hidden />
-                </div>
-              ) : historySiblings && historySiblings.length > 0 ? (
-                <div className="flex flex-col gap-3">
-                  {historySiblings.map((sibling) => (
-                    <div
-                      key={sibling.id}
-                      className="flex flex-col gap-2 rounded-ds2-lg border border-ds2-border bg-ds2-surface p-3.5 shadow-ds2-sm"
-                    >
-                      <div className="flex items-center justify-between">
-                        <AdminOrderStatusBadge status={sibling.status} />
-                        <span className="inline-flex items-center gap-1 text-xs text-ds2-foreground-muted">
-                          <Clock3 className="h-3 w-3 shrink-0" aria-hidden />
-                          {formatRelativeTimeShort(sibling.created_at)}
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        {sibling.items.map((item) => (
-                          <div key={item.id} className="flex items-baseline justify-between gap-2 text-sm">
-                            <span
-                              className={cn(
-                                item.cancelled_at
-                                  ? "text-ds2-foreground-muted line-through"
-                                  : "text-ds2-foreground",
-                              )}
-                            >
-                              {item.quantity}× {item.name}
-                            </span>
-                            <span className="shrink-0 text-ds2-foreground-muted">{formatCurrency(item.price)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex items-center justify-between border-t border-ds2-border pt-2 text-sm font-semibold">
-                        <span className="text-ds2-foreground-muted">Subtotal</span>
-                        <span className="text-ds2-foreground">{formatCurrency(sibling.total_amount)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-ds2-foreground-muted">Nenhum outro pedido nesta comanda.</p>
-              )}
-            </>
-          ) : (
-            <>
           {error && <Alert variant="destructive">{error}</Alert>}
 
           {openOrders.length > 0 && (
@@ -1463,8 +1317,6 @@ export function TableDrawer({
               })}
             </div>
           )}
-            </>
-          )}
         </div>
 
         {/* View de impressão — só visível em @media print (globals.css), some do resto da UI.
@@ -1539,25 +1391,18 @@ export function TableDrawer({
           )}
 
           {openOrders.length > 0 && (
-            // Correção (2026-08-17, dono trouxe de novo depois de já
-            // termos mexido nesse botão 4x antes): `outline` (só borda)
-            // simplesmente não bastava — mesmo comprovado com print antes,
-            // continuava sem "cara de botão" pro dono. Parando de tentar
-            // ajuste sutil de novo (mesma lição de sempre: se não resolveu
-            // depois de 1 tentativa, simplificar em vez de insistir) — cor
-            // sólida de verdade agora (`variant="primary"`, vermelho da
-            // marca), impossível de confundir com texto solto.
-            //
-            // Correção maior no mesmo dia: deixou de ser `<ButtonLink>`
-            // navegando pra `/pedidos/{id}` (página cheia, "nem parece um
-            // modal") — agora chama `handleShowHistory`, troca o CONTEÚDO
-            // do mesmo drawer já aberto. Nenhum modal novo, nenhuma
-            // navegação — mesmo raciocínio já usado no fluxo de meio a
-            // meio (trocar conteúdo em vez de empilhar).
-            <Button type="button" variant="primary" className="w-full" onClick={handleShowHistory}>
+            // 4ª rodada (2026-08-15) — o dono apontou o que realmente
+            // faltava: "Imprimir"/"Liberar mesa" têm ÍCONE junto do
+            // texto (`<Printer />`), este botão era só texto puro, frase
+            // longa ("Ver histórico completo de pedidos desta mesa", 43
+            // caracteres) — lê como faixa de texto esparsa, não botão.
+            // Ícone + texto mais curto ("abrasileirado", pedido
+            // explícito) resolve as duas queixas de uma vez: mesma
+            // linguagem visual do resto do rodapé, menos "esparsado".
+            <ButtonLink href={`${ROUTES.pedidoDetalhe(openOrders[0]!.id)}?historico=1`} variant="outline" className="w-full">
               <History className="h-4 w-4" />
               Ver histórico da mesa
-            </Button>
+            </ButtonLink>
           )}
         </div>
       </div>

@@ -80,8 +80,15 @@ const SELECT_COLUMNS =
  * mesmo o total (que já exclui cancelados desde a correção da migration
  * 0038) batendo diferente da soma visível dos itens — confuso.
  */
-export default async function PedidoDetalhePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PedidoDetalhePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ historico?: string }>;
+}) {
   const { id } = await params;
+  const { historico } = await searchParams;
   const { profile } = await requirePageSession();
   const supabase = await createClient();
 
@@ -116,5 +123,5 @@ export default async function PedidoDetalhePage({ params }: { params: Promise<{ 
     siblingOrders = ((siblings ?? []) as unknown as OrderRow[]).map(toOrderDetailDto);
   }
 
-  return <OrderDetail initialOrder={initialOrder} siblingOrders={siblingOrders} />;
+  return <OrderDetail initialOrder={initialOrder} siblingOrders={siblingOrders} readOnly={historico === "1"} />;
 }
