@@ -1169,14 +1169,17 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                   </a>
                 </div>
 
-                {/* 1. Número da mesa — maior elemento do card, sem dominá-lo. */}
+                {/* 1. Número da mesa — o prefixo "Mesa" é desnecessário no card.
+                    As mesas criadas pelo onboarding já têm nomes como "Mesa 01";
+                    aqui exibimos apenas o identificador numérico para preservar
+                    espaço para os controles no canto superior. */}
                 <span
                   className={cn(
                     "z-10 pr-14 font-numeric text-2xl font-bold leading-none tabular-nums",
                     isFilled ? (isDarkOnLight ? "text-ds2-warning-foreground" : "text-white") : "text-ds2-foreground",
                   )}
                 >
-                  {table.name}
+                  {table.name.replace(/^Mesa\s+/i, "")}
                 </span>
 
                 {/* 2. Status — badge elegante com indicador de cor, nunca texto solto. */}
