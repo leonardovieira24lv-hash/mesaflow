@@ -160,6 +160,16 @@ export function LoginForm() {
         >
           Entrar
         </Button>
+
+        <p className="text-center text-sm text-muted-foreground">
+          Não tem uma conta?{' '}
+          <Link
+            href={ROUTES.onboardingRestaurante}
+            className="font-medium text-[#E63946] hover:underline"
+          >
+            Criar conta
+          </Link>
+        </p>
       </form>
     </div>
   );
