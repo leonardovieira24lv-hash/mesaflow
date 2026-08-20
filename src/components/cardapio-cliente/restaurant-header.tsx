@@ -127,7 +127,7 @@ export function RestaurantHeader({
             onLoad={(event) => {
               const image = event.currentTarget;
               if (image.naturalHeight > 0) {
-                setIsCompactLogo(image.naturalWidth / image.naturalHeight <= 1.4);
+                setIsCompactLogo(image.naturalWidth / image.naturalHeight <= 2);
               }
             }}
             className={cn(
