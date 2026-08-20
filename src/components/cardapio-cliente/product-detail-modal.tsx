@@ -266,8 +266,8 @@ export function ProductDetailModal({
                               : "border-border bg-background hover:bg-muted",
                           )}
                         >
-                          <span className="font-medium text-foreground">{variant.name}</span>
-                          <span className="font-semibold tabular-nums text-foreground">
+                          <span className={cn("font-medium", selected ? "text-zinc-900" : "text-foreground")}>{variant.name}</span>
+                          <span className={cn("font-semibold tabular-nums", selected ? "text-zinc-900" : "text-foreground")}>
                             {formatCurrency(variant.price)}
                           </span>
                         </button>

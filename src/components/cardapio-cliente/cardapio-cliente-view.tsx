@@ -328,7 +328,6 @@ export function CardapioClienteView({
                         displayName={category.name}
                         displayPrice={Math.min(...category.items.map((item) => item.price))}
                         displayDescription="Escolha o tamanho e os complementos"
-                        hidePrice
                       />
                     )}
                   </div>
@@ -351,11 +350,6 @@ export function CardapioClienteView({
                         item={item}
                         onSelect={() => handleCardTap(item, category)}
                         selectedSlot={getSelectedSlot(item, category)}
-                        hidePrice={
-                          category.isSizeBased ||
-                          (category.items.length === 1 &&
-                            item.optionGroups.some((group) => group.groupType === "size"))
-                        }
                       />
                     ))}
                   </div>
