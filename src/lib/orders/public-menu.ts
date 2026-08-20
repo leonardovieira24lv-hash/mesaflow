@@ -60,7 +60,7 @@ export interface PublicMenuCategory {
   // Cardápio Público (`category-nav.tsx`), não aqui — este campo é só o
   // valor cru do banco.
   imageUrl: string | null;
-  /** Categoria composta por variações de tamanho, usada pelo fluxo público de açaí. */
+  /** Categoria cujos itens representam tamanhos/preços de um mesmo produto. */
   isSizeBased: boolean;
   items: PublicMenuItem[];
 }
@@ -73,6 +73,14 @@ interface MenuItemRow {
   price: number;
   image_url: string | null;
   is_available: boolean;
+}
+
+interface MenuCategoryRow {
+  id: string;
+  name: string;
+  allows_half_and_half: boolean;
+  is_compact: boolean;
+  image_url: string | null;
 }
 
 interface OptionGroupRow {
@@ -171,46 +179,40 @@ export async function getPublicMenu(
       }));
   }
 
-  return (categoriesResult.data ?? []).map((category) => {
-    const items = [...(itemsByCategory.get(category.id) ?? [])]
-      .sort((a, b) => {
-        const aMatch = a.name.match(/([0-9]+(?:[.,][0-9]+)?)\s*(ml|l|litro|g|kg)\b/i);
-        const bMatch = b.name.match(/([0-9]+(?:[.,][0-9]+)?)\s*(ml|l|litro|g|kg)\b/i);
-        const toBaseUnit = (match: RegExpMatchArray | null) => {
-          const valueText = match?.[1];
-          const unitText = match?.[2];
-          if (!valueText || !unitText) return null;
-          const value = Number(valueText.replace(",", "."));
-          const unit = unitText.toLowerCase();
-          if (unit === "l" || unit === "litro") return value * 1000;
-          if (unit === "kg") return value * 1000;
-          return value;
-        };
-        const aSize = toBaseUnit(aMatch);
-        const bSize = toBaseUnit(bMatch);
-        if (aSize !== null && bSize !== null) return aSize - bSize;
-        return a.name.localeCompare(b.name, "pt-BR", { numeric: true, sensitivity: "base" });
-      })
-      .map((item) => ({
-        id: item.id,
-        categoryId: category.id,
-        name: item.name,
-        description: item.description ?? undefined,
-        price: item.price,
-        image_url: item.image_url ?? undefined,
-        is_available: item.is_available,
-        optionGroups: optionGroupsForItem(item.id, category.id),
-      }));
+  const categories = (categoriesResult.data ?? []) as MenuCategoryRow[];
 
-    // O fluxo de açaí usa uma categoria para representar o tipo do produto
-    // e os `menu_items` dessa categoria para representar os tamanhos.
-    // Como essa distinção não é uma coluna do schema, o contrato público
-    // identifica o formato sem depender de um nicho específico: todos os
-    // itens precisam ser variações de tamanho. Categorias comuns continuam
-    // com o comportamento tradicional, produto por produto.
+  return categories.map((category) => {
+    const categoryItems = [...(itemsByCategory.get(category.id) ?? [])];
+    const sizePattern = /^\s*[0-9]+(?:[.,][0-9]+)?\s*(?:ml|l|litro|g|kg)\s*$/i;
     const isSizeBased =
-      items.length > 1 &&
-      items.every((item) => /^\s*\d+(?:[.,]\d+)?\s*(?:ml|l|litro|litros|g|kg)\s*$/i.test(item.name));
+      categoryItems.length > 0 && categoryItems.every((item) => sizePattern.test(item.name));
+
+    const sortedItems = categoryItems.sort((a, b) => {
+      const aMatch = a.name.match(/([0-9]+(?:[.,][0-9]+)?)\s*(ml|l|litro|g|kg)\b/i);
+      const bMatch = b.name.match(/([0-9]+(?:[.,][0-9]+)?)\s*(ml|l|litro|g|kg)\b/i);
+
+      const toBaseUnit = (match: RegExpMatchArray | null) => {
+        const valueText = match?.[1];
+        const unitText = match?.[2];
+        if (!valueText || !unitText) return null;
+
+        const value = Number(valueText.replace(",", "."));
+        const unit = unitText.toLowerCase();
+
+        if (unit === "l" || unit === "litro") return value * 1000;
+        if (unit === "kg") return value * 1000;
+        return value;
+      };
+
+      const aSize = toBaseUnit(aMatch);
+      const bSize = toBaseUnit(bMatch);
+
+      if (aSize !== null && bSize !== null) return aSize - bSize;
+      return a.name.localeCompare(b.name, "pt-BR", {
+        numeric: true,
+        sensitivity: "base",
+      });
+    });
 
     return {
       id: category.id,
@@ -219,7 +221,16 @@ export async function getPublicMenu(
       isCompact: category.is_compact,
       imageUrl: category.image_url,
       isSizeBased,
-      items,
+      items: sortedItems.map((item) => ({
+        id: item.id,
+        categoryId: category.id,
+        name: item.name,
+        description: item.description ?? undefined,
+        price: item.price,
+        image_url: item.image_url ?? undefined,
+        is_available: item.is_available,
+        optionGroups: optionGroupsForItem(item.id, category.id),
+      })),
     };
   });
 }

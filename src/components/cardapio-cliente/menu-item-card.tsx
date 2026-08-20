@@ -8,6 +8,9 @@ import type { PublicMenuItem } from "@/lib/orders/public-menu";
 interface MenuItemCardProps {
   item: PublicMenuItem;
   onSelect: (item: PublicMenuItem) => void;
+  displayName?: string;
+  displayPrice?: number;
+  displayDescription?: string;
   /**
    * Sistema de Opcionais, Fase 3 — meio a meio, Opção C (2026-08-15).
    * Numa categoria "aceita meio a meio", tocar no card não abre mais o
@@ -97,7 +100,17 @@ interface MenuItemCardProps {
  * de contraste do Mesas — se ainda não for suficiente, o ajuste correto é
  * nos valores de `:root`/`.menu-dark`, fora do escopo desta etapa.
  */
-export function MenuItemCard({ item, onSelect, selectedSlot = null }: MenuItemCardProps) {
+export function MenuItemCard({
+  item,
+  onSelect,
+  selectedSlot = null,
+  displayName,
+  displayPrice,
+  displayDescription,
+}: MenuItemCardProps) {
+  const cardName = displayName ?? item.name;
+  const cardPrice = displayPrice ?? item.price;
+  const cardDescription = displayDescription ?? item.description;
   const isAvailable = item.is_available;
   const [imageLoaded, setImageLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -109,7 +122,7 @@ export function MenuItemCard({ item, onSelect, selectedSlot = null }: MenuItemCa
       type="button"
       disabled={!isAvailable}
       onClick={() => onSelect(item)}
-      aria-label={isAvailable ? `Ver detalhes de ${item.name}` : `${item.name} — indisponível no momento`}
+      aria-label={isAvailable ? `Ver detalhes de ${cardName}` : `${cardName} — indisponível no momento`}
       className={cn(
         "group flex w-full items-stretch gap-4 rounded-2xl border border-border bg-surface p-3.5 text-left elevation-card",
         isSelected && "border-emerald-500 ring-1 ring-emerald-500",
@@ -173,14 +186,14 @@ export function MenuItemCard({ item, onSelect, selectedSlot = null }: MenuItemCa
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 py-1">
-        <p className="line-clamp-1 text-lg font-bold leading-tight tracking-tight text-foreground">{item.name}</p>
+        <p className="line-clamp-1 text-lg font-bold leading-tight tracking-tight text-foreground">{cardName}</p>
         {item.description && (
-          <p className="line-clamp-2 text-[13px] leading-snug text-muted-foreground">{item.description}</p>
+          <p className="line-clamp-2 text-[13px] leading-snug text-muted-foreground">{cardDescription}</p>
         )}
 
         <div className="mt-2 flex items-center justify-between gap-2">
           <span className="text-lg font-extrabold tabular-nums tracking-tight text-soft-success-foreground">
-            {formatCurrency(item.price)}
+            {formatCurrency(cardPrice)}
           </span>
 
           {isAvailable && (

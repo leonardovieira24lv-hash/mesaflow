@@ -11,9 +11,9 @@ import type { PublicMenuItem, PublicOptionGroup } from "@/lib/orders/public-menu
 
 interface ProductDetailModalProps {
   item: PublicMenuItem | null;
-  sizeItems?: PublicMenuItem[] | null;
-  categoryName?: string;
   onClose: () => void;
+  sizeVariants?: PublicMenuItem[];
+  displayName?: string | null;
 }
 
 /**
@@ -73,10 +73,13 @@ interface ProductDetailModalProps {
  * produto por vez, como sempre foi. Ver `half-and-half-confirm-modal.tsx`
  * pro fluxo novo.
  */
-export function ProductDetailModal({ item, sizeItems = null, categoryName, onClose }: ProductDetailModalProps) {
+export function ProductDetailModal({
+  item,
+  onClose,
+  sizeVariants = [],
+  displayName = null,
+}: ProductDetailModalProps) {
   const { addItem } = useCart();
-  const isSizeBased = Boolean(sizeItems && sizeItems.length > 1);
-  const [selectedSizeId, setSelectedSizeId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   // Sistema de Opcionais, Fase 1 (2026-08-14) — escolha única obrigatória
@@ -88,6 +91,7 @@ export function ProductDetailModal({ item, sizeItems = null, categoryName, onClo
   // mais de 1 item no array (mesmo efeito de antes, só a forma mudou);
   // grupo `multiple` pode ter vários, até `maxSelections`.
   const [selectedOptionIds, setSelectedOptionIds] = useState<Record<string, string[]>>({});
+  const [selectedSizeId, setSelectedSizeId] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
@@ -109,40 +113,25 @@ export function ProductDetailModal({ item, sizeItems = null, categoryName, onClo
     setQuantity(1);
     setNotes("");
     setSelectedOptionIds({});
+    setSelectedSizeId(sizeVariants[0]?.id ?? item?.id ?? null);
     setImageLoaded(false);
     setHasError(false);
-    const firstAvailable = sizeItems?.find((entry) => entry.is_available) ?? sizeItems?.[0] ?? item ?? null;
-    setSelectedSizeId(firstAvailable?.id ?? null);
-  }, [item?.id, sizeItems]);
+  }, [item?.id, sizeVariants]);
 
-  const selectedItem = isSizeBased
-    ? sizeItems?.find((entry) => entry.id === selectedSizeId) ?? sizeItems?.find((entry) => entry.is_available) ?? sizeItems?.[0] ?? item
-    : item;
-  const optionGroups = selectedItem?.optionGroups ?? [];
+  const optionGroups = item?.optionGroups ?? [];
+  const selectedVariant = sizeVariants.find((variant) => variant.id === selectedSizeId) ?? item;
+  const optionsPriceDelta = optionGroups.reduce((sum, group) => {
+    const chosen = selectedOptionIds[group.id] ?? [];
+    return sum + group.options.reduce(
+      (groupSum, option) => (chosen.includes(option.id) ? groupSum + option.priceDelta : groupSum),
+      0,
+    );
+  }, 0);
+  const unitPrice = (selectedVariant?.price ?? 0) + optionsPriceDelta;
   const missingRequiredGroup = optionGroups.some(
     (group) => group.required && (selectedOptionIds[group.id]?.length ?? 0) === 0,
   );
 
-  // Preço unitário = base + soma dos `priceDelta` de TODAS as opções
-  // marcadas (Fase 2: pode ser mais de uma por grupo) — recalculado a
-  // cada escolha, pro cliente ver o valor final antes de adicionar
-  // (nunca só descobrir no carrinho).
-  const optionsPriceDelta = optionGroups.reduce((sum, group) => {
-    const chosenIds = selectedOptionIds[group.id] ?? [];
-    const groupDelta = chosenIds.reduce((groupSum, optionId) => {
-      const option = group.options.find((o) => o.id === optionId);
-      return groupSum + (option?.priceDelta ?? 0);
-    }, 0);
-    return sum + groupDelta;
-  }, 0);
-  const unitPrice = (selectedItem?.price ?? 0) + optionsPriceDelta;
-
-  // Sistema de Opcionais, Fase 2 (2026-08-14) — grupo `single`: marcar
-  // uma opção substitui a anterior (array sempre com no máximo 1). Grupo
-  // `multiple`: marcar alterna (adiciona/remove), até `maxSelections` —
-  // clique além do limite não faz nada (o próprio `<input>` já vem
-  // `disabled` nesse caso, ver JSX abaixo; esta função é a segunda
-  // camada de segurança).
   function toggleOption(group: PublicOptionGroup, optionId: string) {
     setSelectedOptionIds((prev) => {
       const current = prev[group.id] ?? [];
@@ -160,7 +149,7 @@ export function ProductDetailModal({ item, sizeItems = null, categoryName, onClo
   }
 
   function handleAdd() {
-    if (!selectedItem || (isSizeBased && !selectedItem.is_available)) return;
+    if (!item) return;
 
     const selectedOptions: SelectedOption[] = optionGroups.flatMap((group) => {
       const chosenIds = selectedOptionIds[group.id] ?? [];
@@ -176,21 +165,26 @@ export function ProductDetailModal({ item, sizeItems = null, categoryName, onClo
         }));
     });
 
+    const variantName = selectedVariant?.name;
+    const finalName = displayName
+      ? `${displayName}${variantName ? ` — ${variantName}` : ""}`
+      : variantName ?? item.name;
+
     addItem({
-      menuItemId: selectedItem.id,
-      name: isSizeBased ? `${categoryName ?? "Produto"} — ${selectedItem.name}` : selectedItem.name,
+      menuItemId: selectedVariant?.id ?? item.id,
+      name: finalName,
       price: unitPrice,
       quantity,
       notes: notes.trim() || undefined,
       selectedOptions: selectedOptions.length > 0 ? selectedOptions : undefined,
-      imageUrl: selectedItem.image_url ?? undefined,
+      imageUrl: selectedVariant?.image_url ?? item.image_url ?? undefined,
     });
 
-    toast.success("Adicionado ao carrinho", `${quantity}x ${isSizeBased ? `${categoryName ?? "Produto"} — ${selectedItem.name}` : selectedItem.name}`);
+    toast.success("Adicionado ao carrinho", `${quantity}x ${finalName}`);
     onClose();
   }
 
-  const showImage = Boolean(selectedItem?.image_url) && !hasError;
+  const showImage = Boolean(item?.image_url) && !hasError;
 
   return (
     <dialog
@@ -200,14 +194,14 @@ export function ProductDetailModal({ item, sizeItems = null, categoryName, onClo
       onClick={(e) => {
         if (e.target === ref.current) onClose();
       }}
-      aria-label={isSizeBased ? categoryName : selectedItem?.name}
+      aria-label={item?.name}
       className={cn(
         "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88dvh] w-full overflow-hidden rounded-t-3xl border-t border-border bg-background p-0 text-foreground shadow-2xl",
         "sm:inset-0 sm:bottom-auto sm:m-auto sm:max-w-md sm:rounded-2xl sm:border sm:shadow-2xl",
         "backdrop:bg-black/60 backdrop:backdrop-blur-[2px]",
       )}
     >
-      {selectedItem && (
+      {item && (
         <div className="flex max-h-[88dvh] flex-col sm:max-h-[85dvh]">
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="relative h-56 w-full shrink-0 bg-muted sm:h-64 sm:rounded-t-2xl">
@@ -215,7 +209,7 @@ export function ProductDetailModal({ item, sizeItems = null, categoryName, onClo
                 <>
                   {!imageLoaded && <div className="absolute inset-0 animate-pulse bg-muted" aria-hidden />}
                   <Image
-                    src={selectedItem.image_url as string}
+                    src={item.image_url as string}
                     alt=""
                     fill
                     sizes="448px"
@@ -249,49 +243,39 @@ export function ProductDetailModal({ item, sizeItems = null, categoryName, onClo
 
             <div className="flex flex-col gap-5 px-6 pb-6 pt-5">
               <div className="flex flex-col gap-1.5">
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">{isSizeBased ? categoryName : selectedItem.name}</h2>
-                {!isSizeBased && selectedItem.description && (
-                  <p className="text-sm leading-relaxed text-muted-foreground">{selectedItem.description}</p>
-                )}
-                {isSizeBased ? (
-                  <div className="mt-2 flex flex-col gap-2">
-                    <span className="text-sm font-semibold text-foreground">Tamanho</span>
-                    <div className="flex flex-col gap-1.5">
-                      {sizeItems?.map((size) => {
-                        const checked = size.id === selectedItem.id;
-                        return (
-                          <label
-                            key={size.id}
-                            className={cn(
-                              "flex items-center justify-between rounded-xl border px-3.5 py-3 text-sm transition",
-                              checked ? "border-emerald-500 bg-emerald-50" : "border-border bg-background",
-                              !size.is_available && "cursor-not-allowed opacity-50",
-                            )}
-                          >
-                            <span className="flex items-center gap-2.5">
-                              <input
-                                type="radio"
-                                name="acai-size"
-                                checked={checked}
-                                disabled={!size.is_available}
-                                onChange={() => {
-                                  setSelectedSizeId(size.id);
-                                  setSelectedOptionIds({});
-                                }}
-                                className="h-4 w-4 accent-emerald-500"
-                              />
-                              <span className="font-medium text-foreground">{size.name}</span>
-                            </span>
-                            <span className="font-semibold tabular-nums text-soft-success-foreground">{formatCurrency(size.price)}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="pt-1 text-lg font-bold tabular-nums text-soft-success-foreground">{formatCurrency(selectedItem.price)}</p>
-                )}
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">{displayName ?? item.name}</h2>
+                {item.description && <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>}
+                <p className="pt-1 text-lg font-bold tabular-nums text-soft-success-foreground">{formatCurrency(selectedVariant?.price ?? item.price)}</p>
               </div>
+
+              {sizeVariants.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-foreground">Tamanho</span>
+                  <div className="flex flex-col gap-1.5">
+                    {sizeVariants.map((variant) => {
+                      const selected = variant.id === selectedSizeId;
+                      return (
+                        <button
+                          key={variant.id}
+                          type="button"
+                          onClick={() => setSelectedSizeId(variant.id)}
+                          className={cn(
+                            "flex items-center justify-between rounded-xl border px-3.5 py-3 text-left text-sm transition",
+                            selected
+                              ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500"
+                              : "border-border bg-background hover:bg-muted",
+                          )}
+                        >
+                          <span className="font-medium text-foreground">{variant.name}</span>
+                          <span className="font-semibold tabular-nums text-foreground">
+                            {formatCurrency(variant.price)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-between rounded-2xl bg-surface px-4 py-3 ring-1 ring-border">
                 <span className="text-sm font-medium text-foreground">Quantidade</span>
@@ -396,7 +380,7 @@ export function ProductDetailModal({ item, sizeItems = null, categoryName, onClo
                   rows={2}
                   className="w-full resize-none rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 />
-                <p className="text-xs text-muted-foreground">Opcional — ex.: sem cebola, observação especial.</p>
+                <p className="text-xs text-muted-foreground">Opcional — ex.: sem cebola, ponto da carne.</p>
               </div>
             </div>
           </div>

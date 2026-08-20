@@ -8,7 +8,6 @@ import { RestaurantHeader } from "@/components/cardapio-cliente/restaurant-heade
 import { CategoryNav, categorySectionId } from "@/components/cardapio-cliente/category-nav";
 import { MenuItemCard } from "@/components/cardapio-cliente/menu-item-card";
 import { MenuItemCardCompact } from "@/components/cardapio-cliente/menu-item-card-compact";
-import { SizeBasedCategoryCard } from "@/components/cardapio-cliente/size-based-category-card";
 import { ProductDetailModal } from "@/components/cardapio-cliente/product-detail-modal";
 import { CartProvider } from "@/components/cardapio-cliente/cart-context";
 import { CartSummaryBar } from "@/components/cardapio-cliente/cart-summary-bar";
@@ -115,8 +114,8 @@ export function CardapioClienteView({
   website,
 }: CardapioClienteViewProps) {
   const [selectedItem, setSelectedItem] = useState<PublicMenuItem | null>(null);
-  const [selectedSizeItems, setSelectedSizeItems] = useState<PublicMenuItem[] | null>(null);
-  const [selectedCategoryName, setSelectedCategoryName] = useState<string | null>(null);
+  const [selectedSizeVariants, setSelectedSizeVariants] = useState<PublicMenuItem[]>([]);
+  const [selectedDisplayName, setSelectedDisplayName] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const hasCategories = categories.length > 0;
 
@@ -143,6 +142,14 @@ export function CardapioClienteView({
    * inteira daquele sabor) — não desfaz; a correção de erro só faz
    * sentido depois que os 2 já estão visíveis na barra de revisão.
    */
+  function handleSizeBasedCardTap(category: PublicMenuCategory) {
+    const firstItem = category.items[0];
+    if (!firstItem) return;
+    setSelectedItem(firstItem);
+    setSelectedSizeVariants(category.items);
+    setSelectedDisplayName(category.name);
+  }
+
   function handleCardTap(item: PublicMenuItem, category: PublicMenuCategory) {
     if (!category.allowsHalfAndHalf) {
       setSelectedItem(item);
@@ -218,28 +225,14 @@ export function CardapioClienteView({
     if (!normalizedSearch) return categories;
 
     return categories
-      .map((category) => {
-        const categoryMatches = category.name.toLocaleLowerCase("pt-BR").includes(normalizedSearch);
-        if (category.isSizeBased) {
-          // Numa categoria de tamanhos, buscar um tamanho precisa manter
-          // a categoria inteira visível para que o cliente possa escolher
-          // entre todos os tamanhos no mesmo fluxo.
-          const sizeMatches = category.items.some((item) => {
-            const haystack = `${item.name} ${item.description ?? ""}`.toLocaleLowerCase("pt-BR");
-            return haystack.includes(normalizedSearch);
-          });
-          return categoryMatches || sizeMatches ? category : null;
-        }
-
-        return {
-          ...category,
-          items: category.items.filter((item) => {
-            const haystack = `${item.name} ${item.description ?? ""}`.toLocaleLowerCase("pt-BR");
-            return haystack.includes(normalizedSearch);
-          }),
-        };
-      })
-      .filter((category): category is PublicMenuCategory => category !== null && category.items.length > 0);
+      .map((category) => ({
+        ...category,
+        items: category.items.filter((item) => {
+          const haystack = `${item.name} ${item.description ?? ""}`.toLocaleLowerCase("pt-BR");
+          return haystack.includes(normalizedSearch);
+        }),
+      }))
+      .filter((category) => category.items.length > 0);
   }, [categories, normalizedSearch]);
 
   const hasResults = visibleCategories.length > 0;
@@ -327,16 +320,17 @@ export function CardapioClienteView({
                 <h2 className="text-base font-bold tracking-tight text-foreground">{category.name}</h2>
 
                 {category.isSizeBased ? (
-                  <SizeBasedCategoryCard
-                    category={category}
-                    onSelect={() => {
-                      const firstAvailable = category.items.find((item) => item.is_available) ?? category.items[0] ?? null;
-                      if (!firstAvailable) return;
-                      setSelectedItem(firstAvailable);
-                      setSelectedSizeItems(category.items);
-                      setSelectedCategoryName(category.name);
-                    }}
-                  />
+                  <div className="flex flex-col gap-3.5">
+                    {category.items[0] && (
+                      <MenuItemCard
+                        item={category.items[0]}
+                        onSelect={() => handleSizeBasedCardTap(category)}
+                        displayName={category.name}
+                        displayPrice={Math.min(...category.items.map((item) => item.price))}
+                        displayDescription="Escolha o tamanho e os complementos"
+                      />
+                    )}
+                  </div>
                 ) : category.isCompact ? (
                   <div className="grid grid-cols-2 gap-2.5">
                     {category.items.map((item) => (
@@ -369,12 +363,12 @@ export function CardapioClienteView({
 
         <ProductDetailModal
           item={selectedItem}
-          sizeItems={selectedSizeItems}
-          categoryName={selectedCategoryName ?? undefined}
+          sizeVariants={selectedSizeVariants}
+          displayName={selectedDisplayName}
           onClose={() => {
             setSelectedItem(null);
-            setSelectedSizeItems(null);
-            setSelectedCategoryName(null);
+            setSelectedSizeVariants([]);
+            setSelectedDisplayName(null);
           }}
         />
 
