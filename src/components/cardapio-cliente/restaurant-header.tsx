@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Search, UtensilsCrossed, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -109,17 +110,31 @@ export function RestaurantHeader({
 }: RestaurantHeaderProps) {
   const hasSearch = onSearchChange !== undefined;
   const hasDescription = Boolean(description?.trim());
+  const [isCompactLogo, setIsCompactLogo] = useState(false);
 
   return (
     <header className="flex flex-col gap-3 border-b border-border bg-surface/95 px-4 pb-3.5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-surface/80">
       {logoUrl ? (
         <div className="flex justify-center">
-          {/* Tamanho reduzido (2026-08-16, pedido do dono: "achando ela um
-              pouco grande") — 75px → 56px (~25% menor). Continua
-              `object-contain`/`w-auto`, mesma lógica de proporção livre
-              de sempre, só a altura mudou. */}
+          {/* Logos horizontais permanecem compactas; logos quadradas,
+              redondas ou verticais ganham mais presença visual. A
+              classificação usa a proporção intrínseca do próprio arquivo,
+              sem cortar nem deformar a imagem. */}
           {/* eslint-disable-next-line @next/next/no-img-element -- proporção livre, ver docstring acima. */}
-          <img src={logoUrl} alt={restaurantName} className="h-14 w-auto max-w-full object-contain" />
+          <img
+            src={logoUrl}
+            alt={restaurantName}
+            onLoad={(event) => {
+              const image = event.currentTarget;
+              if (image.naturalHeight > 0) {
+                setIsCompactLogo(image.naturalWidth / image.naturalHeight <= 1.4);
+              }
+            }}
+            className={cn(
+              "w-auto max-w-full object-contain transition-[height] duration-200",
+              isCompactLogo ? "h-24" : "h-14",
+            )}
+          />
         </div>
       ) : (
         <div className="flex items-center justify-between gap-3">
