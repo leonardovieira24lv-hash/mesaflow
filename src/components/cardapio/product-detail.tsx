@@ -10,12 +10,15 @@ import { ProductForm } from "@/components/cardapio/product-form";
 import { ROUTES } from "@/constants/routes";
 import type { ApiError } from "@/types/api";
 import type { MenuCategory, MenuItem } from "@/types/domain";
+import type { BusinessType } from "@/lib/business-type";
 
 interface ProductDetailProps {
   item: MenuItem;
   categories: MenuCategory[];
   /** Repassado para `<ProductForm>` — necessário para montar o caminho do upload de imagem. */
   restaurantId: string;
+  /** Perfil do negócio, repassado ao formulário e aos grupos de opções. */
+  businessType?: BusinessType | string | null;
 }
 
 /**
@@ -23,7 +26,7 @@ interface ProductDetailProps {
  * o mesmo `<ProductForm>` da criação — só muda o método/URL da chamada por
  * já receber `item` preenchido.
  */
-export function ProductDetail({ item, categories, restaurantId }: ProductDetailProps) {
+export function ProductDetail({ item, categories, restaurantId, businessType }: ProductDetailProps) {
   const router = useRouter();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -66,6 +69,7 @@ export function ProductDetail({ item, categories, restaurantId }: ProductDetailP
         <ProductForm
           categories={categories}
           restaurantId={restaurantId}
+          businessType={businessType}
           item={item}
           onSaved={() => toast.success("Produto atualizado")}
           onCancel={() => router.push(ROUTES.cardapioProdutos)}

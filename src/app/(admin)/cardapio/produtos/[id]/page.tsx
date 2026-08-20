@@ -12,7 +12,7 @@ export default async function ProdutoDetalhePage({ params }: { params: Promise<{
   const { profile } = await requirePageSession();
   const supabase = await createClient();
 
-  const [itemResult, categoriesResult] = await Promise.all([
+  const [itemResult, categoriesResult, restaurantResult] = await Promise.all([
     supabase
       .from("menu_items")
       .select("id, category_id, name, description, price, image_url, is_available, is_archived")
@@ -24,6 +24,11 @@ export default async function ProdutoDetalhePage({ params }: { params: Promise<{
       .select("id, name, position, allows_half_and_half, is_compact, image_url")
       .eq("restaurant_id", profile.restaurantId)
       .order("position", { ascending: true }),
+    supabase
+      .from("restaurants")
+      .select("business_type")
+      .eq("id", profile.restaurantId)
+      .maybeSingle(),
   ]);
 
   // RLS + filtro por restaurant_id garantem que um produto de outro
@@ -59,7 +64,12 @@ export default async function ProdutoDetalhePage({ params }: { params: Promise<{
         <p className="text-sm text-muted-foreground">Edite os dados do produto ou remova-o do cardápio.</p>
       </div>
 
-      <ProductDetail item={item} categories={categories} restaurantId={profile.restaurantId} />
+      <ProductDetail
+        item={item}
+        categories={categories}
+        restaurantId={profile.restaurantId}
+        businessType={restaurantResult.data?.business_type ?? null}
+      />
     </div>
   );
 }

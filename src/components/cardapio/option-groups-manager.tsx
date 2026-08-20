@@ -75,7 +75,7 @@ interface OptionGroupsManagerProps {
 function optionGroupCopy(businessType?: BusinessType | string | null) {
   switch (businessType) {
     case "acai":
-      return { group: "Ex.: Complementos, Frutas, Caldas", item: "Ex.: Leite em pó", description: "Ex.: Complementos, Frutas ou Caldas." };
+      return { group: "Ex.: Tamanho, Complementos, Frutas", item: "Ex.: Leite em pó", description: "Ex.: Tamanho, Complementos ou Frutas." };
     case "pizza":
       return { group: "Ex.: Borda, Adicionais", item: "Ex.: Catupiry", description: "Ex.: Borda ou Adicionais." };
     case "burger":
@@ -179,15 +179,9 @@ export function OptionGroupsManager({
       setTargetType("category");
       setTargetId("");
     }
-    if (businessType === "acai" && filterCategoryId !== undefined) {
-      setSelectionType("multiple");
-      setMaxSelections("4");
-      setIsRequired(false);
-    } else {
-      setSelectionType("single");
-      setMaxSelections("");
-      setIsRequired(true);
-    }
+    setSelectionType("single");
+    setMaxSelections("");
+    setIsRequired(true);
     setGroupFormError(null);
     setIsGroupModalOpen(true);
   }
@@ -286,7 +280,8 @@ export function OptionGroupsManager({
     setItemFormError(null);
   }
 
-  async function handleAddItem(groupId: string) {
+  async function handleAddItem(e: FormEvent, groupId: string) {
+    e.preventDefault();
     const priceDelta = Number(itemPrice.replace(",", "."));
     if (!itemName.trim()) {
       setItemFormError("Informe o nome da opção.");
@@ -371,13 +366,13 @@ export function OptionGroupsManager({
       <div className="flex items-center justify-between gap-3">
         {!compact && (
           <p className="text-sm text-ds2-foreground-muted">
-            Grupos de opção — ex.: &quot;Borda&quot;, &quot;Ponto da carne&quot;, &quot;Tamanho&quot;. Cada grupo define se o
+            Grupos de opção — {optionGroupCopy(businessType).description.replace("Ex.: ", "")} Cada grupo define se o
             cliente escolhe 1 opção ou várias (com limite), e se é obrigatório ou opcional.
           </p>
         )}
         <Button onClick={openCreateGroupModal} size={compact ? "sm" : "md"} variant={compact ? "outline" : "primary"}>
           <Plus className="h-4 w-4" aria-hidden />
-          {businessType === "acai" && filterCategoryId !== undefined ? "Adicionar grupo" : "Novo grupo"}
+          Novo grupo
         </Button>
       </div>
 
@@ -439,7 +434,7 @@ export function OptionGroupsManager({
                     <span className="text-ds2-foreground">{item.name}</span>
                     <div className="flex items-center gap-2">
                       <span className="font-numeric text-ds2-foreground-muted">
-                        {item.priceDelta > 0 ? `+${formatCurrency(item.priceDelta)}` : businessType === "acai" ? null : "Sem custo"}
+                        {item.priceDelta > 0 ? `+${formatCurrency(item.priceDelta)}` : "Sem custo"}
                       </span>
                       <button
                         type="button"
@@ -455,7 +450,7 @@ export function OptionGroupsManager({
               </div>
 
               {addingItemToGroupId === group.id ? (
-                <div className="mt-3 flex flex-col gap-2">
+                <form onSubmit={(e) => handleAddItem(e, group.id)} className="mt-3 flex flex-col gap-2">
                   {itemFormError && <Alert variant="destructive">{itemFormError}</Alert>}
                   <div className="flex gap-2">
                     <Input
@@ -475,14 +470,14 @@ export function OptionGroupsManager({
                     />
                   </div>
                   <div className="flex gap-2">
-                    <Button type="button" size="sm" isLoading={isSavingItem} onClick={() => void handleAddItem(group.id)}>
+                    <Button type="submit" size="sm" isLoading={isSavingItem}>
                       Adicionar
                     </Button>
                     <Button type="button" variant="ghost" size="sm" onClick={() => setAddingItemToGroupId(null)}>
                       Cancelar
                     </Button>
                   </div>
-                </div>
+                </form>
               ) : (
                 <Button variant="outline" size="sm" className="mt-3" onClick={() => openAddItemForm(group.id)}>
                   <ListPlus className="h-3.5 w-3.5" />
@@ -499,8 +494,8 @@ export function OptionGroupsManager({
         onClose={() => {
           if (!isSavingGroup) setIsGroupModalOpen(false);
         }}
-        title={editingGroup ? "Editar grupo" : businessType === "acai" && filterCategoryId !== undefined ? "Novo grupo de complementos" : "Novo grupo de opção"}
-        description={businessType === "acai" && filterCategoryId !== undefined ? "As opções deste grupo ficam disponíveis para todos os tamanhos deste açaí." : optionGroupCopy(businessType).description}
+        title={editingGroup ? "Editar grupo de opção" : "Novo grupo de opção"}
+        description={optionGroupCopy(businessType).description}
         footer={
           <>
             <Button type="button" variant="outline" onClick={() => setIsGroupModalOpen(false)} disabled={isSavingGroup}>
@@ -587,9 +582,7 @@ export function OptionGroupsManager({
               onChange={(e) => setIsRequired(e.target.checked)}
               className="h-4 w-4 accent-ds2-primary"
             />
-            {businessType === "acai" && filterCategoryId !== undefined
-              ? "Cliente precisa escolher pelo menos 1 opção deste grupo"
-              : "Cliente é obrigado a escolher pelo menos 1 opção deste grupo"}
+            Cliente é obrigado a escolher pelo menos 1 opção deste grupo
           </label>
         </form>
       </Modal>
