@@ -183,23 +183,30 @@ export async function getPublicMenu(
 
   return categories.map((category) => {
     const categoryItems = [...(itemsByCategory.get(category.id) ?? [])];
-    const sizePattern = /^\s*[0-9]+(?:[.,][0-9]+)?\s*(?:ml|l|litro|g|kg)\s*$/i;
+    // Tamanhos cadastrados pelo builder podem ser escritos como "300",
+    // "500", "700", "1Lt", "1 L", "500 ml", etc. A regra anterior
+    // exigia unidade explícita e ainda não reconhecia "Lt", fazendo uma
+    // categoria válida de açaí cair no layout comum.
+    //
+    // Unidade ausente é tratada como a unidade-base do cadastro (normalmente
+    // ml para açaí); o importante aqui é identificar que todos os itens da
+    // categoria são tamanhos/preços do mesmo produto.
+    const sizePattern = /^\s*[0-9]+(?:[.,][0-9]+)?\s*(?:ml|l|lt|litro|g|kg)?\s*$/i;
     const isSizeBased =
       categoryItems.length > 0 && categoryItems.every((item) => sizePattern.test(item.name));
 
     const sortedItems = categoryItems.sort((a, b) => {
-      const aMatch = a.name.match(/([0-9]+(?:[.,][0-9]+)?)\s*(ml|l|litro|g|kg)\b/i);
-      const bMatch = b.name.match(/([0-9]+(?:[.,][0-9]+)?)\s*(ml|l|litro|g|kg)\b/i);
+      const aMatch = a.name.match(/^\s*([0-9]+(?:[.,][0-9]+)?)\s*(ml|l|lt|litro|g|kg)?\s*$/i);
+      const bMatch = b.name.match(/^\s*([0-9]+(?:[.,][0-9]+)?)\s*(ml|l|lt|litro|g|kg)?\s*$/i);
 
       const toBaseUnit = (match: RegExpMatchArray | null) => {
         const valueText = match?.[1];
-        const unitText = match?.[2];
-        if (!valueText || !unitText) return null;
+        if (!valueText) return null;
 
         const value = Number(valueText.replace(",", "."));
-        const unit = unitText.toLowerCase();
+        const unit = (match?.[2] ?? "ml").toLowerCase();
 
-        if (unit === "l" || unit === "litro") return value * 1000;
+        if (unit === "l" || unit === "lt" || unit === "litro") return value * 1000;
         if (unit === "kg") return value * 1000;
         return value;
       };
