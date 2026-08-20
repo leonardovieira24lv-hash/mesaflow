@@ -8,6 +8,7 @@ import { RestaurantHeader } from "@/components/cardapio-cliente/restaurant-heade
 import { CategoryNav, categorySectionId } from "@/components/cardapio-cliente/category-nav";
 import { MenuItemCard } from "@/components/cardapio-cliente/menu-item-card";
 import { MenuItemCardCompact } from "@/components/cardapio-cliente/menu-item-card-compact";
+import { SizeBasedCategoryCard } from "@/components/cardapio-cliente/size-based-category-card";
 import { ProductDetailModal } from "@/components/cardapio-cliente/product-detail-modal";
 import { CartProvider } from "@/components/cardapio-cliente/cart-context";
 import { CartSummaryBar } from "@/components/cardapio-cliente/cart-summary-bar";
@@ -114,6 +115,8 @@ export function CardapioClienteView({
   website,
 }: CardapioClienteViewProps) {
   const [selectedItem, setSelectedItem] = useState<PublicMenuItem | null>(null);
+  const [selectedSizeItems, setSelectedSizeItems] = useState<PublicMenuItem[] | null>(null);
+  const [selectedCategoryName, setSelectedCategoryName] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const hasCategories = categories.length > 0;
 
@@ -215,14 +218,28 @@ export function CardapioClienteView({
     if (!normalizedSearch) return categories;
 
     return categories
-      .map((category) => ({
-        ...category,
-        items: category.items.filter((item) => {
-          const haystack = `${item.name} ${item.description ?? ""}`.toLocaleLowerCase("pt-BR");
-          return haystack.includes(normalizedSearch);
-        }),
-      }))
-      .filter((category) => category.items.length > 0);
+      .map((category) => {
+        const categoryMatches = category.name.toLocaleLowerCase("pt-BR").includes(normalizedSearch);
+        if (category.isSizeBased) {
+          // Numa categoria de tamanhos, buscar um tamanho precisa manter
+          // a categoria inteira visível para que o cliente possa escolher
+          // entre todos os tamanhos no mesmo fluxo.
+          const sizeMatches = category.items.some((item) => {
+            const haystack = `${item.name} ${item.description ?? ""}`.toLocaleLowerCase("pt-BR");
+            return haystack.includes(normalizedSearch);
+          });
+          return categoryMatches || sizeMatches ? category : null;
+        }
+
+        return {
+          ...category,
+          items: category.items.filter((item) => {
+            const haystack = `${item.name} ${item.description ?? ""}`.toLocaleLowerCase("pt-BR");
+            return haystack.includes(normalizedSearch);
+          }),
+        };
+      })
+      .filter((category): category is PublicMenuCategory => category !== null && category.items.length > 0);
   }, [categories, normalizedSearch]);
 
   const hasResults = visibleCategories.length > 0;
@@ -309,13 +326,18 @@ export function CardapioClienteView({
               >
                 <h2 className="text-base font-bold tracking-tight text-foreground">{category.name}</h2>
 
-                {/* Layout compacto por categoria (2026-08-15) — mockup
-                    aprovado antes de codar. Só muda a apresentação (grade
-                    2 colunas, card menor); a lógica de seleção (toque
-                    normal ou meio a meio) é exatamente a mesma dos dois
-                    lados, `handleCardTap`/`getSelectedSlot` não sabem
-                    nem precisam saber qual card renderizou o toque. */}
-                {category.isCompact ? (
+                {category.isSizeBased ? (
+                  <SizeBasedCategoryCard
+                    category={category}
+                    onSelect={() => {
+                      const firstAvailable = category.items.find((item) => item.is_available) ?? category.items[0] ?? null;
+                      if (!firstAvailable) return;
+                      setSelectedItem(firstAvailable);
+                      setSelectedSizeItems(category.items);
+                      setSelectedCategoryName(category.name);
+                    }}
+                  />
+                ) : category.isCompact ? (
                   <div className="grid grid-cols-2 gap-2.5">
                     {category.items.map((item) => (
                       <MenuItemCardCompact
@@ -345,7 +367,16 @@ export function CardapioClienteView({
 
         <PublicFooter instagram={instagram ?? null} facebook={facebook ?? null} website={website ?? null} />
 
-        <ProductDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+        <ProductDetailModal
+          item={selectedItem}
+          sizeItems={selectedSizeItems}
+          categoryName={selectedCategoryName ?? undefined}
+          onClose={() => {
+            setSelectedItem(null);
+            setSelectedSizeItems(null);
+            setSelectedCategoryName(null);
+          }}
+        />
 
         {/* Sistema de Opcionais, Fase 3 — meio a meio, Opção C
             (2026-08-15). Aparece só com os 2 sabores escolhidos e ANTES

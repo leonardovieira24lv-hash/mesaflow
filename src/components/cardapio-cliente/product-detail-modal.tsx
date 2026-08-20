@@ -11,6 +11,8 @@ import type { PublicMenuItem, PublicOptionGroup } from "@/lib/orders/public-menu
 
 interface ProductDetailModalProps {
   item: PublicMenuItem | null;
+  sizeItems?: PublicMenuItem[] | null;
+  categoryName?: string;
   onClose: () => void;
 }
 
@@ -71,8 +73,10 @@ interface ProductDetailModalProps {
  * produto por vez, como sempre foi. Ver `half-and-half-confirm-modal.tsx`
  * pro fluxo novo.
  */
-export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
+export function ProductDetailModal({ item, sizeItems = null, categoryName, onClose }: ProductDetailModalProps) {
   const { addItem } = useCart();
+  const isSizeBased = Boolean(sizeItems && sizeItems.length > 1);
+  const [selectedSizeId, setSelectedSizeId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   // Sistema de Opcionais, Fase 1 (2026-08-14) — escolha única obrigatória
@@ -107,10 +111,14 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
     setSelectedOptionIds({});
     setImageLoaded(false);
     setHasError(false);
-  }, [item?.id]);
+    const firstAvailable = sizeItems?.find((entry) => entry.is_available) ?? sizeItems?.[0] ?? item ?? null;
+    setSelectedSizeId(firstAvailable?.id ?? null);
+  }, [item?.id, sizeItems]);
 
-  const optionGroups = item?.optionGroups ?? [];
-  const hasSizeGroup = optionGroups.some((group) => group.groupType === "size");
+  const selectedItem = isSizeBased
+    ? sizeItems?.find((entry) => entry.id === selectedSizeId) ?? sizeItems?.find((entry) => entry.is_available) ?? sizeItems?.[0] ?? item
+    : item;
+  const optionGroups = selectedItem?.optionGroups ?? [];
   const missingRequiredGroup = optionGroups.some(
     (group) => group.required && (selectedOptionIds[group.id]?.length ?? 0) === 0,
   );
@@ -127,7 +135,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
     }, 0);
     return sum + groupDelta;
   }, 0);
-  const unitPrice = (item?.price ?? 0) + optionsPriceDelta;
+  const unitPrice = (selectedItem?.price ?? 0) + optionsPriceDelta;
 
   // Sistema de Opcionais, Fase 2 (2026-08-14) — grupo `single`: marcar
   // uma opção substitui a anterior (array sempre com no máximo 1). Grupo
@@ -152,7 +160,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
   }
 
   function handleAdd() {
-    if (!item) return;
+    if (!selectedItem || (isSizeBased && !selectedItem.is_available)) return;
 
     const selectedOptions: SelectedOption[] = optionGroups.flatMap((group) => {
       const chosenIds = selectedOptionIds[group.id] ?? [];
@@ -169,20 +177,20 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
     });
 
     addItem({
-      menuItemId: item.id,
-      name: item.name,
+      menuItemId: selectedItem.id,
+      name: isSizeBased ? `${categoryName ?? "Produto"} — ${selectedItem.name}` : selectedItem.name,
       price: unitPrice,
       quantity,
       notes: notes.trim() || undefined,
       selectedOptions: selectedOptions.length > 0 ? selectedOptions : undefined,
-      imageUrl: item.image_url ?? undefined,
+      imageUrl: selectedItem.image_url ?? undefined,
     });
 
-    toast.success("Adicionado ao carrinho", `${quantity}x ${item.name}`);
+    toast.success("Adicionado ao carrinho", `${quantity}x ${isSizeBased ? `${categoryName ?? "Produto"} — ${selectedItem.name}` : selectedItem.name}`);
     onClose();
   }
 
-  const showImage = Boolean(item?.image_url) && !hasError;
+  const showImage = Boolean(selectedItem?.image_url) && !hasError;
 
   return (
     <dialog
@@ -192,14 +200,14 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
       onClick={(e) => {
         if (e.target === ref.current) onClose();
       }}
-      aria-label={item?.name}
+      aria-label={isSizeBased ? categoryName : selectedItem?.name}
       className={cn(
         "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88dvh] w-full overflow-hidden rounded-t-3xl border-t border-border bg-background p-0 text-foreground shadow-2xl",
         "sm:inset-0 sm:bottom-auto sm:m-auto sm:max-w-md sm:rounded-2xl sm:border sm:shadow-2xl",
         "backdrop:bg-black/60 backdrop:backdrop-blur-[2px]",
       )}
     >
-      {item && (
+      {selectedItem && (
         <div className="flex max-h-[88dvh] flex-col sm:max-h-[85dvh]">
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="relative h-56 w-full shrink-0 bg-muted sm:h-64 sm:rounded-t-2xl">
@@ -207,7 +215,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                 <>
                   {!imageLoaded && <div className="absolute inset-0 animate-pulse bg-muted" aria-hidden />}
                   <Image
-                    src={item.image_url as string}
+                    src={selectedItem.image_url as string}
                     alt=""
                     fill
                     sizes="448px"
@@ -241,11 +249,48 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
 
             <div className="flex flex-col gap-5 px-6 pb-6 pt-5">
               <div className="flex flex-col gap-1.5">
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">{item.name}</h2>
-                {item.description && <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>}
-                <p className="pt-1 text-lg font-bold tabular-nums text-soft-success-foreground">
-                  {hasSizeGroup ? `A partir de ${formatCurrency(item.price)}` : formatCurrency(item.price)}
-                </p>
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">{isSizeBased ? categoryName : selectedItem.name}</h2>
+                {!isSizeBased && selectedItem.description && (
+                  <p className="text-sm leading-relaxed text-muted-foreground">{selectedItem.description}</p>
+                )}
+                {isSizeBased ? (
+                  <div className="mt-2 flex flex-col gap-2">
+                    <span className="text-sm font-semibold text-foreground">Tamanho</span>
+                    <div className="flex flex-col gap-1.5">
+                      {sizeItems?.map((size) => {
+                        const checked = size.id === selectedItem.id;
+                        return (
+                          <label
+                            key={size.id}
+                            className={cn(
+                              "flex items-center justify-between rounded-xl border px-3.5 py-3 text-sm transition",
+                              checked ? "border-emerald-500 bg-emerald-50" : "border-border bg-background",
+                              !size.is_available && "cursor-not-allowed opacity-50",
+                            )}
+                          >
+                            <span className="flex items-center gap-2.5">
+                              <input
+                                type="radio"
+                                name="acai-size"
+                                checked={checked}
+                                disabled={!size.is_available}
+                                onChange={() => {
+                                  setSelectedSizeId(size.id);
+                                  setSelectedOptionIds({});
+                                }}
+                                className="h-4 w-4 accent-emerald-500"
+                              />
+                              <span className="font-medium text-foreground">{size.name}</span>
+                            </span>
+                            <span className="font-semibold tabular-nums text-soft-success-foreground">{formatCurrency(size.price)}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="pt-1 text-lg font-bold tabular-nums text-soft-success-foreground">{formatCurrency(selectedItem.price)}</p>
+                )}
               </div>
 
               <div className="flex items-center justify-between rounded-2xl bg-surface px-4 py-3 ring-1 ring-border">
@@ -328,11 +373,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                               <span className="text-foreground">{option.name}</span>
                             </span>
                             <span className="tabular-nums text-muted-foreground">
-                              {group.groupType === "size"
-                                ? formatCurrency((item?.price ?? 0) + option.priceDelta)
-                                : option.priceDelta > 0
-                                  ? `+${formatCurrency(option.priceDelta)}`
-                                  : "Sem custo"}
+                              {option.priceDelta > 0 ? `+${formatCurrency(option.priceDelta)}` : "Sem custo"}
                             </span>
                           </label>
                         );
@@ -355,7 +396,7 @@ export function ProductDetailModal({ item, onClose }: ProductDetailModalProps) {
                   rows={2}
                   className="w-full resize-none rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 />
-                <p className="text-xs text-muted-foreground">Opcional — ex.: sem cebola, ponto da carne.</p>
+                <p className="text-xs text-muted-foreground">Opcional — ex.: sem cebola, observação especial.</p>
               </div>
             </div>
           </div>

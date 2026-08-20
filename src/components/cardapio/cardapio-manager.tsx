@@ -648,7 +648,7 @@ export function CardapioManager({
             <Input
               value={promoBannerText}
               onChange={(e) => setPromoBannerText(e.target.value)}
-              placeholder="Ex.: Terça é dia de pizza em dobro!"
+              placeholder="Ex.: Oferta especial desta semana"
               disabled={isSavingPromoBanner}
               maxLength={200}
             />
