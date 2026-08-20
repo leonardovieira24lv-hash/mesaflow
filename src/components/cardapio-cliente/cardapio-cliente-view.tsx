@@ -118,12 +118,10 @@ export function CardapioClienteView({
   const [selectedItem, setSelectedItem] = useState<PublicMenuItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const hasCategories = categories.length > 0;
-  const halfAndHalfEnabledForBusiness = businessType !== "acai";
 
   // Sistema de Opcionais, Fase 3 — meio a meio, Opção C (2026-08-15):
   // seleção acontece nos CARDS da lista, não dentro de um modal — só numa
-  // categoria marcada `allowsHalfAndHalf` e nunca no perfil de açaíteria.
-  // `halfAndHalfCategoryId`
+  // categoria marcada `allowsHalfAndHalf`. `halfAndHalfCategoryId`
   // amarra a seleção a UMA categoria por vez (tocar num card de outra
   // categoria de meio a meio no meio do caminho reinicia, não mistura
   // sabores de categorias diferentes). `halfAndHalfSelection` guarda até
@@ -145,7 +143,7 @@ export function CardapioClienteView({
    * sentido depois que os 2 já estão visíveis na barra de revisão.
    */
   function handleCardTap(item: PublicMenuItem, category: PublicMenuCategory) {
-    if (!halfAndHalfEnabledForBusiness || !category.allowsHalfAndHalf) {
+    if (!category.allowsHalfAndHalf) {
       setSelectedItem(item);
       return;
     }
@@ -192,7 +190,7 @@ export function CardapioClienteView({
    * mesmo sabor ocupa as duas posições (pizza inteira).
    */
   function getSelectedSlot(item: PublicMenuItem, category: PublicMenuCategory): 1 | 2 | "both" | null {
-    if (!halfAndHalfEnabledForBusiness || halfAndHalfCategoryId !== category.id) return null;
+    if (halfAndHalfCategoryId !== category.id) return null;
     const isFirst = halfAndHalfSelection[0] === item.id;
     const isSecond = halfAndHalfSelection.length > 1 && halfAndHalfSelection[1] === item.id;
     if (isFirst && isSecond) return "both";

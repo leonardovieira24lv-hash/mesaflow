@@ -350,7 +350,7 @@ export function ProductDetailModal({ item, businessType, onClose }: ProductDetai
                   rows={2}
                   className="w-full resize-none rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 />
-                <p className="text-xs text-muted-foreground">Opcional — ex.: sem cebola, ponto da carne.</p>
+                <p className="text-xs text-muted-foreground">{getMenuObservationHint(businessType)}</p>
               </div>
             </div>
           </div>

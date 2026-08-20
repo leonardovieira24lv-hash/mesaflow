@@ -53,18 +53,6 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
 
-    const { data: restaurant, error: restaurantError } = await supabase
-      .from("restaurants")
-      .select("business_type")
-      .eq("id", profile.restaurantId)
-      .maybeSingle();
-
-    if (restaurantError || !restaurant) {
-      throw new AppError("INTERNAL_ERROR", "Não foi possível validar o tipo do estabelecimento.");
-    }
-
-    const effectiveAllowsHalfAndHalf = restaurant.business_type === "acai" ? false : allowsHalfAndHalf;
-
     // A posição da nova categoria é sempre a última — busca o maior
     // `position` atual do restaurante para calcular a próxima (seção 5.2:
     // "position calculada automaticamente como a última").
@@ -88,7 +76,7 @@ export async function POST(request: Request) {
         restaurant_id: profile.restaurantId,
         name,
         position: nextPosition,
-        allows_half_and_half: effectiveAllowsHalfAndHalf,
+        allows_half_and_half: allowsHalfAndHalf,
         is_compact: isCompact,
         image_url: imageUrl || null,
       })
