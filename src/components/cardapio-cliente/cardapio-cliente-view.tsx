@@ -116,6 +116,7 @@ export function CardapioClienteView({
   const [selectedItem, setSelectedItem] = useState<PublicMenuItem | null>(null);
   const [selectedSizeVariants, setSelectedSizeVariants] = useState<PublicMenuItem[]>([]);
   const [selectedDisplayName, setSelectedDisplayName] = useState<string | null>(null);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const hasCategories = categories.length > 0;
 
@@ -148,11 +149,13 @@ export function CardapioClienteView({
     setSelectedItem(firstItem);
     setSelectedSizeVariants(category.items);
     setSelectedDisplayName(category.name);
+    setSelectedImageUrl(category.imageUrl);
   }
 
   function handleCardTap(item: PublicMenuItem, category: PublicMenuCategory) {
     if (!category.allowsHalfAndHalf) {
       setSelectedItem(item);
+      setSelectedImageUrl(null);
       return;
     }
 
@@ -328,6 +331,8 @@ export function CardapioClienteView({
                         displayName={category.name}
                         displayPrice={Math.min(...category.items.map((item) => item.price))}
                         displayDescription="Escolha o tamanho e os complementos"
+                        imageUrlOverride={category.imageUrl}
+                        hidePrice
                       />
                     )}
                   </div>
@@ -350,6 +355,11 @@ export function CardapioClienteView({
                         item={item}
                         onSelect={() => handleCardTap(item, category)}
                         selectedSlot={getSelectedSlot(item, category)}
+                        hidePrice={
+                          category.isSizeBased ||
+                          (category.items.length === 1 &&
+                            item.optionGroups.some((group) => group.groupType === "size"))
+                        }
                       />
                     ))}
                   </div>
@@ -365,10 +375,12 @@ export function CardapioClienteView({
           item={selectedItem}
           sizeVariants={selectedSizeVariants}
           displayName={selectedDisplayName}
+          imageUrlOverride={selectedImageUrl}
           onClose={() => {
             setSelectedItem(null);
             setSelectedSizeVariants([]);
             setSelectedDisplayName(null);
+            setSelectedImageUrl(null);
           }}
         />
 

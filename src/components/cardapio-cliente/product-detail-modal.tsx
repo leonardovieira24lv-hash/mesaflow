@@ -14,6 +14,7 @@ interface ProductDetailModalProps {
   onClose: () => void;
   sizeVariants?: PublicMenuItem[];
   displayName?: string | null;
+  imageUrlOverride?: string | null;
 }
 
 /**
@@ -78,6 +79,7 @@ export function ProductDetailModal({
   onClose,
   sizeVariants = [],
   displayName = null,
+  imageUrlOverride,
 }: ProductDetailModalProps) {
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
@@ -184,7 +186,8 @@ export function ProductDetailModal({
     onClose();
   }
 
-  const showImage = Boolean(item?.image_url) && !hasError;
+  const modalImageUrl = imageUrlOverride ?? selectedVariant?.image_url ?? item?.image_url;
+  const showImage = Boolean(modalImageUrl) && !hasError;
 
   return (
     <dialog
@@ -209,7 +212,7 @@ export function ProductDetailModal({
                 <>
                   {!imageLoaded && <div className="absolute inset-0 animate-pulse bg-muted" aria-hidden />}
                   <Image
-                    src={item.image_url as string}
+                    src={modalImageUrl as string}
                     alt=""
                     fill
                     sizes="448px"
@@ -262,12 +265,12 @@ export function ProductDetailModal({
                           className={cn(
                             "flex items-center justify-between rounded-xl border px-3.5 py-3 text-left text-sm transition",
                             selected
-                              ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500"
+                              ? "border-emerald-500 bg-background ring-1 ring-emerald-500"
                               : "border-border bg-background hover:bg-muted",
                           )}
                         >
-                          <span className={cn("font-medium", selected ? "text-zinc-900" : "text-foreground")}>{variant.name}</span>
-                          <span className={cn("font-semibold tabular-nums", selected ? "text-zinc-900" : "text-foreground")}>
+                          <span className={cn("font-medium", "text-foreground")}>{variant.name}</span>
+                          <span className={cn("font-semibold tabular-nums", "text-foreground")}>
                             {formatCurrency(variant.price)}
                           </span>
                         </button>

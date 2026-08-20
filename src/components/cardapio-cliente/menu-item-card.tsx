@@ -11,6 +11,8 @@ interface MenuItemCardProps {
   displayName?: string;
   displayPrice?: number;
   displayDescription?: string;
+  imageUrlOverride?: string | null;
+  hidePrice?: boolean;
   /**
    * Sistema de Opcionais, Fase 3 — meio a meio, Opção C (2026-08-15).
    * Numa categoria "aceita meio a meio", tocar no card não abre mais o
@@ -107,6 +109,8 @@ export function MenuItemCard({
   displayName,
   displayPrice,
   displayDescription,
+  hidePrice = false,
+  imageUrlOverride,
 }: MenuItemCardProps) {
   const cardName = displayName ?? item.name;
   const cardPrice = displayPrice ?? item.price;
@@ -114,7 +118,8 @@ export function MenuItemCard({
   const isAvailable = item.is_available;
   const [imageLoaded, setImageLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const showImage = Boolean(item.image_url) && !hasError;
+  const imageUrl = imageUrlOverride ?? item.image_url;
+  const showImage = Boolean(imageUrl) && !hasError;
   const isSelected = selectedSlot !== null;
 
   return (
@@ -136,7 +141,7 @@ export function MenuItemCard({
           <>
             {!imageLoaded && <div className="absolute inset-0 z-10 animate-pulse bg-muted" aria-hidden />}
             <Image
-              src={item.image_url as string}
+              src={imageUrl as string}
               alt=""
               fill
               sizes="144px"
@@ -186,25 +191,50 @@ export function MenuItemCard({
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 py-1">
-        <p className="line-clamp-1 text-lg font-bold leading-tight tracking-tight text-foreground">{cardName}</p>
-        {item.description && (
-          <p className="line-clamp-2 text-[13px] leading-snug text-muted-foreground">{cardDescription}</p>
+        {hidePrice ? (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <p className="line-clamp-2 min-w-0 flex-1 text-lg font-bold leading-tight tracking-tight text-foreground">
+                {cardName}
+              </p>
+
+              {isAvailable && (
+                <span
+                  aria-hidden
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-500/30 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
+                >
+                  <Plus className="h-5 w-5" strokeWidth={2.5} />
+                </span>
+              )}
+            </div>
+
+            {item.description && (
+              <p className="line-clamp-2 text-[13px] leading-snug text-muted-foreground">{cardDescription}</p>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="line-clamp-1 text-lg font-bold leading-tight tracking-tight text-foreground">{cardName}</p>
+            {item.description && (
+              <p className="line-clamp-2 text-[13px] leading-snug text-muted-foreground">{cardDescription}</p>
+            )}
+
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <span className="text-lg font-extrabold tabular-nums tracking-tight text-soft-success-foreground">
+                {formatCurrency(cardPrice)}
+              </span>
+
+              {isAvailable && (
+                <span
+                  aria-hidden
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-500/30 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
+                >
+                  <Plus className="h-5 w-5" strokeWidth={2.5} />
+                </span>
+              )}
+            </div>
+          </>
         )}
-
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="text-lg font-extrabold tabular-nums tracking-tight text-soft-success-foreground">
-            {formatCurrency(cardPrice)}
-          </span>
-
-          {isAvailable && (
-            <span
-              aria-hidden
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-500/30 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
-            >
-              <Plus className="h-5 w-5" strokeWidth={2.5} />
-            </span>
-          )}
-        </div>
       </div>
     </button>
   );
