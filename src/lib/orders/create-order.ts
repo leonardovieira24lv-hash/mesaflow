@@ -331,28 +331,48 @@ export async function createPublicOrder({
 
   // Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14): rejeita o
   // pedido inteiro (mesmo padrão de "obrigatório vazio" acima) se algum
-  // item pedir meio a meio numa categoria que não permite, ou combinar
-  // com um produto de OUTRA categoria — nunca confia que o cliente só
+  // item pedir meio a meio numa açaíteria, numa categoria que não permite,
+  // ou combinar com um produto de OUTRA categoria — nunca confia que o cliente só
   // ofereceu essa opção porque o Cardápio Público já escondia o botão
   // nesses casos; aqui é a validação de verdade.
-  const halfAndHalfErrors = input.items
-    .filter((item): item is typeof item & { second_menu_item_id: string } => Boolean(item.second_menu_item_id))
-    .flatMap((item) => {
-      const menuItem = menuItemById.get(item.menu_item_id)!;
-      const secondItem = menuItemById.get(item.second_menu_item_id)!;
-      if (!categoryAllowsHalfAndHalfById.get(menuItem.category_id)) {
-        return [{ field: item.menu_item_id, issue: `"${menuItem.name}" não aceita meio a meio.` }];
-      }
-      if (secondItem.category_id !== menuItem.category_id) {
-        return [
-          {
-            field: item.second_menu_item_id,
-            issue: `"${secondItem.name}" não pode combinar com "${menuItem.name}" — categorias diferentes.`,
-          },
-        ];
-      }
-      return [];
-    });
+  const halfAndHalfItems = input.items.filter(
+    (item): item is typeof item & { second_menu_item_id: string } => Boolean(item.second_menu_item_id),
+  );
+
+  let businessType: string | null = null;
+  if (halfAndHalfItems.length > 0) {
+    const { data: restaurant, error: restaurantError } = await admin
+      .from("restaurants")
+      .select("business_type")
+      .eq("id", restaurantId)
+      .maybeSingle();
+
+    if (restaurantError || !restaurant) {
+      throw new AppError("INTERNAL_ERROR", "Não foi possível validar o tipo do estabelecimento.");
+    }
+
+    businessType = restaurant.business_type ?? null;
+  }
+
+  const halfAndHalfErrors = halfAndHalfItems.flatMap((item) => {
+    const menuItem = menuItemById.get(item.menu_item_id)!;
+    const secondItem = menuItemById.get(item.second_menu_item_id)!;
+    if (businessType === "acai") {
+      return [{ field: item.menu_item_id, issue: `"${menuItem.name}" não aceita meio a meio neste estabelecimento.` }];
+    }
+    if (!categoryAllowsHalfAndHalfById.get(menuItem.category_id)) {
+      return [{ field: item.menu_item_id, issue: `"${menuItem.name}" não aceita meio a meio.` }];
+    }
+    if (secondItem.category_id !== menuItem.category_id) {
+      return [
+        {
+          field: item.second_menu_item_id,
+          issue: `"${secondItem.name}" não pode combinar com "${menuItem.name}" — categorias diferentes.`,
+        },
+      ];
+    }
+    return [];
+  });
 
   if (halfAndHalfErrors.length > 0) {
     throw new AppError(

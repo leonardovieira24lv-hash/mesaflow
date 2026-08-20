@@ -21,9 +21,20 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     const supabase = await createClient();
 
+    const { data: restaurant, error: restaurantError } = await supabase
+      .from("restaurants")
+      .select("business_type")
+      .eq("id", profile.restaurantId)
+      .maybeSingle();
+
+    if (restaurantError || !restaurant) {
+      throw new AppError("INTERNAL_ERROR", "Não foi possível validar o tipo do estabelecimento.");
+    }
+
     const updates: Record<string, unknown> = {};
     if (name !== undefined) updates.name = name;
-    if (allowsHalfAndHalf !== undefined) updates.allows_half_and_half = allowsHalfAndHalf;
+    if (restaurant.business_type === "acai") updates.allows_half_and_half = false;
+    else if (allowsHalfAndHalf !== undefined) updates.allows_half_and_half = allowsHalfAndHalf;
     if (isCompact !== undefined) updates.is_compact = isCompact;
     // Diferente de `name`/`isCompact` acima: uma string vazia é uma
     // intenção válida ("remover a foto"), não "não mexi nesse campo" —

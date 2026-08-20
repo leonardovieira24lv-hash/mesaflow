@@ -179,6 +179,7 @@ export function CardapioManager({
   const [isArchivingItem, setIsArchivingItem] = useState(false);
 
   const setupGuide = getMenuSetupGuide(businessType);
+  const isAcaiBusiness = businessType === "acai";
 
   function itemsForCategory(categoryId: string) {
     return items
@@ -229,7 +230,7 @@ export function CardapioManager({
 
     const result = createCategorySchema.safeParse({
       name: categoryName,
-      allowsHalfAndHalf: categoryAllowsHalfAndHalf,
+      allowsHalfAndHalf: isAcaiBusiness ? false : categoryAllowsHalfAndHalf,
       isCompact: categoryIsCompact,
       imageUrl: categoryImageUrl,
     });
@@ -248,7 +249,7 @@ export function CardapioManager({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: result.data.name,
-            allowsHalfAndHalf: result.data.allowsHalfAndHalf,
+            allowsHalfAndHalf: isAcaiBusiness ? false : result.data.allowsHalfAndHalf,
             isCompact: result.data.isCompact,
             imageUrl: result.data.imageUrl,
           }),
@@ -727,20 +728,22 @@ export function CardapioManager({
             />
           </FormField>
 
-          {/* Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). Só
-              faz sentido pra categorias de produto principal (ex.:
-              pizza), mas é uma escolha do dono, não uma trava por nome
-              de categoria — funciona em qualquer uma que ele marcar. */}
-          <label className="flex items-center gap-2 text-sm text-ds2-foreground">
-            <input
-              type="checkbox"
-              checked={categoryAllowsHalfAndHalf}
-              onChange={(e) => setCategoryAllowsHalfAndHalf(e.target.checked)}
-              disabled={isSavingCategory}
-              className="h-4 w-4 accent-ds2-primary"
-            />
-            Aceita meio a meio (cliente combina 2 opções da categoria)
-          </label>
+          {/* Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14).
+              Continua sendo uma escolha por categoria para todos os perfis
+              de negócio, exceto açaíteria — nesse perfil o recurso não faz
+              parte da experiência e não é exibido. */}
+          {!isAcaiBusiness && (
+            <label className="flex items-center gap-2 text-sm text-ds2-foreground">
+              <input
+                type="checkbox"
+                checked={categoryAllowsHalfAndHalf}
+                onChange={(e) => setCategoryAllowsHalfAndHalf(e.target.checked)}
+                disabled={isSavingCategory}
+                className="h-4 w-4 accent-ds2-primary"
+              />
+              Aceita meio a meio (cliente combina 2 opções da categoria)
+            </label>
+          )}
 
           {/* Layout compacto por categoria (2026-08-15). Ideia do dono,
               comparando com outros cardápios: produto de base sempre
