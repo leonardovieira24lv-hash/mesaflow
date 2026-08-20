@@ -132,7 +132,7 @@ export function RestaurantHeader({
             }}
             className={cn(
               "w-auto max-w-full object-contain transition-[height] duration-200",
-              isCompactLogo ? "h-24" : "h-14",
+              isCompactLogo ? "h-32" : "h-14",
             )}
           />
         </div>
