@@ -789,7 +789,7 @@ export function CardapioManager({
         open={Boolean(deletingCategory)}
         onOpenChange={(open) => !open && setDeletingCategory(null)}
         title="Excluir categoria"
-        description={`Tem certeza que deseja excluir "${deletingCategory?.name}"? Categorias com produtos vinculados não podem ser excluídas.`}
+        description={`Tem certeza que deseja excluir "${deletingCategory?.name}"? Os produtos desta categoria também serão removidos do cardápio.`}
         variant="destructive"
         confirmLabel="Excluir"
         onConfirm={handleDeleteCategory}

@@ -76,27 +76,11 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
 
     const supabase = await createClient();
 
-    const { count: activeItemsCount, error: activeItemsError } = await supabase
-      .from("menu_items")
-      .select("id", { count: "exact", head: true })
-      .eq("category_id", id)
-      .eq("restaurant_id", profile.restaurantId)
-      .eq("is_archived", false);
-
-    if (activeItemsError) {
-      throw new AppError(
-        "INTERNAL_ERROR",
-        "Não foi possível verificar os produtos da categoria.",
-      );
-    }
-
-    if ((activeItemsCount ?? 0) > 0) {
-      throw new AppError(
-        "CONFLICT",
-        "Esta categoria ainda tem produtos ativos. Mova ou exclua os produtos primeiro.",
-      );
-    }
-
+    // A exclusão da categoria também resolve os produtos que ainda apontam
+    // para ela. A migration 0047 trata cada produto de forma segura: se já
+    // existe histórico em `order_items`, o produto é preservado fora do
+    // cardápio (arquivado e sem categoria); sem histórico, ele é excluído
+    // de verdade. Assim a categoria nunca fica bloqueada por produtos atuais.
     const { data: deleted, error } = await supabase
       .from("menu_categories")
       .delete()
@@ -106,12 +90,6 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       .maybeSingle();
 
     if (error) {
-      if (error.code === "23503" || error.code === "23514") {
-        throw new AppError(
-          "CONFLICT",
-          "Esta categoria ainda tem produtos ativos. Mova ou exclua os produtos primeiro.",
-        );
-      }
       throw new AppError("INTERNAL_ERROR", "Não foi possível excluir a categoria. Tente novamente.");
     }
 

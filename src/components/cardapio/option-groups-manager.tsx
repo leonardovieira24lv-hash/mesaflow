@@ -286,8 +286,7 @@ export function OptionGroupsManager({
     setItemFormError(null);
   }
 
-  async function handleAddItem(e: FormEvent, groupId: string) {
-    e.preventDefault();
+  async function handleAddItem(groupId: string) {
     const priceDelta = Number(itemPrice.replace(",", "."));
     if (!itemName.trim()) {
       setItemFormError("Informe o nome da opção.");
@@ -456,7 +455,7 @@ export function OptionGroupsManager({
               </div>
 
               {addingItemToGroupId === group.id ? (
-                <form onSubmit={(e) => handleAddItem(e, group.id)} className="mt-3 flex flex-col gap-2">
+                <div className="mt-3 flex flex-col gap-2">
                   {itemFormError && <Alert variant="destructive">{itemFormError}</Alert>}
                   <div className="flex gap-2">
                     <Input
@@ -476,14 +475,14 @@ export function OptionGroupsManager({
                     />
                   </div>
                   <div className="flex gap-2">
-                    <Button type="submit" size="sm" isLoading={isSavingItem}>
+                    <Button type="button" size="sm" isLoading={isSavingItem} onClick={() => void handleAddItem(group.id)}>
                       Adicionar
                     </Button>
                     <Button type="button" variant="ghost" size="sm" onClick={() => setAddingItemToGroupId(null)}>
                       Cancelar
                     </Button>
                   </div>
-                </form>
+                </div>
               ) : (
                 <Button variant="outline" size="sm" className="mt-3" onClick={() => openAddItemForm(group.id)}>
                   <ListPlus className="h-3.5 w-3.5" />
