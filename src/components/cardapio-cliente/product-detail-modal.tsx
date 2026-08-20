@@ -180,7 +180,7 @@ export function ProductDetailModal({
       quantity,
       notes: notes.trim() || undefined,
       selectedOptions: selectedOptions.length > 0 ? selectedOptions : undefined,
-      imageUrl: selectedVariant?.image_url ?? item.image_url ?? undefined,
+      imageUrl: imageUrlOverride ?? selectedVariant?.image_url ?? item.image_url ?? undefined,
     });
 
     toast.success("Adicionado ao carrinho", `${quantity}x ${finalName}`);
