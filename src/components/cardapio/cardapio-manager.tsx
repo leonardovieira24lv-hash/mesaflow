@@ -21,7 +21,7 @@ import { menuItemFromDto, type MenuItemDto } from "@/types/menu-item-dto";
 import { createCategorySchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
 import type { ApiError } from "@/types/api";
-import { getMenuSetupGuide, getBusinessTypeLabel } from "@/lib/business-type";
+import { getMenuSetupGuide, getBusinessTypeLabel, getMenuPromoBannerExample, getMenuEmptyCategoryDescription } from "@/lib/business-type";
 
 interface CategoryDto {
   id: string;
@@ -636,7 +636,7 @@ export function CardapioManager({
             <Input
               value={promoBannerText}
               onChange={(e) => setPromoBannerText(e.target.value)}
-              placeholder="Ex.: Terça é dia de pizza em dobro!"
+              placeholder={getMenuPromoBannerExample(businessType)}
               disabled={isSavingPromoBanner}
               maxLength={200}
             />
@@ -654,7 +654,7 @@ export function CardapioManager({
         <EmptyState
           icon={UtensilsCrossed}
           title="Nenhuma categoria cadastrada"
-          description="Crie a primeira categoria para começar a montar o cardápio (ex.: Lanches, Bebidas)."
+          description={getMenuEmptyCategoryDescription(businessType)}
           action={
             <Button onClick={openCreateCategoryModal} variant="outline">
               <Plus className="h-4 w-4" />

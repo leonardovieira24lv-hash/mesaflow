@@ -64,12 +64,7 @@ export default async function ProdutoDetalhePage({ params }: { params: Promise<{
         <p className="text-sm text-muted-foreground">Edite os dados do produto ou remova-o do cardápio.</p>
       </div>
 
-      <ProductDetail
-        item={item}
-        categories={categories}
-        restaurantId={profile.restaurantId}
-        businessType={restaurantResult.data?.business_type ?? null}
-      />
+      <ProductDetail item={item} categories={categories} restaurantId={profile.restaurantId} businessType={restaurantResult.data?.business_type ?? null} />
     </div>
   );
 }

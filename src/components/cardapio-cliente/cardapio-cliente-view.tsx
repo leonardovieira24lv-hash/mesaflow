@@ -33,6 +33,7 @@ interface CardapioClienteViewProps {
   // Sem prop (`undefined`) cai no comportamento atual (escuro), mesmo
   // default `'dark'` já usado no banco.
   menuTheme?: "light" | "dark";
+  businessType?: string | null;
   tableName?: string;
   categories: PublicMenuCategory[];
   // Banner promocional — estudo de caso de concorrentes (2026-08-16).
@@ -104,6 +105,7 @@ export function CardapioClienteView({
   restaurantDescription,
   restaurantIsOpen,
   menuTheme,
+  businessType,
   tableName,
   categories,
   promoBannerImageUrl,
@@ -114,9 +116,6 @@ export function CardapioClienteView({
   website,
 }: CardapioClienteViewProps) {
   const [selectedItem, setSelectedItem] = useState<PublicMenuItem | null>(null);
-  const [selectedSizeVariants, setSelectedSizeVariants] = useState<PublicMenuItem[]>([]);
-  const [selectedDisplayName, setSelectedDisplayName] = useState<string | null>(null);
-  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const hasCategories = categories.length > 0;
 
@@ -143,19 +142,9 @@ export function CardapioClienteView({
    * inteira daquele sabor) — não desfaz; a correção de erro só faz
    * sentido depois que os 2 já estão visíveis na barra de revisão.
    */
-  function handleSizeBasedCardTap(category: PublicMenuCategory) {
-    const firstItem = category.items[0];
-    if (!firstItem) return;
-    setSelectedItem(firstItem);
-    setSelectedSizeVariants(category.items);
-    setSelectedDisplayName(category.name);
-    setSelectedImageUrl(category.imageUrl);
-  }
-
   function handleCardTap(item: PublicMenuItem, category: PublicMenuCategory) {
     if (!category.allowsHalfAndHalf) {
       setSelectedItem(item);
-      setSelectedImageUrl(null);
       return;
     }
 
@@ -322,21 +311,13 @@ export function CardapioClienteView({
               >
                 <h2 className="text-base font-bold tracking-tight text-foreground">{category.name}</h2>
 
-                {category.isSizeBased ? (
-                  <div className="flex flex-col gap-3.5">
-                    {category.items[0] && (
-                      <MenuItemCard
-                        item={category.items[0]}
-                        onSelect={() => handleSizeBasedCardTap(category)}
-                        displayName={category.name}
-                        displayPrice={Math.min(...category.items.map((item) => item.price))}
-                        displayDescription="Escolha o tamanho e os complementos"
-                        imageUrlOverride={category.imageUrl}
-                        hidePrice
-                      />
-                    )}
-                  </div>
-                ) : category.isCompact ? (
+                {/* Layout compacto por categoria (2026-08-15) — mockup
+                    aprovado antes de codar. Só muda a apresentação (grade
+                    2 colunas, card menor); a lógica de seleção (toque
+                    normal ou meio a meio) é exatamente a mesma dos dois
+                    lados, `handleCardTap`/`getSelectedSlot` não sabem
+                    nem precisam saber qual card renderizou o toque. */}
+                {category.isCompact ? (
                   <div className="grid grid-cols-2 gap-2.5">
                     {category.items.map((item) => (
                       <MenuItemCardCompact
@@ -355,11 +336,6 @@ export function CardapioClienteView({
                         item={item}
                         onSelect={() => handleCardTap(item, category)}
                         selectedSlot={getSelectedSlot(item, category)}
-                        hidePrice={
-                          category.isSizeBased ||
-                          (category.items.length === 1 &&
-                            item.optionGroups.some((group) => group.groupType === "size"))
-                        }
                       />
                     ))}
                   </div>
@@ -371,18 +347,7 @@ export function CardapioClienteView({
 
         <PublicFooter instagram={instagram ?? null} facebook={facebook ?? null} website={website ?? null} />
 
-        <ProductDetailModal
-          item={selectedItem}
-          sizeVariants={selectedSizeVariants}
-          displayName={selectedDisplayName}
-          imageUrlOverride={selectedImageUrl}
-          onClose={() => {
-            setSelectedItem(null);
-            setSelectedSizeVariants([]);
-            setSelectedDisplayName(null);
-            setSelectedImageUrl(null);
-          }}
-        />
+        <ProductDetailModal item={selectedItem} businessType={businessType} onClose={() => setSelectedItem(null)} />
 
         {/* Sistema de Opcionais, Fase 3 — meio a meio, Opção C
             (2026-08-15). Aparece só com os 2 sabores escolhidos e ANTES

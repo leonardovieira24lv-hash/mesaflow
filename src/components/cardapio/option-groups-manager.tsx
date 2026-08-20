@@ -558,8 +558,8 @@ export function OptionGroupsManager({
               value={selectionType}
               onChange={(e) => setSelectionType(e.target.value as "single" | "multiple")}
             >
-              <option value="single">Escolha única (ex.: borda, tamanho)</option>
-              <option value="multiple">Múltipla escolha (ex.: adicionais)</option>
+              <option value="single">Escolha única (ex.: {businessType === "acai" ? "tamanho, sabor" : businessType === "pizza" ? "borda, tamanho" : "tamanho, adicional"})</option>
+              <option value="multiple">Múltipla escolha (ex.: {businessType === "acai" ? "complementos" : "adicionais"})</option>
             </Select>
           </FormField>
 

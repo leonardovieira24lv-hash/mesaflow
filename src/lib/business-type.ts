@@ -23,6 +23,9 @@ export interface MenuSetupGuide {
   productExample: string;
   optionExample: string;
   tip: string;
+  observationHint: string;
+  promoBannerExample: string;
+  emptyCategoryDescription: string;
 }
 
 const GUIDES: Record<BusinessType, MenuSetupGuide> = {
@@ -33,6 +36,9 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
     productExample: "Açaí tradicional, Açaí cremoso, Açaí com morango",
     optionExample: "Tamanho: 300 ml, 500 ml, 700 ml, 1 litro",
     tip: "Não crie uma categoria para cada tamanho: mantenha os tipos de açaí juntos e use Tamanho como grupo de escolha. Complementos sem preço podem ficar em R$ 0,00.",
+    observationHint: "Opcional — ex.: retirar um complemento ou deixar uma observação para o preparo.",
+    promoBannerExample: "Ex.: Hoje tem açaí em dobro!",
+    emptyCategoryDescription: "Crie sua primeira categoria, como Açaí, para começar a montar o cardápio.",
   },
   burger: {
     title: "Monte sua hamburgueria",
@@ -41,6 +47,9 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
     productExample: "X-Salada, X-Bacon, Duplo Bacon",
     optionExample: "Adicionais: Bacon, Queijo, Ovo",
     tip: "Grupos de opções podem ficar na categoria inteira ou em um produto específico.",
+    observationHint: "Opcional — ex.: sem cebola, ponto da carne.",
+    promoBannerExample: "Ex.: Terça é dia de hambúrguer em dobro!",
+    emptyCategoryDescription: "Crie sua primeira categoria, como Hambúrgueres, para começar a montar o cardápio.",
   },
   pizza: {
     title: "Monte sua pizzaria",
@@ -49,6 +58,9 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
     productExample: "Calabresa, Frango com Catupiry, Portuguesa",
     optionExample: "Bordas: Catupiry, Cheddar",
     tip: "Se a categoria aceitar meio a meio, ative essa opção na categoria de pizzas.",
+    observationHint: "Opcional — ex.: sem cebola, bem passado.",
+    promoBannerExample: "Ex.: Terça é dia de pizza em dobro!",
+    emptyCategoryDescription: "Crie sua primeira categoria, como Pizzas, para começar a montar o cardápio.",
   },
   snack: {
     title: "Monte sua lanchonete",
@@ -57,6 +69,9 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
     productExample: "X-Salada, Misto, Cachorro-quente",
     optionExample: "Adicionais: Bacon, Queijo, Ovo",
     tip: "Você pode criar grupos diferentes para cada produto quando as escolhas não forem compartilhadas.",
+    observationHint: "Opcional — ex.: retirar um ingrediente ou deixar uma observação para o preparo.",
+    promoBannerExample: "Ex.: Hoje tem promoção nos lanches!",
+    emptyCategoryDescription: "Crie sua primeira categoria, como Lanches, para começar a montar o cardápio.",
   },
   bar: {
     title: "Monte seu bar",
@@ -65,6 +80,9 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
     productExample: "Cerveja, Refrigerante, Suco",
     optionExample: "Tamanho: 300 ml, 500 ml, 1 litro",
     tip: "Use o layout compacto em categorias com muitos itens simples, como bebidas.",
+    observationHint: "Opcional — deixe uma observação para o preparo.",
+    promoBannerExample: "Ex.: Hoje tem promoção nas bebidas!",
+    emptyCategoryDescription: "Crie sua primeira categoria, como Bebidas, para começar a montar o cardápio.",
   },
   restaurant: {
     title: "Monte seu restaurante",
@@ -73,6 +91,9 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
     productExample: "Filé, Parmegiana, Frango grelhado",
     optionExample: "Acompanhamentos: Arroz, Batata, Salada",
     tip: "Use grupos de opções para escolhas que o cliente precisa ou pode fazer antes de pedir.",
+    observationHint: "Opcional — deixe uma observação para o preparo.",
+    promoBannerExample: "Ex.: Hoje tem promoção no almoço!",
+    emptyCategoryDescription: "Crie sua primeira categoria, como Pratos principais, para começar a montar o cardápio.",
   },
   dessert: {
     title: "Monte sua doceria",
@@ -81,6 +102,9 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
     productExample: "Brownie, Açaí, Milk-shake",
     optionExample: "Complementos: Nutella, Morango, Granulado",
     tip: "Deixe grupos opcionais quando o cliente puder pedir o produto sem escolher nenhum complemento.",
+    observationHint: "Opcional — deixe uma observação para o preparo.",
+    promoBannerExample: "Ex.: Hoje tem sobremesa em promoção!",
+    emptyCategoryDescription: "Crie sua primeira categoria, como Sobremesas, para começar a montar o cardápio.",
   },
   cafe: {
     title: "Monte sua cafeteria",
@@ -89,6 +113,9 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
     productExample: "Expresso, Cappuccino, Mocha",
     optionExample: "Tamanho: Pequeno, Médio, Grande",
     tip: "Use grupos específicos do produto quando uma escolha não fizer sentido para toda a categoria.",
+    observationHint: "Opcional — deixe uma observação para o preparo.",
+    promoBannerExample: "Ex.: Hoje tem café especial em promoção!",
+    emptyCategoryDescription: "Crie sua primeira categoria, como Cafés, para começar a montar o cardápio.",
   },
   other: {
     title: "Monte seu cardápio do seu jeito",
@@ -97,8 +124,23 @@ const GUIDES: Record<BusinessType, MenuSetupGuide> = {
     productExample: "Um produto que você vende",
     optionExample: "Tamanho, adicionais ou complementos",
     tip: "Você pode colocar um grupo na categoria inteira ou somente em um produto.",
+    observationHint: "Opcional — deixe uma observação para o preparo.",
+    promoBannerExample: "Ex.: Confira nossas promoções de hoje!",
+    emptyCategoryDescription: "Crie sua primeira categoria para começar a montar o cardápio.",
   },
 };
+
+export function getMenuObservationHint(value: string | null | undefined): string {
+  return getMenuSetupGuide(value).observationHint;
+}
+
+export function getMenuPromoBannerExample(value: string | null | undefined): string {
+  return getMenuSetupGuide(value).promoBannerExample;
+}
+
+export function getMenuEmptyCategoryDescription(value: string | null | undefined): string {
+  return getMenuSetupGuide(value).emptyCategoryDescription;
+}
 
 export function getMenuSetupGuide(value: string | null | undefined): MenuSetupGuide {
   return GUIDES[(value as BusinessType) ?? "other"] ?? GUIDES.other;

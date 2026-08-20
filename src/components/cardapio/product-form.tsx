@@ -16,6 +16,7 @@ import { deleteProductImage } from "@/lib/storage/product-images";
 import { createMenuItemSchema, updateMenuItemSchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
 import type { ApiError } from "@/types/api";
+import { getMenuSetupGuide } from "@/lib/business-type";
 import type { BusinessType } from "@/lib/business-type";
 import { menuItemFromDto, type MenuItemDto } from "@/types/menu-item-dto";
 
@@ -146,7 +147,7 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Ex.: X-Burger"
+          placeholder={`Ex.: ${getMenuSetupGuide(businessType).productExample.split(",")[0]?.trim() || "Seu produto"}`}
           disabled={isSubmitting}
         />
       </FormField>
@@ -155,7 +156,7 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
         <Textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Ex.: Pão brioche, hambúrguer 150g, queijo e maionese da casa."
+          placeholder={`Ex.: ${businessType === "acai" ? "Açaí com leite em pó e morango." : businessType === "pizza" ? "Massa, molho, queijo e ingredientes do sabor." : businessType === "burger" ? "Pão, carne, queijo e acompanhamentos." : "Descrição do produto e seus principais ingredientes."}`}
           disabled={isSubmitting}
         />
       </FormField>

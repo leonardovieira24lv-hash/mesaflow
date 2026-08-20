@@ -46,6 +46,7 @@ export interface PublicRestaurantContext {
   // pra decidir, na raiz de cada página pública, se a classe `menu-dark`
   // deve ser aplicada.
   menuTheme: "light" | "dark";
+  businessType: string | null;
 }
 
 export interface PublicTableContext {
@@ -71,7 +72,7 @@ export async function resolveRestaurantBySlug(
   const { data, error } = await admin
     .from("restaurants")
     .select(
-      "id, name, slug, trade_name, logo_url, description, promo_banner_image_url, promo_banner_text, promo_banner_enabled, instagram, facebook, website, opening_hours, timezone, menu_theme",
+      "id, name, slug, trade_name, logo_url, description, promo_banner_image_url, promo_banner_text, promo_banner_enabled, instagram, facebook, website, opening_hours, timezone, menu_theme, business_type",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -99,6 +100,7 @@ export async function resolveRestaurantBySlug(
     openingHours: data.opening_hours as OpeningHours | null,
     timezone: data.timezone,
     menuTheme: data.menu_theme as "light" | "dark",
+    businessType: data.business_type ?? null,
   };
 }
 
