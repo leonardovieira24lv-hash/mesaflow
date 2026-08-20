@@ -11,6 +11,7 @@ interface MenuItemCardProps {
   displayName?: string;
   displayPrice?: number;
   displayDescription?: string;
+  hidePrice?: boolean;
   /**
    * Sistema de Opcionais, Fase 3 — meio a meio, Opção C (2026-08-15).
    * Numa categoria "aceita meio a meio", tocar no card não abre mais o
@@ -107,6 +108,7 @@ export function MenuItemCard({
   displayName,
   displayPrice,
   displayDescription,
+  hidePrice = false,
 }: MenuItemCardProps) {
   const cardName = displayName ?? item.name;
   const cardPrice = displayPrice ?? item.price;
@@ -191,10 +193,12 @@ export function MenuItemCard({
           <p className="line-clamp-2 text-[13px] leading-snug text-muted-foreground">{cardDescription}</p>
         )}
 
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="text-lg font-extrabold tabular-nums tracking-tight text-soft-success-foreground">
-            {formatCurrency(cardPrice)}
-          </span>
+        <div className={cn("mt-2 flex items-center gap-2", hidePrice ? "justify-end" : "justify-between")}>
+          {!hidePrice && (
+            <span className="text-lg font-extrabold tabular-nums tracking-tight text-soft-success-foreground">
+              {formatCurrency(cardPrice)}
+            </span>
+          )}
 
           {isAvailable && (
             <span
