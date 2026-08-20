@@ -259,7 +259,7 @@ export function HalfAndHalfConfirmModal({ flavorA, flavorB, onClose }: HalfAndHa
                             key={option.id}
                             className={cn(
                               "flex items-center justify-between rounded-xl border px-3.5 py-2.5 text-sm transition",
-                              isChecked ? "border-emerald-500 bg-emerald-50" : "border-border bg-background",
+                              isChecked ? "border-emerald-500 bg-background ring-1 ring-emerald-500/70" : "border-border bg-background",
                               isLimitReached ? "cursor-not-allowed opacity-50" : "cursor-pointer",
                             )}
                           >
@@ -275,7 +275,7 @@ export function HalfAndHalfConfirmModal({ flavorA, flavorB, onClose }: HalfAndHa
                               <span className="text-foreground">{option.name}</span>
                             </span>
                             <span className="tabular-nums text-muted-foreground">
-                              {option.priceDelta > 0 ? `+${formatCurrency(option.priceDelta)}` : ""}
+                              {option.priceDelta > 0 ? `+${formatCurrency(option.priceDelta)}` : "Sem custo"}
                             </span>
                           </label>
                         );
