@@ -188,27 +188,50 @@ export function MenuItemCard({
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 py-1">
-        <p className="line-clamp-1 text-lg font-bold leading-tight tracking-tight text-foreground">{cardName}</p>
-        {item.description && (
-          <p className="line-clamp-2 text-[13px] leading-snug text-muted-foreground">{cardDescription}</p>
+        {hidePrice ? (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <p className="line-clamp-2 min-w-0 flex-1 text-lg font-bold leading-tight tracking-tight text-foreground">
+                {cardName}
+              </p>
+
+              {isAvailable && (
+                <span
+                  aria-hidden
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-500/30 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
+                >
+                  <Plus className="h-5 w-5" strokeWidth={2.5} />
+                </span>
+              )}
+            </div>
+
+            {item.description && (
+              <p className="line-clamp-2 text-[13px] leading-snug text-muted-foreground">{cardDescription}</p>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="line-clamp-1 text-lg font-bold leading-tight tracking-tight text-foreground">{cardName}</p>
+            {item.description && (
+              <p className="line-clamp-2 text-[13px] leading-snug text-muted-foreground">{cardDescription}</p>
+            )}
+
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <span className="text-lg font-extrabold tabular-nums tracking-tight text-soft-success-foreground">
+                {formatCurrency(cardPrice)}
+              </span>
+
+              {isAvailable && (
+                <span
+                  aria-hidden
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-500/30 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
+                >
+                  <Plus className="h-5 w-5" strokeWidth={2.5} />
+                </span>
+              )}
+            </div>
+          </>
         )}
-
-        <div className={cn("mt-2 flex items-center gap-2", hidePrice ? "justify-end" : "justify-between")}>
-          {!hidePrice && (
-            <span className="text-lg font-extrabold tabular-nums tracking-tight text-soft-success-foreground">
-              {formatCurrency(cardPrice)}
-            </span>
-          )}
-
-          {isAvailable && (
-            <span
-              aria-hidden
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-500/30 transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90"
-            >
-              <Plus className="h-5 w-5" strokeWidth={2.5} />
-            </span>
-          )}
-        </div>
       </div>
     </button>
   );
