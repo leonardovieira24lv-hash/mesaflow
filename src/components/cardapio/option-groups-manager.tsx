@@ -75,7 +75,7 @@ interface OptionGroupsManagerProps {
 function optionGroupCopy(businessType?: BusinessType | string | null) {
   switch (businessType) {
     case "acai":
-      return { group: "Ex.: Tamanho, Complementos, Frutas", item: "Ex.: Leite em pó", description: "Ex.: Tamanho, Complementos ou Frutas." };
+      return { group: "Ex.: Complementos, Frutas, Caldas", item: "Ex.: Leite em pó", description: "Ex.: Complementos, Frutas ou Caldas." };
     case "pizza":
       return { group: "Ex.: Borda, Adicionais", item: "Ex.: Catupiry", description: "Ex.: Borda ou Adicionais." };
     case "burger":
@@ -179,9 +179,15 @@ export function OptionGroupsManager({
       setTargetType("category");
       setTargetId("");
     }
-    setSelectionType("single");
-    setMaxSelections("");
-    setIsRequired(true);
+    if (businessType === "acai" && filterCategoryId !== undefined) {
+      setSelectionType("multiple");
+      setMaxSelections("4");
+      setIsRequired(false);
+    } else {
+      setSelectionType("single");
+      setMaxSelections("");
+      setIsRequired(true);
+    }
     setGroupFormError(null);
     setIsGroupModalOpen(true);
   }
@@ -372,7 +378,7 @@ export function OptionGroupsManager({
         )}
         <Button onClick={openCreateGroupModal} size={compact ? "sm" : "md"} variant={compact ? "outline" : "primary"}>
           <Plus className="h-4 w-4" aria-hidden />
-          Novo grupo
+          {businessType === "acai" && filterCategoryId !== undefined ? "Adicionar grupo" : "Novo grupo"}
         </Button>
       </div>
 
@@ -434,7 +440,7 @@ export function OptionGroupsManager({
                     <span className="text-ds2-foreground">{item.name}</span>
                     <div className="flex items-center gap-2">
                       <span className="font-numeric text-ds2-foreground-muted">
-                        {item.priceDelta > 0 ? `+${formatCurrency(item.priceDelta)}` : "Sem custo"}
+                        {item.priceDelta > 0 ? `+${formatCurrency(item.priceDelta)}` : businessType === "acai" ? null : "Sem custo"}
                       </span>
                       <button
                         type="button"
@@ -494,8 +500,8 @@ export function OptionGroupsManager({
         onClose={() => {
           if (!isSavingGroup) setIsGroupModalOpen(false);
         }}
-        title={editingGroup ? "Editar grupo de opção" : "Novo grupo de opção"}
-        description={optionGroupCopy(businessType).description}
+        title={editingGroup ? "Editar grupo" : businessType === "acai" && filterCategoryId !== undefined ? "Novo grupo de complementos" : "Novo grupo de opção"}
+        description={businessType === "acai" && filterCategoryId !== undefined ? "As opções deste grupo ficam disponíveis para todos os tamanhos deste açaí." : optionGroupCopy(businessType).description}
         footer={
           <>
             <Button type="button" variant="outline" onClick={() => setIsGroupModalOpen(false)} disabled={isSavingGroup}>
@@ -582,7 +588,9 @@ export function OptionGroupsManager({
               onChange={(e) => setIsRequired(e.target.checked)}
               className="h-4 w-4 accent-ds2-primary"
             />
-            Cliente é obrigado a escolher pelo menos 1 opção deste grupo
+            {businessType === "acai" && filterCategoryId !== undefined
+              ? "Cliente precisa escolher pelo menos 1 opção deste grupo"
+              : "Cliente é obrigado a escolher pelo menos 1 opção deste grupo"}
           </label>
         </form>
       </Modal>

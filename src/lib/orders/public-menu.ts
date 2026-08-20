@@ -175,7 +175,35 @@ export async function getPublicMenu(
     allowsHalfAndHalf: category.allows_half_and_half,
     isCompact: category.is_compact,
     imageUrl: category.image_url,
-    items: (itemsByCategory.get(category.id) ?? []).map((item) => ({
+    items: [...(itemsByCategory.get(category.id) ?? [])]
+      .sort((a, b) => {
+        const aMatch = a.name.match(/([0-9]+(?:[.,][0-9]+)?)\s*(ml|l|litro|g|kg)\b/i);
+        const bMatch = b.name.match(/([0-9]+(?:[.,][0-9]+)?)\s*(ml|l|litro|g|kg)\b/i);
+        const toBaseUnit = (match: RegExpMatchArray | null) => {
+
+          const valueText = match?.[1];
+
+          const unitText = match?.[2];
+
+          if (!valueText || !unitText) return null;
+
+          const value = Number(valueText.replace(",", "."));
+
+          const unit = unitText.toLowerCase();
+
+          if (unit === "l" || unit === "litro") return value * 1000;
+
+          if (unit === "kg") return value * 1000;
+
+          return value;
+
+        };
+        const aSize = toBaseUnit(aMatch);
+        const bSize = toBaseUnit(bMatch);
+        if (aSize !== null && bSize !== null) return aSize - bSize;
+        return a.name.localeCompare(b.name, "pt-BR", { numeric: true, sensitivity: "base" });
+      })
+      .map((item) => ({
       id: item.id,
       categoryId: category.id,
       name: item.name,

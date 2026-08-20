@@ -1,7 +1,7 @@
 "use client";
 
 import type { DragEvent } from "react";
-import { Archive, GripVertical, Layers, Package, Pencil, Plus, Trash2 } from "lucide-react";
+import { Archive, GripVertical, Package, Pencil, Trash2 } from "lucide-react";
 import { AccordionItem } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -127,6 +127,28 @@ export function CategorySection({
               title={emptyStateCopy.title}
               description={emptyStateCopy.description}
             />
+          ) : businessType === "acai" ? (
+            <div className="flex flex-col gap-2">
+              <div className="rounded-ds2-md bg-ds2-primary/[0.04] p-3 ring-1 ring-ds2-primary/10">
+                <p className="text-sm font-semibold text-ds2-foreground">Tamanhos cadastrados</p>
+                <p className="mt-1 text-xs text-ds2-foreground-muted">
+                  Cada item abaixo é um tamanho deste açaí. Para adicionar, alterar ou remover tamanhos e complementos, edite a categoria.
+                </p>
+              </div>
+              {items.map((item) => (
+                <div key={item.id} className="flex items-center gap-3 rounded-ds2-md border border-ds2-border bg-ds2-surface p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-ds2-foreground">{item.name}</p>
+                    <p className="text-xs text-ds2-foreground-muted">
+                      {item.isAvailable ? "Disponível para pedidos" : "Indisponível"}
+                    </p>
+                  </div>
+                  <span className="font-numeric text-sm font-semibold text-ds2-primary">
+                    {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(item.price)}
+                  </span>
+                </div>
+              ))}
+            </div>
           ) : (
             items.map((item) => (
               <ProductCard
@@ -143,20 +165,16 @@ export function CategorySection({
             ))
           )}
 
-          {statusFilter !== "archived" && (
+          {statusFilter !== "archived" && businessType !== "acai" && (
             <Button variant="outline" size="sm" onClick={onAddProduct} className="self-start">
-              <Plus className="h-4 w-4" />
               Adicionar Produto
             </Button>
           )}
 
-          {statusFilter !== "archived" && (
+          {statusFilter !== "archived" && businessType !== "acai" && (
             <div className="mt-1 flex flex-col gap-2 rounded-ds2-lg bg-ds2-danger/[0.04] p-3 ring-1 ring-ds2-danger/10">
-              <div className="flex items-center gap-1.5">
-                <Layers className="h-3.5 w-3.5 text-ds2-danger" aria-hidden />
-                <span className="text-xs font-semibold uppercase tracking-wide text-ds2-danger">
-                  Opcionais desta categoria
-                </span>
+              <div className="text-xs font-semibold uppercase tracking-wide text-ds2-danger">
+                Opcionais desta categoria
               </div>
               <OptionGroupsManager filterCategoryId={category.id} businessType={businessType} compact />
             </div>

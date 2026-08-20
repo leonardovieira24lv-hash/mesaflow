@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { ProductImageUpload } from "@/components/cardapio/product-image-upload";
 import { OptionGroupsManager } from "@/components/cardapio/option-groups-manager";
-import { ProductSizesManager } from "@/components/cardapio/product-sizes-manager";
 import { deleteProductImage } from "@/lib/storage/product-images";
 import { createMenuItemSchema, updateMenuItemSchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
@@ -31,7 +30,6 @@ interface ProductFormProps {
   /** Perfil do negócio escolhido no onboarding; usado apenas para orientar exemplos do formulário. */
   businessType?: BusinessType | string | null;
   onSaved: (item: MenuItem) => void;
-  onItemUpdated?: (item: MenuItem) => void;
   onCancel: () => void;
 }
 
@@ -52,7 +50,7 @@ interface ProductFormProps {
  * para não perder a imagem antiga caso o usuário cancele o formulário
  * depois de já ter trocado a foto.
  */
-export function ProductForm({ categories, restaurantId, item, defaultCategoryId, businessType, onSaved, onItemUpdated, onCancel }: ProductFormProps) {
+export function ProductForm({ categories, restaurantId, item, defaultCategoryId, businessType, onSaved, onCancel }: ProductFormProps) {
   const isEditing = Boolean(item);
   const originalImageUrl = item?.imageUrl;
 
@@ -62,7 +60,6 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
   const [price, setPrice] = useState(item?.price !== undefined ? String(item.price) : "");
   const [imageUrl, setImageUrl] = useState(item?.imageUrl ?? "");
   const [isAvailable, setIsAvailable] = useState(item?.isAvailable ?? true);
-  const [hasSizes, setHasSizes] = useState(false);
 
   const productNamePlaceholder = businessType === "acai"
     ? "Ex.: Açaí tradicional"
@@ -179,10 +176,9 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
       </FormField>
 
       <FormField
-        label={businessType === "acai" ? "Preço base (menor tamanho) (R$)" : "Preço (R$)"}
+        label="Preço (R$)"
         error={errors.price}
         required
-        hint={businessType === "acai" ? "Ao usar tamanhos, este valor fica sendo o preço do menor tamanho." : undefined}
       >
         <Input
           type="number"
@@ -191,8 +187,8 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
           min="0.01"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          placeholder={businessType === "acai" ? "Ex.: 15.00" : "Ex.: 24.90"}
-          disabled={isSubmitting || (businessType === "acai" && isEditing && hasSizes)}
+          placeholder="Ex.: 24.90"
+          disabled={isSubmitting}
         />
       </FormField>
 
@@ -213,18 +209,6 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
           Disponível para pedidos
         </Label>
       </div>
-
-      {businessType === "acai" && isEditing && item && (
-        <ProductSizesManager
-          item={item}
-          basePrice={Number(price) || item.price}
-          onBasePriceChange={(nextPrice) => {
-            setPrice(nextPrice.toFixed(2));
-            if (item && onItemUpdated) onItemUpdated({ ...item, price: nextPrice });
-          }}
-          onHasSizesChange={setHasSizes}
-        />
-      )}
 
       {/* Parada técnica — reorganização do fluxo de Cardápio (2026-08-14):
           opcional vinculado a ESTE produto específico (ex.: "Ponto da
