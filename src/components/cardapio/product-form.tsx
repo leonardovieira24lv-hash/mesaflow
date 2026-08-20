@@ -16,7 +16,6 @@ import { deleteProductImage } from "@/lib/storage/product-images";
 import { createMenuItemSchema, updateMenuItemSchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
 import type { ApiError } from "@/types/api";
-import { getMenuSetupGuide } from "@/lib/business-type";
 import type { BusinessType } from "@/lib/business-type";
 import { menuItemFromDto, type MenuItemDto } from "@/types/menu-item-dto";
 
@@ -28,7 +27,7 @@ interface ProductFormProps {
   item?: MenuItem;
   /** Sprint "Refatoração da Experiência do Cardápio": pré-seleciona a categoria ao criar a partir do "+ Adicionar Produto" de uma seção específica. Ignorado em edição (usa `item.categoryId`). */
   defaultCategoryId?: string;
-  /** Perfil do negócio, propagado até os grupos de opções para contextualizar exemplos e textos. */
+  /** Perfil do negócio escolhido no onboarding; usado apenas para orientar exemplos do formulário. */
   businessType?: BusinessType | string | null;
   onSaved: (item: MenuItem) => void;
   onCancel: () => void;
@@ -61,6 +60,21 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
   const [price, setPrice] = useState(item?.price !== undefined ? String(item.price) : "");
   const [imageUrl, setImageUrl] = useState(item?.imageUrl ?? "");
   const [isAvailable, setIsAvailable] = useState(item?.isAvailable ?? true);
+
+  const productNamePlaceholder = businessType === "acai"
+    ? "Ex.: Açaí tradicional"
+    : businessType === "pizza"
+      ? "Ex.: Calabresa"
+      : businessType === "burger"
+        ? "Ex.: X-Bacon"
+        : "Ex.: Seu produto";
+  const productDescriptionPlaceholder = businessType === "acai"
+    ? "Ex.: Açaí com leite em pó e morango."
+    : businessType === "pizza"
+      ? "Ex.: Molho, queijo e ingredientes da casa."
+      : businessType === "burger"
+        ? "Ex.: Pão, hambúrguer, queijo e molho da casa."
+        : "Ex.: Descreva os principais ingredientes ou detalhes do produto.";
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -147,7 +161,7 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder={`Ex.: ${getMenuSetupGuide(businessType).productExample.split(",")[0]?.trim() || "Seu produto"}`}
+          placeholder={productNamePlaceholder}
           disabled={isSubmitting}
         />
       </FormField>
@@ -156,12 +170,16 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
         <Textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder={`Ex.: ${businessType === "acai" ? "Açaí com leite em pó e morango." : businessType === "pizza" ? "Massa, molho, queijo e ingredientes do sabor." : businessType === "burger" ? "Pão, carne, queijo e acompanhamentos." : "Descrição do produto e seus principais ingredientes."}`}
+          placeholder={productDescriptionPlaceholder}
           disabled={isSubmitting}
         />
       </FormField>
 
-      <FormField label="Preço (R$)" error={errors.price} required>
+      <FormField
+        label="Preço (R$)"
+        error={errors.price}
+        required
+      >
         <Input
           type="number"
           inputMode="decimal"
@@ -199,7 +217,7 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
           pista visual de que existia. Só aparece editando um produto já
           salvo: produto novo ainda não tem `item.id` pra vincular o
           grupo (a opção pertence ao PRODUTO, precisa existir primeiro). */}
-      {isEditing && item && (
+      {isEditing && item && businessType !== "acai" && (
         <div className="flex flex-col gap-2 rounded-ds2-lg bg-ds2-danger/[0.04] p-3 ring-1 ring-ds2-danger/10">
           <div className="flex items-center gap-1.5">
             <Layers className="h-3.5 w-3.5 text-ds2-danger" aria-hidden />
@@ -210,7 +228,7 @@ export function ProductForm({ categories, restaurantId, item, defaultCategoryId,
           <p className="text-xs text-ds2-foreground-muted">
             Além dos opcionais da categoria inteira — use aqui só quando for algo exclusivo deste produto.
           </p>
-          <OptionGroupsManager filterMenuItemId={item.id} businessType={businessType} compact />
+          <OptionGroupsManager filterMenuItemId={item.id} compact />
         </div>
       )}
 

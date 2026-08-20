@@ -41,23 +41,15 @@ export function AcaiCategoryBuilder({ category, items, onItemsChange }: AcaiCate
       const aMatch = a.name.match(/([0-9]+(?:[.,][0-9]+)?)\s*(ml|l|litro|g|kg)\b/i);
       const bMatch = b.name.match(/([0-9]+(?:[.,][0-9]+)?)\s*(ml|l|litro|g|kg)\b/i);
       const toBaseUnit = (match: RegExpMatchArray | null) => {
-
         const valueText = match?.[1];
-
         const unitText = match?.[2];
-
         if (!valueText || !unitText) return null;
-
+        if (!valueText || !unitText) return null;
         const value = Number(valueText.replace(",", "."));
-
         const unit = unitText.toLowerCase();
-
         if (unit === "l" || unit === "litro") return value * 1000;
-
         if (unit === "kg") return value * 1000;
-
         return value;
-
       };
       const aSize = toBaseUnit(aMatch);
       const bSize = toBaseUnit(bMatch);

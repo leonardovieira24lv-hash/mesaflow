@@ -8,12 +8,14 @@ import { useCart, type SelectedOption } from "@/components/cardapio-cliente/cart
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import type { PublicMenuItem, PublicOptionGroup } from "@/lib/orders/public-menu";
-import { getMenuObservationHint } from "@/lib/business-type";
 
 interface ProductDetailModalProps {
   item: PublicMenuItem | null;
   businessType?: string | null;
   onClose: () => void;
+  sizeVariants?: PublicMenuItem[];
+  displayName?: string | null;
+  imageUrlOverride?: string | null;
 }
 
 /**
@@ -73,7 +75,13 @@ interface ProductDetailModalProps {
  * produto por vez, como sempre foi. Ver `half-and-half-confirm-modal.tsx`
  * pro fluxo novo.
  */
-export function ProductDetailModal({ item, businessType, onClose }: ProductDetailModalProps) {
+export function ProductDetailModal({
+  item,
+  onClose,
+  sizeVariants = [],
+  displayName = null,
+  imageUrlOverride,
+}: ProductDetailModalProps) {
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
@@ -86,6 +94,7 @@ export function ProductDetailModal({ item, businessType, onClose }: ProductDetai
   // mais de 1 item no array (mesmo efeito de antes, só a forma mudou);
   // grupo `multiple` pode ter vários, até `maxSelections`.
   const [selectedOptionIds, setSelectedOptionIds] = useState<Record<string, string[]>>({});
+  const [selectedSizeId, setSelectedSizeId] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
@@ -107,35 +116,25 @@ export function ProductDetailModal({ item, businessType, onClose }: ProductDetai
     setQuantity(1);
     setNotes("");
     setSelectedOptionIds({});
+    setSelectedSizeId(sizeVariants[0]?.id ?? item?.id ?? null);
     setImageLoaded(false);
     setHasError(false);
-  }, [item?.id]);
+  }, [item?.id, sizeVariants]);
 
   const optionGroups = item?.optionGroups ?? [];
+  const selectedVariant = sizeVariants.find((variant) => variant.id === selectedSizeId) ?? item;
+  const optionsPriceDelta = optionGroups.reduce((sum, group) => {
+    const chosen = selectedOptionIds[group.id] ?? [];
+    return sum + group.options.reduce(
+      (groupSum, option) => (chosen.includes(option.id) ? groupSum + option.priceDelta : groupSum),
+      0,
+    );
+  }, 0);
+  const unitPrice = (selectedVariant?.price ?? 0) + optionsPriceDelta;
   const missingRequiredGroup = optionGroups.some(
     (group) => group.required && (selectedOptionIds[group.id]?.length ?? 0) === 0,
   );
 
-  // Preço unitário = base + soma dos `priceDelta` de TODAS as opções
-  // marcadas (Fase 2: pode ser mais de uma por grupo) — recalculado a
-  // cada escolha, pro cliente ver o valor final antes de adicionar
-  // (nunca só descobrir no carrinho).
-  const optionsPriceDelta = optionGroups.reduce((sum, group) => {
-    const chosenIds = selectedOptionIds[group.id] ?? [];
-    const groupDelta = chosenIds.reduce((groupSum, optionId) => {
-      const option = group.options.find((o) => o.id === optionId);
-      return groupSum + (option?.priceDelta ?? 0);
-    }, 0);
-    return sum + groupDelta;
-  }, 0);
-  const unitPrice = (item?.price ?? 0) + optionsPriceDelta;
-
-  // Sistema de Opcionais, Fase 2 (2026-08-14) — grupo `single`: marcar
-  // uma opção substitui a anterior (array sempre com no máximo 1). Grupo
-  // `multiple`: marcar alterna (adiciona/remove), até `maxSelections` —
-  // clique além do limite não faz nada (o próprio `<input>` já vem
-  // `disabled` nesse caso, ver JSX abaixo; esta função é a segunda
-  // camada de segurança).
   function toggleOption(group: PublicOptionGroup, optionId: string) {
     setSelectedOptionIds((prev) => {
       const current = prev[group.id] ?? [];
@@ -169,21 +168,27 @@ export function ProductDetailModal({ item, businessType, onClose }: ProductDetai
         }));
     });
 
+    const variantName = selectedVariant?.name;
+    const finalName = displayName
+      ? `${displayName}${variantName ? ` — ${variantName}` : ""}`
+      : variantName ?? item.name;
+
     addItem({
-      menuItemId: item.id,
-      name: item.name,
+      menuItemId: selectedVariant?.id ?? item.id,
+      name: finalName,
       price: unitPrice,
       quantity,
       notes: notes.trim() || undefined,
       selectedOptions: selectedOptions.length > 0 ? selectedOptions : undefined,
-      imageUrl: item.image_url ?? undefined,
+      imageUrl: selectedVariant?.image_url ?? item.image_url ?? undefined,
     });
 
-    toast.success("Adicionado ao carrinho", `${quantity}x ${item.name}`);
+    toast.success("Adicionado ao carrinho", `${quantity}x ${finalName}`);
     onClose();
   }
 
-  const showImage = Boolean(item?.image_url) && !hasError;
+  const modalImageUrl = imageUrlOverride ?? selectedVariant?.image_url ?? item?.image_url;
+  const showImage = Boolean(modalImageUrl) && !hasError;
 
   return (
     <dialog
@@ -208,7 +213,7 @@ export function ProductDetailModal({ item, businessType, onClose }: ProductDetai
                 <>
                   {!imageLoaded && <div className="absolute inset-0 animate-pulse bg-muted" aria-hidden />}
                   <Image
-                    src={item.image_url as string}
+                    src={modalImageUrl as string}
                     alt=""
                     fill
                     sizes="448px"
@@ -242,10 +247,39 @@ export function ProductDetailModal({ item, businessType, onClose }: ProductDetai
 
             <div className="flex flex-col gap-5 px-6 pb-6 pt-5">
               <div className="flex flex-col gap-1.5">
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">{item.name}</h2>
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">{displayName ?? item.name}</h2>
                 {item.description && <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>}
-                <p className="pt-1 text-lg font-bold tabular-nums text-soft-success-foreground">{formatCurrency(item.price)}</p>
+                <p className="pt-1 text-lg font-bold tabular-nums text-soft-success-foreground">{formatCurrency(selectedVariant?.price ?? item.price)}</p>
               </div>
+
+              {sizeVariants.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-foreground">Tamanho</span>
+                  <div className="flex flex-col gap-1.5">
+                    {sizeVariants.map((variant) => {
+                      const selected = variant.id === selectedSizeId;
+                      return (
+                        <button
+                          key={variant.id}
+                          type="button"
+                          onClick={() => setSelectedSizeId(variant.id)}
+                          className={cn(
+                            "flex items-center justify-between rounded-xl border px-3.5 py-3 text-left text-sm transition",
+                            selected
+                              ? "border-emerald-500 bg-background ring-1 ring-emerald-500"
+                              : "border-border bg-background hover:bg-muted",
+                          )}
+                        >
+                          <span className={cn("font-medium", "text-foreground")}>{variant.name}</span>
+                          <span className={cn("font-semibold tabular-nums", "text-foreground")}>
+                            {formatCurrency(variant.price)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-between rounded-2xl bg-surface px-4 py-3 ring-1 ring-border">
                 <span className="text-sm font-medium text-foreground">Quantidade</span>
@@ -311,7 +345,7 @@ export function ProductDetailModal({ item, businessType, onClose }: ProductDetai
                             key={option.id}
                             className={cn(
                               "flex items-center justify-between rounded-xl border px-3.5 py-2.5 text-sm transition",
-                              isChecked ? "border-emerald-500 bg-background ring-1 ring-emerald-500/70" : "border-border bg-background",
+                              isChecked ? "border-emerald-500 bg-background ring-1 ring-emerald-500" : "border-border bg-background",
                               isLimitReached ? "cursor-not-allowed opacity-50" : "cursor-pointer",
                             )}
                           >
@@ -350,7 +384,7 @@ export function ProductDetailModal({ item, businessType, onClose }: ProductDetai
                   rows={2}
                   className="w-full resize-none rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 />
-                <p className="text-xs text-muted-foreground">{getMenuObservationHint(businessType)}</p>
+                <p className="text-xs text-muted-foreground">Opcional — ex.: sem cebola, ponto da carne.</p>
               </div>
             </div>
           </div>

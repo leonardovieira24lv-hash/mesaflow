@@ -15,13 +15,14 @@ import { CategorySection } from "@/components/cardapio/category-section";
 import { ProductStatusFilter, type ProductStatusFilterValue } from "@/components/cardapio/product-status-filter";
 import { ProductForm } from "@/components/cardapio/product-form";
 import { CategoryImageUpload } from "@/components/cardapio/category-image-upload";
+import { AcaiCategoryBuilder } from "@/components/cardapio/acai-category-builder";
 import { PromoBannerUpload } from "@/components/configuracoes/promo-banner-upload";
 import { deleteCategoryImage } from "@/lib/storage/category-images";
 import { menuItemFromDto, type MenuItemDto } from "@/types/menu-item-dto";
 import { createCategorySchema } from "@/lib/validations/menu";
 import type { MenuCategory, MenuItem } from "@/types/domain";
 import type { ApiError } from "@/types/api";
-import { getMenuSetupGuide, getBusinessTypeLabel, getMenuPromoBannerExample, getMenuEmptyCategoryDescription } from "@/lib/business-type";
+import { getMenuSetupGuide, getBusinessTypeLabel } from "@/lib/business-type";
 
 interface CategoryDto {
   id: string;
@@ -277,8 +278,18 @@ export function CardapioManager({
         void deleteCategoryImage(originalCategoryImageUrl);
       }
 
-      // Categoria nova: fica visível e já expandida, com "+ Adicionar
-      // Produto" pronto — sem navegar pra lugar nenhum.
+      // Açaí tem um fluxo próprio: a categoria representa um tipo de açaí
+      // e, dentro do mesmo modal, o dono cadastra tamanhos/preços e depois
+      // os complementos que servem para toda a categoria.
+      if (businessType === "acai") {
+        setEditingCategory(saved);
+        setCategoryOpen(saved.id, true);
+        toast.success(isEditing ? "Categoria atualizada" : "Categoria criada — agora cadastre os tamanhos.");
+        setIsSavingCategory(false);
+        return;
+      }
+
+      // Categorias dos demais nichos continuam com o fluxo universal atual.
       if (!isEditing) setCategoryOpen(saved.id, true);
 
       toast.success(isEditing ? "Categoria atualizada" : "Categoria criada");
@@ -386,6 +397,7 @@ export function CardapioManager({
       return exists ? prev.map((i) => (i.id === saved.id ? saved : i)) : [...prev, saved];
     });
     setCategoryOpen(saved.categoryId, true);
+
     toast.success(editingItem ? "Produto atualizado" : "Produto criado");
     setProductModalOpen(false);
   }
@@ -636,7 +648,7 @@ export function CardapioManager({
             <Input
               value={promoBannerText}
               onChange={(e) => setPromoBannerText(e.target.value)}
-              placeholder={getMenuPromoBannerExample(businessType)}
+              placeholder="Ex.: Terça é dia de pizza em dobro!"
               disabled={isSavingPromoBanner}
               maxLength={200}
             />
@@ -654,7 +666,7 @@ export function CardapioManager({
         <EmptyState
           icon={UtensilsCrossed}
           title="Nenhuma categoria cadastrada"
-          description={getMenuEmptyCategoryDescription(businessType)}
+          description="Crie a primeira categoria para começar a montar o cardápio (ex.: Lanches, Bebidas)."
           action={
             <Button onClick={openCreateCategoryModal} variant="outline">
               <Plus className="h-4 w-4" />
@@ -695,7 +707,8 @@ export function CardapioManager({
       <Modal
         open={categoryModalOpen}
         onClose={() => setCategoryModalOpen(false)}
-        title={editingCategory ? "Editar categoria" : "Nova categoria"}
+        title={businessType === "acai" ? (editingCategory ? "Editar açaí" : "Novo açaí") : editingCategory ? "Editar categoria" : "Nova categoria"}
+        description={businessType === "acai" ? "Cadastre o tipo de açaí, depois os tamanhos e os complementos que valem para toda essa categoria." : undefined}
       >
         <form onSubmit={handleCategorySubmit} noValidate className="flex flex-col gap-4 pb-6">
           <FormField label="Nome da categoria" error={categoryFormError ?? undefined} required>
@@ -727,43 +740,46 @@ export function CardapioManager({
             />
           </FormField>
 
-          {/* Sistema de Opcionais, Fase 3 — meio a meio (2026-08-14). Só
-              faz sentido pra categorias de produto principal (ex.:
-              pizza), mas é uma escolha do dono, não uma trava por nome
-              de categoria — funciona em qualquer uma que ele marcar. */}
-          <label className="flex items-center gap-2 text-sm text-ds2-foreground">
-            <input
-              type="checkbox"
-              checked={categoryAllowsHalfAndHalf}
-              onChange={(e) => setCategoryAllowsHalfAndHalf(e.target.checked)}
-              disabled={isSavingCategory}
-              className="h-4 w-4 accent-ds2-primary"
-            />
-            Aceita meio a meio (cliente combina 2 opções da categoria)
-          </label>
+          {businessType !== "acai" && (
+            <>
+              <label className="flex items-center gap-2 text-sm text-ds2-foreground">
+                <input
+                  type="checkbox"
+                  checked={categoryAllowsHalfAndHalf}
+                  onChange={(e) => setCategoryAllowsHalfAndHalf(e.target.checked)}
+                  disabled={isSavingCategory}
+                  className="h-4 w-4 accent-ds2-primary"
+                />
+                Aceita meio a meio (cliente combina 2 opções da categoria)
+              </label>
 
-          {/* Layout compacto por categoria (2026-08-15). Ideia do dono,
-              comparando com outros cardápios: produto de base sempre
-              igual (bebida, adicional) não precisa do card grande —
-              mockup aprovado antes de codar. Mesmo raciocínio do meio a
-              meio acima: escolha do dono, não travado por nome. */}
-          <label className="flex items-center gap-2 text-sm text-ds2-foreground">
-            <input
-              type="checkbox"
-              checked={categoryIsCompact}
-              onChange={(e) => setCategoryIsCompact(e.target.checked)}
-              disabled={isSavingCategory}
-              className="h-4 w-4 accent-ds2-primary"
+              <label className="flex items-center gap-2 text-sm text-ds2-foreground">
+                <input
+                  type="checkbox"
+                  checked={categoryIsCompact}
+                  onChange={(e) => setCategoryIsCompact(e.target.checked)}
+                  disabled={isSavingCategory}
+                  className="h-4 w-4 accent-ds2-primary"
+                />
+                Layout compacto (ideal para itens simples, como bebidas)
+              </label>
+            </>
+          )}
+
+          {businessType === "acai" && editingCategory && (
+            <AcaiCategoryBuilder
+              category={editingCategory}
+              items={items}
+              onItemsChange={setItems}
             />
-            Layout compacto (ideal para itens simples, como bebidas)
-          </label>
+          )}
 
           <div className="flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={() => setCategoryModalOpen(false)} disabled={isSavingCategory}>
-              Cancelar
+              {businessType === "acai" && editingCategory ? "Concluir" : "Cancelar"}
             </Button>
             <Button type="submit" isLoading={isSavingCategory}>
-              {editingCategory ? "Salvar" : "Criar categoria"}
+              {editingCategory ? "Salvar categoria" : "Criar categoria"}
             </Button>
           </div>
         </form>
@@ -773,7 +789,7 @@ export function CardapioManager({
         open={Boolean(deletingCategory)}
         onOpenChange={(open) => !open && setDeletingCategory(null)}
         title="Excluir categoria"
-        description={`Tem certeza que deseja excluir "${deletingCategory?.name}"? Categorias com produtos vinculados não podem ser excluídas.`}
+        description={`Tem certeza que deseja excluir "${deletingCategory?.name}"? Os produtos desta categoria também serão removidos do cardápio.`}
         variant="destructive"
         confirmLabel="Excluir"
         onConfirm={handleDeleteCategory}
