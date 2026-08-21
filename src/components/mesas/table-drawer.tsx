@@ -1145,7 +1145,7 @@ export function TableDrawer({
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-5 py-4">
           {error && <Alert variant="destructive">{error}</Alert>}
 
-          <ManualTableItemForm tableId={table.id} onAdded={onOrdersChanged} />
+          <ManualTableItemForm tableId={table.id} tableName={table.name} onAdded={onOrdersChanged} />
 
           {openOrders.length > 0 && (
             <span className="text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted">

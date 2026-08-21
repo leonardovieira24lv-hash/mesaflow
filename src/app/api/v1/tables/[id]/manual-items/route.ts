@@ -21,6 +21,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       p_table_id: tableId,
       p_name: input.name,
       p_amount: input.amount,
+      p_quantity: input.quantity,
       p_notes: input.notes ?? null,
     });
 
