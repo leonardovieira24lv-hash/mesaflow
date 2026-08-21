@@ -16,7 +16,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const input = parseOrThrow(createManualTableItemSchema, await request.json());
     const admin = createAdminClient();
 
-    const { data, error } = await admin.rpc("add_manual_table_item", {
+    const { data, error } = await admin.rpc("add_manual_table_item_v2", {
       p_restaurant_id: profile.restaurantId,
       p_table_id: tableId,
       p_name: input.name,
