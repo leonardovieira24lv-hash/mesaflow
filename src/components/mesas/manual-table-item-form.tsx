@@ -1,9 +1,17 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import { Minus, Plus, X } from "lucide-react";
+import { ChevronDown, Minus, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+
+const QUICK_ITEMS = [
+  "Self-service",
+  "Couvert artístico",
+  "Taxa de rolha",
+  "Ingresso",
+  "Prato extra",
+] as const;
 
 interface ManualTableItemFormProps {
   tableId: string;
@@ -25,6 +33,8 @@ function formatCurrency(value: number) {
 
 export function ManualTableItemForm({ tableId, tableName, onAdded }: ManualTableItemFormProps) {
   const [open, setOpen] = useState(false);
+  const [quickMenuOpen, setQuickMenuOpen] = useState(false);
+  const [manualDescription, setManualDescription] = useState(false);
   const [name, setName] = useState("");
   const [unitAmount, setUnitAmount] = useState("");
   const [quantity, setQuantity] = useState(1);
@@ -36,6 +46,8 @@ export function ManualTableItemForm({ tableId, tableName, onAdded }: ManualTable
   const total = parsedUnitAmount === null ? 0 : Math.round(parsedUnitAmount * quantity * 100) / 100;
 
   function reset() {
+    setQuickMenuOpen(false);
+    setManualDescription(false);
     setName("");
     setUnitAmount("");
     setQuantity(1);
@@ -47,6 +59,20 @@ export function ManualTableItemForm({ tableId, tableName, onAdded }: ManualTable
     if (submitting) return;
     reset();
     setOpen(false);
+  }
+
+  function selectQuickItem(item: string) {
+    setName(item);
+    setManualDescription(false);
+    setQuickMenuOpen(false);
+    setError(null);
+  }
+
+  function selectManualItem() {
+    setName("");
+    setManualDescription(true);
+    setQuickMenuOpen(false);
+    setError(null);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -157,17 +183,70 @@ export function ManualTableItemForm({ tableId, tableName, onAdded }: ManualTable
                 </p>
               </div>
 
-              <label className="flex flex-col gap-1 text-xs font-medium text-ds2-foreground">
-                Descrição
-                <input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  maxLength={120}
-                  placeholder="Ex.: Taxa de rolha"
-                  disabled={submitting}
-                  className="h-10 rounded-ds2-md border border-ds2-border bg-ds2-background px-3 text-sm text-ds2-foreground outline-none focus:border-ds2-primary focus:ring-2 focus:ring-ds2-primary/20"
-                />
-              </label>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-ds2-foreground">Descrição</span>
+
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setQuickMenuOpen((value) => !value)}
+                    disabled={submitting}
+                    className="flex h-10 w-full items-center justify-between rounded-ds2-md border border-ds2-border bg-ds2-background px-3 text-left text-sm text-ds2-foreground outline-none transition-colors hover:bg-ds2-surface-hover focus:border-ds2-primary focus:ring-2 focus:ring-ds2-primary/20"
+                    aria-expanded={quickMenuOpen}
+                    aria-haspopup="listbox"
+                  >
+                    <span className={name ? "truncate" : "truncate text-ds2-foreground-muted"}>
+                      {name || "Selecionar item rápido"}
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 text-ds2-foreground-muted transition-transform ${
+                        quickMenuOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {quickMenuOpen && (
+                    <div
+                      role="listbox"
+                      className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 overflow-hidden rounded-ds2-md border border-ds2-border bg-ds2-surface shadow-ds2-md"
+                    >
+                      {QUICK_ITEMS.map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          role="option"
+                          aria-selected={name === item && !manualDescription}
+                          onClick={() => selectQuickItem(item)}
+                          className="flex h-9 w-full items-center px-3 text-left text-sm text-ds2-foreground hover:bg-ds2-surface-hover"
+                        >
+                          {item}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={manualDescription}
+                        onClick={selectManualItem}
+                        className="flex h-9 w-full items-center border-t border-ds2-border px-3 text-left text-sm font-medium text-ds2-primary hover:bg-ds2-surface-hover"
+                      >
+                        + Outro item...
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {manualDescription && (
+                  <input
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    maxLength={120}
+                    placeholder="Digite a descrição"
+                    disabled={submitting}
+                    autoFocus
+                    className="h-10 rounded-ds2-md border border-ds2-border bg-ds2-background px-3 text-sm text-ds2-foreground outline-none focus:border-ds2-primary focus:ring-2 focus:ring-ds2-primary/20"
+                  />
+                )}
+              </div>
 
               <div className="grid grid-cols-[1fr_132px] gap-2.5">
                 <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-ds2-foreground">
