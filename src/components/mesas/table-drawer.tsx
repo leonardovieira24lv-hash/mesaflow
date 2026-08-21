@@ -812,13 +812,13 @@ export function TableDrawer({
       }}
       aria-label={`Mesa ${table.name}`}
       className={cn(
-        "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[88vh] w-full overflow-hidden rounded-t-ds2-lg border-t border-ds2-border bg-ds2-surface p-0 text-ds2-foreground shadow-ds2-lg",
+        "fixed inset-x-0 bottom-0 top-auto m-0 flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-ds2-lg border-t border-ds2-border bg-ds2-surface p-0 text-ds2-foreground shadow-ds2-lg",
         "sm:inset-0 sm:m-auto sm:h-auto sm:max-h-[min(760px,calc(100vh-4rem))] sm:w-[min(760px,calc(100vw-3rem))] sm:rounded-ds2-lg sm:border sm:shadow-ds2-lg",
         "backdrop:bg-black/50 backdrop:backdrop-blur-[2px]",
         "open:animate-sheet-up sm:open:animate-none",
       )}
     >
-      <div className="flex max-h-[88vh] flex-col sm:max-h-[min(760px,calc(100vh-4rem))]">
+      <div className="flex min-h-0 flex-1 flex-col">
         {showHistory && (
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="flex items-center justify-between border-b border-ds2-border px-5 py-4">
@@ -919,7 +919,7 @@ export function TableDrawer({
 
         <div
           className={cn(
-            "flex h-full max-h-[88vh] flex-col sm:max-h-none",
+            "flex min-h-0 flex-1 flex-col",
             showHistory && "hidden",
           )}
         >
