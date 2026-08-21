@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Alert } from "@/components/ui/alert";
 import { toast } from "@/components/ui/toast";
 import { CloseBillModal } from "@/components/mesas/close-bill-modal";
+import { ManualTableItemForm } from "@/components/mesas/manual-table-item-form";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatRelativeTimeShort } from "@/lib/format";
 import {
@@ -96,6 +97,7 @@ interface OrderDetail {
   created_at: string;
   items: {
     id: string;
+    menu_item_id: string | null;
     name: string;
     quantity: number;
     price: number;
@@ -512,9 +514,14 @@ export function TableDrawer({
     setCancelingItemId(itemId);
     setError(null);
     try {
-      const response = await fetch(`/api/v1/orders/${orderId}/items/${itemId}/cancel`, {
-        method: "POST",
-      });
+      const item = details[orderId]?.items.find((candidate) => candidate.id === itemId);
+      const isManualItem = item?.menu_item_id === null;
+      const response = await fetch(
+        isManualItem
+          ? `/api/v1/tables/${table.id}/manual-items/${orderId}`
+          : `/api/v1/orders/${orderId}/items/${itemId}/cancel`,
+        { method: isManualItem ? "DELETE" : "POST" },
+      );
       const body = await response.json();
       if (!response.ok) {
         setError(body?.error?.message ?? "Não foi possível cancelar o item.");
@@ -1137,6 +1144,8 @@ export function TableDrawer({
             rodapé (abaixo) ficam sempre visíveis, só esta lista rola. */}
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-5 py-4">
           {error && <Alert variant="destructive">{error}</Alert>}
+
+          <ManualTableItemForm tableId={table.id} onAdded={onOrdersChanged} />
 
           {openOrders.length > 0 && (
             <span className="text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted">

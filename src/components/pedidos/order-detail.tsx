@@ -24,7 +24,7 @@ export interface OrderDetailDto {
   notes?: string;
   items: {
     id: string;
-    menu_item_id: string;
+    menu_item_id: string | null;
     name: string;
     price: number;
     quantity: number;

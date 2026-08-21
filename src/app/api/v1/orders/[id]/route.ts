@@ -57,7 +57,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       order_items:
         | {
             id: string;
-            menu_item_id: string;
+            menu_item_id: string | null;
             name: string;
             price: number;
             quantity: number;

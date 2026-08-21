@@ -1049,20 +1049,24 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
             // é derivado aqui direto de `data.orders` (que já traz o status
             // de cada pedido), sem mudar nenhuma lib compartilhada.
             const pendingCount = data?.orders.filter((o) => o.status === "pending").length ?? 0;
-            // Sprint "Correção — Abrir Mesa Não Deve Mudar Status"
-            // (2026-07-30): rótulo único — o clique sempre só abre o
-            // Drawer agora, para qualquer status; manter "Abrir mesa" só
-            // pra mesas livres passaria a impressão errada de que algo
-            // muda ao clicar.
-            const actionLabel = "Ver mesa";
             const toneClass = TABLE_CARD_TONE_CLASSES[state.tone];
 
             return (
               <div
                 key={table.id}
                 data-table-tile-id={table.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => handleOpenTable(table)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleOpenTable(table);
+                  }
+                }}
                 className={cn(
-                  "group relative flex h-full flex-col gap-2 overflow-hidden rounded-ds2-lg border p-2.5 shadow-ds2-sm transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-ds2-md",
+                  "group relative flex h-full cursor-pointer flex-col gap-2 overflow-hidden rounded-ds2-lg border p-2.5 shadow-ds2-sm transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-ds2-md",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds2-background",
                   toneClass,
                   isFlashing && "animate-status-flash",
                   state.hasUnprocessedOrders && "animate-new-order-alert",
@@ -1318,27 +1322,6 @@ export function TablesManager({ initialTables, restaurantSlug, restaurantId, acc
                   </div>
                 )}
 
-                {/* Ação principal — sempre visível, alvo de toque grande, fixada no final do card. */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenTable(table);
-                  }}
-                  className={cn(
-                    "z-10 mt-auto h-7 w-full justify-center border text-xs font-semibold",
-                    isFilled
-                      ? isDarkOnLight
-                        ? "border-ds2-warning-foreground/25 bg-ds2-warning-foreground/10 text-ds2-warning-foreground hover:bg-ds2-warning-foreground/20"
-                        : "border-white/25 bg-white/10 text-white hover:bg-white/20"
-                      : "border-ds2-border bg-ds2-surface hover:bg-ds2-surface-hover",
-                    focusRingClass,
-                  )}
-                >
-                  {actionLabel}
-                </Button>
               </div>
             );
           })}
