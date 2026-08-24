@@ -3,7 +3,7 @@ import { stdin, stdout } from "node:process";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { loadConfig, saveConfig, removeConfig, maskToken, CONFIG_PATH } from "./config.js";
-import { pairDevice, claimJob, reportResult, UnauthorizedError } from "./api-client.js";
+import { pairDevice, claimJob, reportResult, sendHeartbeat, UnauthorizedError } from "./api-client.js";
 import { findEntry, recordPrinted, markAckConfirmed, listRecent, countEntries, getMostRecentEntry, DATA_DIR } from "./journal.js";
 import { MockPrintAdapter } from "./adapters/mock-print-adapter.js";
 import type { AgentConfig, ClaimedJob } from "./types.js";
@@ -216,6 +216,26 @@ async function commandStart(): Promise<void> {
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
 
+  // Heartbeat (Etapa 4) — timer PRÓPRIO, independente do loop principal
+  // de jobs (pedido explícito: "heartbeat NÃO pode iniciar segundo loop
+  // de jobs" — este `setInterval` nunca chama `claimJob`/`processJob`,
+  // só `sendHeartbeat`). Uma falha aqui NUNCA derruba um job em
+  // processamento — `try/catch` próprio, log e segue, exceto 401/403,
+  // que segue a MESMA política de "dispositivo não autorizado" do loop
+  // principal (reaproveita o mesmo `stop()`).
+  const HEARTBEAT_INTERVAL_MS = 30_000;
+  const heartbeatTimer = setInterval(() => {
+    void sendHeartbeat(config).catch((err) => {
+      if (err instanceof UnauthorizedError) {
+        console.log("[printer] Dispositivo não autorizado. Faça o pareamento novamente.");
+        stop();
+        return;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      console.log(`[network] heartbeat falhou (${message}) — próxima tentativa em ${HEARTBEAT_INTERVAL_MS / 1000}s`);
+    });
+  }, HEARTBEAT_INTERVAL_MS);
+
   while (!stopping) {
     try {
       const job = await claimJob(config);
@@ -230,6 +250,7 @@ async function commandStart(): Promise<void> {
     } catch (err) {
       if (err instanceof UnauthorizedError) {
         console.log("[printer] Dispositivo não autorizado. Faça o pareamento novamente.");
+        clearInterval(heartbeatTimer);
         process.exitCode = 1;
         return;
       }
@@ -241,6 +262,8 @@ async function commandStart(): Promise<void> {
       await sleep(waitMs);
     }
   }
+
+  clearInterval(heartbeatTimer);
 }
 
 // ── entrada ──────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Store, Clock, Users, ChevronRight } from "lucide-react";
+import { Store, Clock, Users, Printer, ChevronRight } from "lucide-react";
 import { requirePageSession } from "@/lib/auth/require-page-session";
 import { ROUTES } from "@/constants/routes";
 
@@ -24,6 +24,12 @@ const OPTIONS = [
     icon: Users,
     title: "Equipe",
     description: "Funcionários com acesso ao sistema.",
+  },
+  {
+    href: ROUTES.configuracoesImpressao,
+    icon: Printer,
+    title: "Impressão",
+    description: "Conecte o computador do restaurante para imprimir pedidos.",
   },
 ] as const;
 

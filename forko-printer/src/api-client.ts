@@ -76,3 +76,15 @@ export async function reportResult(
   });
   await parseJson<{ job: { id: string; status: string } }>(response);
 }
+
+/** Etapa 4 (2026-08-24) — reforço de `last_seen_at` fora do ritmo do
+ *  `claim` (ver `POST /api/v1/printer/heartbeat`, backend). Mesmo
+ *  `parseJson`/tratamento de erro dos outros 2 endpoints — nenhum
+ *  padrão novo. */
+export async function sendHeartbeat(config: AgentConfig): Promise<void> {
+  const response = await fetch(`${config.serverUrl}/api/v1/printer/heartbeat`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${config.deviceToken}` },
+  });
+  await parseJson<{ ok: boolean }>(response);
+}

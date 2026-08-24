@@ -32,6 +32,7 @@ export const ROUTES = {
   configuracoesPerfil: "/configuracoes/perfil",
   configuracoesEquipe: "/configuracoes/equipe",
   configuracoesOperacao: "/configuracoes/operacao",
+  configuracoesImpressao: "/configuracoes/impressao",
 
   // Área do cliente (pública, sem login)
   clienteMesa: (slug: string, token: string): Route =>
