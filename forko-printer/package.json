@@ -2,7 +2,7 @@
   "name": "forko-printer",
   "version": "0.1.0",
   "private": true,
-  "description": "Agente local FORKO Printer — Etapa 3A (modo mock, sem hardware real).",
+  "description": "Agente local FORKO Printer \u2014 Etapa 3A (modo mock, sem hardware real).",
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -12,7 +12,8 @@
     "journal": "npm run build && node dist/index.js journal",
     "reset": "npm run build && node dist/index.js reset",
     "test-print": "npm run build && node dist/index.js test-print",
-    "printers": "npm run build && node dist/index.js printers"
+    "printers": "npm run build && node dist/index.js printers",
+    "sync-version": "node scripts/sync-version.js"
   },
   "engines": {
     "node": ">=18.17"

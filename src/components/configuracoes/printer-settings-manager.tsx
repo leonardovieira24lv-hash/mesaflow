@@ -3,13 +3,28 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Printer, Monitor } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
+
+/**
+ * Etapa 7 (2026-08-25) — link estável do GitHub que sempre aponta pro
+ * asset da release MAIS RECENTE, sem precisar saber o número da versão
+ * (nem hardcode-lo em lugar nenhum): funciona porque o nome do arquivo
+ * (`FORKO-Printer-Setup.exe`) é fixo entre versões — ver
+ * `.github/workflows/release-forko-printer.yml`. Sem
+ * `NEXT_PUBLIC_FORKO_PRINTER_GITHUB_REPO` configurada, fica `null` — o
+ * botão mostra estado desabilitado em vez de um link quebrado (pedido
+ * explícito: "não colocar link quebrado").
+ */
+const FORKO_PRINTER_DOWNLOAD_URL = process.env.NEXT_PUBLIC_FORKO_PRINTER_GITHUB_REPO
+  ? `https://github.com/${process.env.NEXT_PUBLIC_FORKO_PRINTER_GITHUB_REPO}/releases/latest/download/FORKO-Printer-Setup.exe`
+  : null;
 
 /**
  * FORKO Printer — Etapa 4 (2026-08-24). Interface REAL de produto (pedido
@@ -234,18 +249,43 @@ function ConnectComputerModal({ open, onClose }: ConnectComputerModalProps) {
       description="Passo a passo pra conectar o FORKO Printer."
     >
       <div className="flex flex-col gap-5">
+        {/* Visão geral do fluxo completo (Etapa 7, pedido explícito) —
+            os passos 3-7 acontecem fora deste modal (no aplicativo
+            instalado e na tela principal desta página), mas listar
+            todos aqui ajuda o dono a entender o caminho inteiro antes
+            de começar. */}
+        <ol className="flex flex-col gap-1 rounded-ds2-md bg-ds2-surface-hover/40 p-3 text-xs text-ds2-foreground-muted">
+          <li>1. Baixe e instale o FORKO Printer</li>
+          <li>2. Abra o aplicativo</li>
+          <li>3. Gere o código de conexão (aqui embaixo)</li>
+          <li>4. Digite o código no aplicativo</li>
+          <li>5. Escolha a impressora</li>
+          <li>6. Imprima um teste</li>
+          <li>7. Pronto</li>
+        </ol>
+
         <div className="flex flex-col gap-2 rounded-ds2-md border border-ds2-border p-4">
           <span className="text-xs font-semibold uppercase tracking-wide text-ds2-foreground-muted">Passo 1</span>
           <span className="font-medium text-ds2-foreground">Instale o FORKO Printer</span>
           <p className="text-sm text-ds2-foreground-muted">
             Abra o FORKO Printer no computador que será usado para impressão.
           </p>
-          {/* Sem link de instalador ainda (pedido explícito — "não
-              inventar link de download nesta etapa"). Botão desabilitado,
-              já no lugar certo pra quando existir. */}
-          <Button variant="outline" disabled className="w-fit">
-            Baixar FORKO Printer (indisponível nesta versão)
-          </Button>
+          {FORKO_PRINTER_DOWNLOAD_URL ? (
+            <a
+              href={FORKO_PRINTER_DOWNLOAD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+              className={cn(buttonVariants("outline", "md"), "w-fit")}
+            >
+              Baixar FORKO Printer para Windows
+            </a>
+          ) : (
+            <Button variant="outline" disabled className="w-fit">
+              Baixar FORKO Printer (download não configurado)
+            </Button>
+          )}
+          <span className="text-xs text-ds2-foreground-muted">Windows 10/11 · 64 bits</span>
         </div>
 
         <div className="flex flex-col gap-3 rounded-ds2-md border border-ds2-border p-4">

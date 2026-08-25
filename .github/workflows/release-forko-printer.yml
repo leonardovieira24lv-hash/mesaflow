@@ -1,0 +1,98 @@
+name: Release FORKO Printer
+
+# FORKO Printer — Etapa 7 (2026-08-25).
+#
+# Dispara SÓ em push de tag no formato `forko-printer-v*` (pedido
+# explícito — "não criar Release a cada commit comum"). O prefixo
+# `forko-printer-` evita colisão com qualquer futura tag de versão do
+# FORKO Web em si (ex.: `v1.2.0` do site) — fica claro, olhando a tag,
+# que ela pertence ao aplicativo desktop, não ao site.
+on:
+  push:
+    tags:
+      - "forko-printer-v*"
+
+# Só a permissão necessária pra criar Release + anexar o instalador —
+# nada além disso, nenhum secret extra exposto (pedido explícito).
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # ── Motor (Node/TypeScript) ──────────────────────────────────────
+      - name: Instalar dependências do agente
+        working-directory: forko-printer
+        run: npm ci
+
+      - name: Build TypeScript do agente
+        working-directory: forko-printer
+        run: npm run build
+
+      # Fonte única de verdade pra versão (item 2 do pedido) —
+      # `forko-printer/package.json` → copiada pro `desktop/package.json`
+      # ANTES do empacotamento, nunca 2 números mantidos manualmente.
+      - name: Sincronizar versão (fonte única = forko-printer/package.json)
+        working-directory: forko-printer
+        run: node scripts/sync-version.js
+
+      - name: Ler versão resolvida
+        id: version
+        working-directory: forko-printer
+        run: |
+          $pkg = Get-Content package.json | ConvertFrom-Json
+          echo "version=$($pkg.version)" >> $env:GITHUB_OUTPUT
+
+      # ── Electron desktop ──────────────────────────────────────────────
+      - name: Instalar dependências do desktop
+        working-directory: forko-printer/desktop
+        run: npm ci
+
+      - name: Empacotar instalador Windows (electron-builder)
+        working-directory: forko-printer/desktop
+        run: npm run dist
+
+      # Pedido explícito: "não considerar sucesso se o instalador não
+      # existir ao final" — checagem explícita, falha o workflow se o
+      # arquivo esperado não estiver lá.
+      - name: Verificar se o instalador foi gerado
+        working-directory: forko-printer/desktop
+        run: |
+          $installerPath = "release/FORKO-Printer-Setup.exe"
+          if (-not (Test-Path $installerPath)) {
+            Write-Error "Instalador não encontrado em '$installerPath' — build considerado falho."
+            exit 1
+          }
+          Write-Host "Instalador encontrado: $installerPath"
+
+      # ── Release ─────────────────────────────────────────────────────
+      # `softprops/action-gh-release` — mantida ativamente, amplamente
+      # usada, não é uma action obscura/abandonada (pedido explícito).
+      - name: Criar GitHub Release com o instalador anexado
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "FORKO Printer v${{ steps.version.outputs.version }}"
+          body: |
+            Instalador do FORKO Printer para Windows 10/11 (64 bits).
+
+            Este instalador ainda não possui certificado de assinatura
+            digital — o Windows SmartScreen pode exibir um aviso na
+            primeira execução ("Windows protegeu seu PC"). Isso é
+            esperado nesta fase piloto; clique em "Mais informações" →
+            "Executar assim mesmo" pra prosseguir.
+          files: forko-printer/desktop/release/FORKO-Printer-Setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
