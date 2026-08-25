@@ -58,13 +58,77 @@ export interface ApiErrorEnvelope {
   error: { code: string; message: string };
 }
 
-/** Configuração local persistida — só o que foi pedido: serverUrl,
- *  deviceId, deviceToken, deviceName. Nada além disso. */
+/** Configuração local persistida — `adapter`/`printer` são OPCIONAIS de
+ *  propósito (Etapa 5B/5C): `loadConfig()` faz um cast direto
+ *  (`JSON.parse(...) as AgentConfig`), sem validação de schema — uma
+ *  config antiga (Etapa 3A/3B, sem esses campos) continua carregando
+ *  normalmente, com os dois como `undefined`. `resolvePrintAdapter()`
+ *  (`index.ts`) trata a ausência como `"mock"` — comportamento atual
+ *  preservado, pedido explícito ("configs antigas não podem quebrar"). */
 export interface AgentConfig {
   serverUrl: string;
   deviceId: string;
   deviceToken: string;
   deviceName: string;
+  adapter?: "mock" | "tcp" | "windows";
+  printer?: TcpPrinterConfig | WindowsPrinterConfig;
+}
+
+/** `port`/`paperWidth`/`hasCutter` também opcionais aqui — os defaults
+ *  reais (9100/80/false) ficam em `resolvePrintAdapter()`, não
+ *  duplicados nesta interface. */
+export interface TcpPrinterConfig {
+  host: string;
+  port?: number;
+  paperWidth?: PaperWidth;
+  hasCutter?: boolean;
+}
+
+/** Etapa 5C — impressora JÁ instalada no Windows (spooler), identificada
+ *  pelo NOME exibido em "Dispositivos e Impressoras", não por IP/porta. */
+export interface WindowsPrinterConfig {
+  name: string;
+  paperWidth?: PaperWidth;
+  hasCutter?: boolean;
+}
+
+/** Largura do papel — únicas 2 opções reais no mercado. Nenhum "número
+ *  mágico" solto: `charsPerLine()` (`printing/paper-width.ts`) é o
+ *  único lugar que sabe quantos caracteres cabem em cada largura. */
+export type PaperWidth = 58 | 80;
+
+export type ReceiptAlign = "left" | "center" | "right";
+
+/** Estrutura intermediária entre o CONTEÚDO (`PrintDocument`) e o
+ *  PROTOCOLO (bytes ESC/POS) — `ReceiptFormatter` produz isto,
+ *  `EscPosRenderer` consome. Nenhuma das duas pontas conhece a outra
+ *  diretamente. */
+export interface ReceiptLine {
+  text: string;
+  bold?: boolean;
+  doubleWidth?: boolean;
+  align?: ReceiptAlign;
+}
+
+/**
+ * Erro tipado de adapter (pedido explícito, Etapa 5B) — substitui o
+ * `errorCode: "mock_failure"` que estava fixo em `processJob`
+ * (`index.ts`) não importa qual adapter falhasse, achado na auditoria
+ * desta etapa. Qualquer `PrintAdapter` (mock, tcp, futuros) pode lançar
+ * isto pra reportar o motivo real ao servidor — `processJob` lê
+ * `code`/`retryable` daqui quando disponível, e só cai num fallback
+ * genérico se o adapter lançar um `Error` comum.
+ */
+export class PrintAdapterError extends Error {
+  readonly code: string;
+  readonly retryable: boolean;
+
+  constructor(code: string, message: string, retryable = true) {
+    super(message);
+    this.name = "PrintAdapterError";
+    this.code = code;
+    this.retryable = retryable;
+  }
 }
 
 /** Uma entrada do journal local. `ackStatus` (Etapa 3B) é o que

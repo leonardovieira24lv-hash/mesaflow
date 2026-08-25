@@ -6,15 +6,65 @@ import { loadConfig, saveConfig, removeConfig, maskToken, CONFIG_PATH } from "./
 import { pairDevice, claimJob, reportResult, sendHeartbeat, UnauthorizedError } from "./api-client.js";
 import { findEntry, recordPrinted, markAckConfirmed, listRecent, countEntries, getMostRecentEntry, DATA_DIR } from "./journal.js";
 import { MockPrintAdapter } from "./adapters/mock-print-adapter.js";
-import type { AgentConfig, ClaimedJob } from "./types.js";
+import { TcpPrintAdapter } from "./adapters/tcp-print-adapter.js";
+import { WindowsPrintAdapter } from "./adapters/windows-print-adapter.js";
+import { listWindowsPrinters } from "./transport/windows-transport.js";
+import type { PrintAdapter } from "./adapters/print-adapter.js";
+import { PrintAdapterError } from "./types.js";
+import type { AgentConfig, ClaimedJob, PrintDocument, TcpPrinterConfig, WindowsPrinterConfig } from "./types.js";
 
 /**
- * FORKO Printer — Etapa 3A/3B (2026-08-24). 5 comandos: `pair`, `start`,
- * `status`, `journal`, `reset`. Sem framework de CLI (pedido explícito)
- * — `process.argv` cru é suficiente pro que existe.
+ * FORKO Printer — Etapa 3A/3B/5B (2026-08-24). 6 comandos: `pair`,
+ * `start`, `status`, `journal`, `reset`, `test-print`. Sem framework de
+ * CLI (pedido explícito) — `process.argv` cru é suficiente pro que
+ * existe.
  */
 
-const adapter = new MockPrintAdapter();
+/**
+ * Etapa 5B — substitui a antiga `const adapter = new MockPrintAdapter()`
+ * (constante fixa de módulo). Agora depende da config carregada em
+ * runtime, então vira uma função resolvida uma vez por comando
+ * (`commandStart`/`commandTestPrint`), não mais um valor fixo no
+ * carregamento do arquivo.
+ *
+ * Compatibilidade (pedido explícito, "configs antigas não podem
+ * quebrar"): `config.adapter` ausente → `"mock"`, comportamento
+ * idêntico ao de antes desta etapa, sem exceção.
+ */
+function resolvePrintAdapter(config: AgentConfig): PrintAdapter {
+  const kind = config.adapter ?? "mock";
+
+  if (kind === "mock") {
+    return new MockPrintAdapter();
+  }
+
+  if (kind === "tcp") {
+    const printer = config.printer as TcpPrinterConfig | undefined;
+    if (!printer?.host) {
+      throw new Error('Configuração de impressora TCP inválida: "printer.host" é obrigatório.');
+    }
+    return new TcpPrintAdapter({
+      host: printer.host,
+      port: printer.port ?? 9100,
+      paperWidth: printer.paperWidth ?? 80,
+      hasCutter: printer.hasCutter ?? false,
+    });
+  }
+
+  if (kind === "windows") {
+    const printer = config.printer as WindowsPrinterConfig | undefined;
+    if (!printer?.name) {
+      throw new Error('Configuração de impressora Windows inválida: "printer.name" é obrigatório.');
+    }
+    return new WindowsPrintAdapter({
+      printerName: printer.name,
+      paperWidth: printer.paperWidth ?? 80,
+      hasCutter: printer.hasCutter ?? false,
+    });
+  }
+
+  throw new Error(`Adapter de impressão desconhecido: "${kind}".`);
+}
 
 // ── pair ─────────────────────────────────────────────────────────────
 
@@ -155,7 +205,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function processJob(config: AgentConfig, job: ClaimedJob): Promise<void> {
+async function processJob(config: AgentConfig, adapter: PrintAdapter, job: ClaimedJob): Promise<void> {
   const existing = await findEntry(job.id);
 
   if (existing) {
@@ -171,14 +221,21 @@ async function processJob(config: AgentConfig, job: ClaimedJob): Promise<void> {
   try {
     await adapter.print(job.id, job.document, job.attemptCount);
   } catch (err) {
+    // Etapa 5B — corrigido: antes disto `errorCode` era sempre
+    // `"mock_failure"`, fixo, não importava qual adapter falhasse
+    // (achado na auditoria desta etapa). Agora lê `code`/`retryable`
+    // reais quando o adapter lança `PrintAdapterError` (mock e tcp já
+    // fazem isso) — só cai num fallback genérico se o adapter lançar um
+    // `Error` comum (não deveria acontecer com os 2 adapters atuais,
+    // mas cobre qualquer futuro adapter que ainda não tenha sido
+    // atualizado pra usar o tipo certo).
+    const isAdapterError = err instanceof PrintAdapterError;
+    const errorCode = isAdapterError ? err.code : "unknown_print_error";
+    const retryable = isAdapterError ? err.retryable : true;
     const message = err instanceof Error ? err.message : String(err);
+
     console.log(`[printer] falha ao imprimir job ${job.id}: ${message}`);
-    await reportResult(config, job.id, {
-      status: "failed",
-      retryable: true,
-      errorCode: "mock_failure",
-      errorMessage: message,
-    });
+    await reportResult(config, job.id, { status: "failed", retryable, errorCode, errorMessage: message });
     return;
   }
 
@@ -203,7 +260,23 @@ async function commandStart(): Promise<void> {
     return;
   }
 
+  // Etapa 5B — pedido explícito: "config TCP inválida, agent NÃO deve
+  // iniciar impressão silenciosamente". Resolvido AQUI, antes do loop
+  // começar — se `adapter: "tcp"` estiver configurado sem `printer.host`,
+  // por exemplo, o agente para com uma mensagem clara em vez de só
+  // falhar (ou pior, cair silenciosamente pro mock) na primeira tentativa
+  // de imprimir.
+  let adapter: PrintAdapter;
+  try {
+    adapter = resolvePrintAdapter(config);
+  } catch (err) {
+    console.log(`[printer] configuração de impressão inválida: ${err instanceof Error ? err.message : err}`);
+    process.exitCode = 1;
+    return;
+  }
+
   console.log(`[printer] iniciado — ${config.deviceName} (${config.serverUrl})`);
+  console.log(`[printer] adapter de impressão: ${config.adapter ?? "mock"}`);
 
   let stopping = false;
   let backoffIndex = 0;
@@ -246,7 +319,7 @@ async function commandStart(): Promise<void> {
         continue;
       }
 
-      await processJob(config, job);
+      await processJob(config, adapter, job);
     } catch (err) {
       if (err instanceof UnauthorizedError) {
         console.log("[printer] Dispositivo não autorizado. Faça o pareamento novamente.");
@@ -264,6 +337,96 @@ async function commandStart(): Promise<void> {
   }
 
   clearInterval(heartbeatTimer);
+}
+
+// ── test-print ───────────────────────────────────────────────────────
+
+/**
+ * Etapa 5B — pedido explícito: prova a impressora física de ponta a
+ * ponta (mesmos `ReceiptFormatter`/`EscPosRenderer`/`TcpTransport` do
+ * fluxo real) SEM precisar de um pedido de verdade nem passar pelo
+ * servidor do FORKO — nenhum HTTP local, nenhum `print_jobs` envolvido.
+ * Só faz sentido com `adapter: "tcp"` configurado (mock não tem nada
+ * físico pra testar).
+ */
+async function commandTestPrint(): Promise<void> {
+  const config = await loadConfig();
+  if (!config) {
+    console.log("[printer] nenhum dispositivo pareado. Rode `npm run pair` primeiro.");
+    process.exitCode = 1;
+    return;
+  }
+
+  if ((config.adapter ?? "mock") === "mock") {
+    console.log('[printer] "npm run test-print" exige "adapter": "tcp" ou "windows" configurado em config.json.');
+    process.exitCode = 1;
+    return;
+  }
+
+  let adapter: PrintAdapter;
+  try {
+    adapter = resolvePrintAdapter(config);
+  } catch (err) {
+    console.log(`[printer] configuração de impressão inválida: ${err instanceof Error ? err.message : err}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const testDocument: PrintDocument = {
+    header: {
+      restaurantName: "FORKO PRINTER",
+      orderLabel: "TESTE DE IMPRESSÃO",
+      tableLabel: "Mesa 01",
+      timeLabel: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    },
+    items: [{ quantity: 2, name: "Produto teste", isManualItem: false, notes: ["Adicional: Bacon"] }],
+    orderNotes: "Sem cebola\n\nÁÉÍÓÚ Ç Ã Õ",
+  };
+
+  console.log("[printer] enviando teste de impressão...");
+  try {
+    await adapter.print("test-print", testDocument, 1);
+    console.log("[printer] teste de impressão enviado com sucesso.");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.log(`[printer] falha no teste de impressão: ${message}`);
+    process.exitCode = 1;
+  }
+}
+
+// ── printers ─────────────────────────────────────────────────────────
+
+/**
+ * Etapa 5C — lista impressoras instaladas no Windows, pra facilitar
+ * preencher `printer.name` na config. Em qualquer outro SO, mensagem
+ * clara e sai — nunca tenta rodar PowerShell fora do Windows, nunca
+ * quebra o build/comandos em Linux/Mac (pedido explícito).
+ */
+async function commandPrinters(): Promise<void> {
+  if (process.platform !== "win32") {
+    console.log("Este comando está disponível apenas no Windows.");
+    return;
+  }
+
+  console.log("[printer] consultando impressoras instaladas...");
+  try {
+    const printers = await listWindowsPrinters();
+    if (printers.length === 0) {
+      console.log("Nenhuma impressora instalada encontrada.");
+      return;
+    }
+    console.log("");
+    console.log("Impressoras instaladas:");
+    console.log("");
+    printers.forEach((printer, index) => {
+      const defaultTag = printer.isDefault ? " (padrão)" : "";
+      console.log(`  ${index + 1}. ${printer.name}${defaultTag}`);
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.log(`[printer] falha ao consultar impressoras: ${message}`);
+    process.exitCode = 1;
+  }
 }
 
 // ── entrada ──────────────────────────────────────────────────────────
@@ -287,8 +450,14 @@ async function main(): Promise<void> {
     case "reset":
       await commandReset(rest.includes("--all"));
       break;
+    case "test-print":
+      await commandTestPrint();
+      break;
+    case "printers":
+      await commandPrinters();
+      break;
     default:
-      console.log("Uso: node dist/index.js <pair|start|status|journal|reset> [--all]");
+      console.log("Uso: node dist/index.js <pair|start|status|journal|reset|test-print|printers> [--all]");
       process.exitCode = 1;
   }
 }

@@ -1,6 +1,7 @@
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { PrintDocument } from "../types.js";
+import { PrintAdapterError } from "../types.js";
 import type { PrintAdapter } from "./print-adapter.js";
 import { DATA_DIR } from "../journal.js";
 
@@ -58,10 +59,14 @@ function renderDocument(document: PrintDocument): string {
 export class MockPrintAdapter implements PrintAdapter {
   async print(jobId: string, document: PrintDocument, attemptCount: number): Promise<void> {
     if (process.env.FORKO_MOCK_FAIL === "true") {
-      throw new Error("Falha simulada (FORKO_MOCK_FAIL=true).");
+      throw new PrintAdapterError("mock_failure", "Falha simulada (FORKO_MOCK_FAIL=true).", true);
     }
     if (process.env.FORKO_MOCK_FAIL_ONCE === "true" && attemptCount <= 1) {
-      throw new Error("Falha simulada — só na 1ª tentativa (FORKO_MOCK_FAIL_ONCE=true).");
+      throw new PrintAdapterError(
+        "mock_failure_once",
+        "Falha simulada — só na 1ª tentativa (FORKO_MOCK_FAIL_ONCE=true).",
+        true,
+      );
     }
 
     await mkdir(PRINTS_DIR, { recursive: true });

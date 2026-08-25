@@ -10,7 +10,9 @@
     "start": "npm run build && node dist/index.js start",
     "status": "npm run build && node dist/index.js status",
     "journal": "npm run build && node dist/index.js journal",
-    "reset": "npm run build && node dist/index.js reset"
+    "reset": "npm run build && node dist/index.js reset",
+    "test-print": "npm run build && node dist/index.js test-print",
+    "printers": "npm run build && node dist/index.js printers"
   },
   "engines": {
     "node": ">=18.17"
