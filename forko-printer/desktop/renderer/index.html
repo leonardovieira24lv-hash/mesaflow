@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>FORKO Printer</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="header">
+      <span class="logo">FORKO Printer</span>
+    </header>
+
+    <!-- NÃO VINCULADO -->
+    <section id="screen-unpaired" class="screen">
+      <h1>Conectar computador</h1>
+      <p class="hint">Gere um código em Configurações → Impressão no painel FORKO, e digite abaixo.</p>
+
+      <label for="input-server-url">Endereço do FORKO</label>
+      <input id="input-server-url" type="text" placeholder="https://mesaflow.vercel.app" />
+
+      <label for="input-code">Código de vinculação</label>
+      <input id="input-code" type="text" placeholder="AB12CD34" maxlength="8" class="code-input" />
+
+      <label for="input-device-name">Nome deste computador</label>
+      <input id="input-device-name" type="text" placeholder="Caixa Principal" />
+
+      <button id="btn-connect" class="btn-primary">Conectar</button>
+      <p id="unpaired-error" class="error-text"></p>
+    </section>
+
+    <!-- VINCULADO -->
+    <section id="screen-paired" class="screen hidden">
+      <div class="status-row">
+        <span id="status-dot" class="status-dot"></span>
+        <div>
+          <span id="status-label" class="status-label">Conectado</span>
+          <span id="device-name" class="device-name"></span>
+        </div>
+      </div>
+
+      <label for="select-printer">Impressora</label>
+      <select id="select-printer"></select>
+
+      <label>Largura do papel</label>
+      <div class="radio-row">
+        <label><input type="radio" name="paper-width" value="58" /> 58 mm</label>
+        <label><input type="radio" name="paper-width" value="80" checked /> 80 mm</label>
+      </div>
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="checkbox-cutter" />
+        Corte automático do papel
+      </label>
+
+      <div class="button-row">
+        <button id="btn-save-settings" class="btn-primary">Salvar</button>
+        <button id="btn-test-print" class="btn-secondary">Imprimir teste</button>
+      </div>
+      <p id="paired-message" class="hint"></p>
+
+      <div class="log-box">
+        <span class="log-title">Atividade</span>
+        <div id="log-list" class="log-list"></div>
+      </div>
+
+      <button id="btn-quit" class="btn-danger">Sair</button>
+    </section>
+  </body>
+  <script src="renderer.js"></script>
+</html>
