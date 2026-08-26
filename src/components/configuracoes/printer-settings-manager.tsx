@@ -1,16 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Printer, Monitor } from "lucide-react";
+import { Printer, Monitor, Download } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
-import { cn } from "@/lib/utils";
 
 /**
  * Etapa 7 (2026-08-25) — link estável do GitHub que sempre aponta pro
@@ -276,9 +275,10 @@ function ConnectComputerModal({ open, onClose }: ConnectComputerModalProps) {
               target="_blank"
               rel="noopener noreferrer"
               download
-              className={cn(buttonVariants("outline", "md"), "w-fit")}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-ds2-md bg-ds2-success px-4 py-3 text-sm font-semibold text-ds2-success-foreground transition hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds2-success focus-visible:ring-offset-2 sm:w-fit"
             >
-              Baixar FORKO Printer para Windows
+              <Download className="h-4 w-4" aria-hidden />
+              Baixar FORKO Printer
             </a>
           ) : (
             <Button variant="outline" disabled className="w-fit">
