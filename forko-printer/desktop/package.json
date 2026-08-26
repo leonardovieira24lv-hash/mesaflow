@@ -1,6 +1,6 @@
 {
   "name": "forko-printer-desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "FORKO Printer — aplicativo Windows, camada gráfica sobre o motor existente em ../src.",
   "main": "main.js",
@@ -11,7 +11,7 @@
     "dist": "electron-builder --win nsis"
   },
   "devDependencies": {
-    "electron": "^31.3.0",
+    "electron": "22.3.27",
     "electron-builder": "^24.13.3"
   },
   "build": {
@@ -40,7 +40,9 @@
       "allowToChangeInstallationDirectory": true,
       "artifactName": "FORKO-Printer-Setup.exe",
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
     }
   }
 }

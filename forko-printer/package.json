@@ -1,6 +1,6 @@
 {
   "name": "forko-printer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Agente local FORKO Printer \u2014 Etapa 3A (modo mock, sem hardware real).",
   "type": "module",

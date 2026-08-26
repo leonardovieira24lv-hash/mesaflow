@@ -84,7 +84,14 @@ public class ForkoRawPrinter {
 }
 "@
 
-Add-Type -TypeDefinition $source -Language CSharp
+# Sem "-Language CSharp": esse parâmetro de "Add-Type" só existe a
+# partir do PowerShell 3.0. Windows 7 RTM/SP1 vem de fábrica com
+# PowerShell 2.0, onde "-Language" nem é reconhecido — o comando falharia
+# antes mesmo de tentar compilar. Remover é seguro: C# já é a linguagem
+# padrão de "Add-Type -TypeDefinition" quando "-Language" não é
+# especificado, em QUALQUER versão do PowerShell — nenhum comportamento
+# muda em máquinas com PowerShell mais novo.
+Add-Type -TypeDefinition $source
 
 $bytes = [System.IO.File]::ReadAllBytes($FilePath)
 
@@ -128,7 +135,15 @@ Write-Output "OK"
 
 const LIST_PRINTERS_SCRIPT = `
 $ErrorActionPreference = "Stop"
-Get-CimInstance -ClassName Win32_Printer |
+# "Get-WmiObject" (não "Get-CimInstance"): os cmdlets CIM só existem a
+# partir do PowerShell 3.0 — no PowerShell 2.0 de fábrica do Windows 7,
+# "Get-CimInstance" nem existe como comando. "Get-WmiObject" consulta a
+# MESMA classe WMI ("Win32_Printer", mesmas propriedades "Name"/"Default")
+# por um caminho mais antigo, presente desde o PowerShell 1.0 — e
+# continua funcionando normalmente em versões novas do Windows/PowerShell
+# também (cmdlet mantido por compatibilidade, não removido). Uma troca
+# só, sem precisar detectar versão de SO nem ramificar o script.
+Get-WmiObject -Class Win32_Printer |
   Select-Object Name, Default |
   ConvertTo-Json -Compress
 `;
