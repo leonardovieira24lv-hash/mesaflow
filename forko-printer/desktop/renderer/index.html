@@ -15,14 +15,13 @@
       <h1>Conectar computador</h1>
       <p class="hint">Gere um código em Configurações → Impressão no painel FORKO, e digite abaixo.</p>
 
-      <label for="input-server-url">Endereço do FORKO</label>
-      <input id="input-server-url" type="text" placeholder="https://mesaflow.vercel.app" />
-
       <label for="input-code">Código de vinculação</label>
       <input id="input-code" type="text" placeholder="AB12CD34" maxlength="8" class="code-input" />
 
       <label for="input-device-name">Nome deste computador</label>
       <input id="input-device-name" type="text" placeholder="Caixa Principal" />
+
+      <p class="hint">Servidor: <span id="official-server-url"></span></p>
 
       <button id="btn-connect" class="btn-primary">Conectar</button>
       <p id="unpaired-error" class="error-text"></p>

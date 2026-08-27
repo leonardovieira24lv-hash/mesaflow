@@ -13,6 +13,7 @@
 
 const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = require("electron");
 const path = require("node:path");
+const { pathToFileURL } = require("node:url");
 
 // Motor compilado, copiado pra dentro de `desktop/dist` pelo script
 // `copy-engine.js` (rodado antes de `start`/`dist` — ver `package.json`)
@@ -20,6 +21,15 @@ const path = require("node:path");
 // empacota (só inclui de forma confiável o que está DENTRO da pasta do
 // app).
 const DIST = path.join(__dirname, "dist");
+
+// Correção (2026-08-27) — pedido explícito: o restaurante não deve
+// precisar digitar o endereço do FORKO (campo livre já causou risco de
+// erro de digitação num teste real). ÚNICA fonte de verdade desse
+// endereço em todo o app desktop — `forko:pair` usa isto internamente
+// (nunca mais confia num valor vindo do formulário), e
+// `forko:get-initial-state` devolve o mesmo valor pro renderer poder
+// EXIBIR como informação, sem duplicar a string em outro arquivo.
+const FORKO_OFFICIAL_URL = "https://mesaflow-seven.vercel.app";
 
 let mainWindow = null;
 let tray = null;
@@ -29,10 +39,23 @@ let engine = null;
 
 async function loadEngine() {
   if (engine) return engine;
+  // Correção (2026-08-27) — causa real do erro visto no teste em
+  // Windows 7 x64 real (instalado no drive E:): `path.join(...)` gera
+  // um caminho no formato do Windows (ex.: "E:\...\dist\config.js",
+  // com "E:" no começo). `import()` dinâmico (ESM) — diferente do
+  // `require()` do CommonJS — exige que um caminho ABSOLUTO chegue como
+  // URL de verdade, não como string de caminho de sistema de arquivos
+  // crua. Recebendo a string crua, o Node tenta interpretar "E:" como
+  // se fosse um ESQUEMA de URL (igual "http:"/"file:") — daí
+  // "UNSUPPORTED_ESM_URL_SCHEME", reportando o protocolo "e:". Isso só
+  // aparecia em instalação fora do drive C: (por isso não pegamos antes
+  // — testes anteriores devem ter sido em C:). `pathToFileURL(...).href`
+  // converte o caminho pro formato de URL que o `import()` realmente
+  // exige (`file:///E:/...`), corrigindo pra qualquer drive.
   const [config, agentRuntime, windowsTransport] = await Promise.all([
-    import(path.join(DIST, "config.js")).then((m) => (m.default ? m.default : m)),
-    import(path.join(DIST, "agent-runtime.js")).then((m) => (m.default ? m.default : m)),
-    import(path.join(DIST, "transport", "windows-transport.js")).then((m) => (m.default ? m.default : m)),
+    import(pathToFileURL(path.join(DIST, "config.js")).href).then((m) => (m.default ? m.default : m)),
+    import(pathToFileURL(path.join(DIST, "agent-runtime.js")).href).then((m) => (m.default ? m.default : m)),
+    import(pathToFileURL(path.join(DIST, "transport", "windows-transport.js")).href).then((m) => (m.default ? m.default : m)),
   ]);
   engine = { config, agentRuntime, windowsTransport };
   return engine;
@@ -88,12 +111,14 @@ async function restartAgentLoop() {
 ipcMain.handle("forko:get-initial-state", async () => {
   const eng = await loadEngine();
   const config = await eng.config.loadConfig();
-  return { config };
+  return { config, officialServerUrl: FORKO_OFFICIAL_URL };
 });
 
-ipcMain.handle("forko:pair", async (_event, { serverUrl, code, deviceName }) => {
+ipcMain.handle("forko:pair", async (_event, { code, deviceName }) => {
   const eng = await loadEngine();
-  const config = await eng.agentRuntime.pairAgent(serverUrl, code, deviceName);
+  // Sempre a URL oficial (constante única, acima) — nunca mais confia
+  // num valor digitado pelo restaurante.
+  const config = await eng.agentRuntime.pairAgent(FORKO_OFFICIAL_URL, code, deviceName);
   return { config };
 });
 
@@ -168,6 +193,28 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
 
+  // Correção (2026-08-27) — pedido explícito: no Windows 7 real, botão
+  // direito num campo de texto não mostrava opção de colar. API própria
+  // do Electron pra isso: escuta o evento "context-menu" do
+  // `webContents" e, quando o clique foi num elemento EDITÁVEL
+  // (`params.isEditable`), mostra um menu de verdade com Recortar/
+  // Copiar/Colar/Selecionar tudo — usando os `role`s nativos do
+  // Electron (que já sabem interagir com a área de transferência do
+  // SO), não reimplementando nada na mão. `params.editFlags` já vem
+  // pronto do Chromium dizendo o que está disponível de verdade
+  // naquele momento (ex.: "Colar" desabilitado se a área de
+  // transferência estiver vazia).
+  mainWindow.webContents.on("context-menu", (_event, params) => {
+    if (!params.isEditable) return;
+    Menu.buildFromTemplate([
+      { role: "cut", enabled: params.editFlags.canCut },
+      { role: "copy", enabled: params.editFlags.canCopy },
+      { role: "paste", enabled: params.editFlags.canPaste },
+      { type: "separator" },
+      { role: "selectAll", enabled: params.editFlags.canSelectAll },
+    ]).popup({ window: mainWindow });
+  });
+
   mainWindow.on("close", (event) => {
     if (!quitting) {
       event.preventDefault();
@@ -196,7 +243,27 @@ function createTray() {
   tray.on("click", () => mainWindow?.show());
 }
 
+// Correção (2026-08-27) — reforço do mesmo pedido: menu de aplicação
+// mínimo, só com "Editar" (roles nativos de novo — `cut`/`copy`/
+// `paste`/`selectAll` já vêm com o atalho de teclado padrão do SO
+// embutido, ex. Ctrl+V no Windows). Mesmo a barra de menu ficando
+// invisível no Windows por padrão (só aparece com Alt), os atalhos de
+// teclado continuam valendo — é o que garante Ctrl+C/V/X/A
+// funcionarem de forma confiável, sem depender só do comportamento
+// padrão de dentro da página.
+function createApplicationMenu() {
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      {
+        label: "Editar",
+        submenu: [{ role: "cut" }, { role: "copy" }, { role: "paste" }, { type: "separator" }, { role: "selectAll" }],
+      },
+    ]),
+  );
+}
+
 app.whenReady().then(async () => {
+  createApplicationMenu();
   createWindow();
   createTray();
   await restartAgentLoop();

@@ -7,7 +7,7 @@
 const screenUnpaired = document.getElementById("screen-unpaired");
 const screenPaired = document.getElementById("screen-paired");
 
-const inputServerUrl = document.getElementById("input-server-url");
+const officialServerUrlLabel = document.getElementById("official-server-url");
 const inputCode = document.getElementById("input-code");
 const inputDeviceName = document.getElementById("input-device-name");
 const btnConnect = document.getElementById("btn-connect");
@@ -74,7 +74,6 @@ btnConnect.addEventListener("click", async () => {
   btnConnect.textContent = "Conectando...";
   try {
     const { config } = await window.forko.pair({
-      serverUrl: inputServerUrl.value,
       code: inputCode.value,
       deviceName: inputDeviceName.value,
     });
@@ -146,7 +145,8 @@ window.forko.onJobFailed((payload) => appendLogLine(`⚠️ ${payload.orderLabel
 
 // ── estado inicial ──────────────────────────────────────────────────
 (async () => {
-  const { config } = await window.forko.getInitialState();
+  const { config, officialServerUrl } = await window.forko.getInitialState();
+  officialServerUrlLabel.textContent = officialServerUrl ?? "";
   if (config) {
     showPaired(config);
     await loadPrinters(config.printer?.name);
